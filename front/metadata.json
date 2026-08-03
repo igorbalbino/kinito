@@ -1,0 +1,6 @@
+{
+  "name": "FleetPulse SaaS",
+  "description": "Plataforma SaaS de Gestão de Corridas e Distribuição de Serviços",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
