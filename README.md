@@ -1,58 +1,134 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# KINITO — Backend API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Plataforma SaaS de gestão de corridas (Laravel 13 + Sanctum + Spatie Permission).
 
-## About Laravel
+O frontend React permanece em [`front/`](front/) e **não é alterado** por este backend. A API está pronta para integração futura.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Requisitos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP 8.3+
+- Composer 2
+- MySQL 8+ **ou** SQLite (padrão local)
+- Redis (opcional, recomendado para filas/cache em produção)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Instalação
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+cp .env.example .env
+php artisan key:generate
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### Banco
 
-## Contributing
+**SQLite (rápido para local):**
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+# .env já vem com DB_CONNECTION=sqlite
+# garanta o arquivo:
+# Windows PowerShell:
+New-Item -ItemType File -Force database/database.sqlite
+```
 
-## Code of Conduct
+**MySQL:**
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=kinito
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-## Security Vulnerabilities
+### Migrar e popular
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan migrate --seed
+```
 
-## License
+### Filas
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+# database (padrão) ou redis
+php artisan queue:work
+```
+
+### Servidor
+
+```bash
+php artisan serve
+# API: http://localhost:8000/api/v1
+```
+
+## Contas seed
+
+| Perfil | Email | Senha |
+|--------|-------|-------|
+| Admin | `admin@kinito.test` | `password` |
+| Empresa 1 | `empresa1@kinito.test` | `password` |
+| Empresa 2 | `empresa2@kinito.test` | `password` |
+| Empresa 3 | `empresa3@kinito.test` | `password` |
+| Motorista | `motorista1@kinito.test` … `motorista8@kinito.test` | `password` |
+| Cliente | `cliente1@kinito.test` … `cliente10@kinito.test` | `password` |
+
+## Configuração importante (`.env`)
+
+| Variável | Descrição |
+|----------|-----------|
+| `PAYMENT_PROVIDER` | `manual` ou `stripe` |
+| `STRIPE_KEY` / `STRIPE_SECRET` / `STRIPE_WEBHOOK_SECRET` | Stripe (opcional) |
+| `PLATFORM_COMMISSION_PERCENT` | Comissão da plataforma (default 15) |
+| `COMPANY_COMMISSION_PERCENT` | Comissão empresa (default 10) |
+| `FRONTEND_URL` | CORS / links (default `http://localhost:3000`) |
+| `QUEUE_CONNECTION` | `database` ou `redis` |
+| `CACHE_STORE` | `database` ou `redis` |
+
+## Autenticação
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"admin@kinito.test\",\"password\":\"password\"}"
+```
+
+Use o header: `Authorization: Bearer {token}`
+
+## Documentação da API
+
+Veja [`docs/API.md`](docs/API.md).
+
+## Estrutura
+
+```
+app/
+  Enums/           # Status e papéis do domínio
+  Http/Controllers/Api/
+  Http/Requests/
+  Http/Resources/
+  Models/
+  Policies/
+  Services/        # Ride, Finance, Company, Client, Driver, Audit, Notification
+  Jobs/            # Purge de ride_detail_logs (90 dias)
+routes/api.php     # /api/v1/*
+config/kinito.php
+```
+
+## Cadastro
+
+- Público: **CLIENTE** ou **MOTORISTA** → `POST /api/v1/auth/register`
+- Empresa (fluxo separado): `POST /api/v1/empresas/register`
+
+## Testes
+
+```bash
+php artisan test
+```
+
+## Scheduler
+
+O job `PurgeExpiredRideDetailLogs` roda diariamente (detalhes de corrida expiram em 90 dias).
+
+```bash
+php artisan schedule:work
+```
