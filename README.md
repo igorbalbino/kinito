@@ -1,4 +1,4 @@
-# KINITO — Backend API
+# Kinito — Backend API
 
 Plataforma SaaS de gestão de corridas (Laravel 13 + Sanctum + Spatie Permission).
 
@@ -83,6 +83,74 @@ php artisan serve
 | `FRONTEND_URL` | CORS / links (default `http://localhost:3000`) |
 | `QUEUE_CONNECTION` | `database` ou `redis` |
 | `CACHE_STORE` | `database` ou `redis` |
+
+## E-mail (SMTP)
+
+Mesmos nomes do Odara — pode copiar as credenciais:
+
+```env
+MAIL_MAILER=smtp
+MAIL_FROM_ADDRESS=noreply@seu-dominio.com
+MAIL_FROM_NAME=Kinito
+
+SMTP_HOST=smtp.seu-provedor.com
+SMTP_PORT=587
+SMTP_USER=seu-usuario
+SMTP_PASS=sua-senha
+SMTP_CRYPTO=tls
+```
+
+- Sem `SMTP_HOST`: use `MAIL_MAILER=log` (e-mails só no log; API não quebra).
+- `SMTP_CRYPTO=tls` (porta 587) ou `ssl`/`smtps` (porta 465).
+- Fallback Laravel: `MAIL_HOST` / `MAIL_USERNAME` / `MAIL_PASSWORD` / `MAIL_PORT`.
+- Alias Odara: `MAIL_FROM` sobrescreve `MAIL_FROM_ADDRESS`.
+
+Teste rápido (com SMTP preenchido):
+
+```bash
+php artisan tinker
+>>> app(\App\Services\Notification\NotificationService::class)->sendEmail(
+...   \App\Models\User::first(),
+...   'Teste SMTP',
+...   'Se você leu isto, o SMTP do Kinito está ok.'
+... );
+```
+
+## WhatsApp (providers)
+
+Troca de driver só por `.env` — código de negócio usa `WhatsAppManager`.  
+Provisório: sidecar Baileys em `whatsapp-gateway/` (até Meta Cloud API).
+
+| `WHATSAPP_PROVIDER` | Uso |
+|---------------------|-----|
+| `log` | Simula envio no log (default / dev) |
+| `baileys` | Sidecar `whatsapp-gateway/` (`WHATSAPP_GATEWAY_*`) |
+| `meta` | Meta Cloud API (`WHATSAPP_META_TOKEN` + `PHONE_NUMBER_ID`) |
+
+```env
+WHATSAPP_ENABLED=true
+WHATSAPP_PROVIDER=baileys
+WHATSAPP_GATEWAY_URL=http://127.0.0.1:3001
+WHATSAPP_GATEWAY_API_KEY=kinito-gateway-dev
+```
+
+Subir o gateway:
+
+```bash
+cd whatsapp-gateway
+cp .env.example .env   # GATEWAY_API_KEY = mesmo do Laravel
+npm install && npm start
+```
+
+Conectar QR: painel **Configurações → WhatsApp** (ou `POST /api/v1/empresas/{id}/whatsapp/connect`).  
+Session do gateway = `company.id` (apenas dígitos).
+
+Interface: `App\Contracts\WhatsApp\WhatsAppGateway`  
+Drivers: `app/Services/WhatsApp/Drivers/*`
+
+## Segurança
+
+Checkup de riscos e integridade: [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ## Autenticação
 

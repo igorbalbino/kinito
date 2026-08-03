@@ -56,7 +56,7 @@ export const FinanceiroView: React.FC = () => {
       ModoProcessamento: tx.paymentMode,
       Data: tx.createdAt,
     }));
-    downloadCSV('extrato_financeiro_fleetpulse.csv', rows);
+    downloadCSV('extrato_financeiro_kinito.csv', rows);
   };
 
   return (

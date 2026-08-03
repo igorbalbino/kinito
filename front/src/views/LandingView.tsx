@@ -23,6 +23,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { BrandLogo } from '../components/common/BrandLogo';
 import { SEOHead } from '../components/common/SEOHead';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Footer } from '../components/layout/Footer';
@@ -69,10 +70,10 @@ export const LandingView: React.FC = () => {
           'mainEntity': [
             {
               '@type': 'Question',
-              'name': 'O que é o FleetPulse Pro?',
+              'name': 'O que é o Kinito?',
               'acceptedAnswer': {
                 '@type': 'Answer',
-                'text': 'O FleetPulse Pro é um software SaaS completo para empresas de logística, distribuidoras e frotas de transporte de passageiros ou cargas. Oferece despacho em tempo real com controle tátil de uma mão e split de pagamento automático via Stripe.',
+                'text': 'O Kinito é um software SaaS completo para empresas de logística, distribuidoras e frotas de transporte de passageiros ou cargas. Oferece despacho em tempo real, gestão de parceiros e split de pagamento via Stripe ou modo manual.',
               },
             },
             {
@@ -99,14 +100,12 @@ export const LandingView: React.FC = () => {
       <header className="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-white/10 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-xl px-4 lg:px-8 py-3.5 transition-colors">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-600/30">
-              FP
-            </div>
+            <BrandLogo className="w-9 h-9 shadow-lg" />
             <div>
               <span className="font-bold text-base tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                FleetPulse Pro <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">SaaS</span>
+                Kinito <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">SaaS</span>
               </span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 block -mt-0.5">Gestão Inteligente de Frotas & Despacho</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block -mt-0.5">Gestão Inteligente de Corridas & Frotas</span>
             </div>
           </div>
 
@@ -213,7 +212,7 @@ export const LandingView: React.FC = () => {
       <section className="py-12 px-4 lg:px-8 max-w-7xl mx-auto space-y-12 w-full">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
-            Como o FleetPulse Pro transforma a gestão da sua frota
+            Como o Kinito transforma a gestão da sua frota
           </h2>
           <p className="text-xs sm:text-sm text-slate-400">
             Projetado para eliminar erros operacionais, perdas de tempo no telefone e atrasos em repasses financeiros.

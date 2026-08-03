@@ -39,7 +39,7 @@ export const Topbar: React.FC = () => {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const roleProfiles = {
-    admin: { name: 'Administrador Master', email: 'admin@fleetpulse.com', badge: 'Admin Master' },
+    admin: { name: 'Administrador Master', email: 'admin@kinito.test', badge: 'Admin Master' },
     empresa: { name: 'Veloce Logística', email: 'contato@velocelog.com.br', badge: 'Empresa' },
     motorista: { name: 'Gabriel Silva', email: 'gabriel.silva@motorista.com', badge: 'Motorista' },
     cliente: { name: 'Lucas Santos', email: 'lucas.santos@gmail.com', badge: 'Cliente VIP' },

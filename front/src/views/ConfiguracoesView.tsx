@@ -18,6 +18,7 @@ import { Footer } from '../components/layout/Footer';
 import { FeatureFlags } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { Language } from '../i18n/translations';
+import { WhatsAppConnectPanel } from '../components/settings/WhatsAppConnectPanel';
 
 export const ConfiguracoesView: React.FC = () => {
   const { t, language, setLanguage, options } = useTranslation();
@@ -67,6 +68,8 @@ export const ConfiguracoesView: React.FC = () => {
           {t.settingsPage.subtitle}
         </p>
       </div>
+
+      <WhatsAppConnectPanel />
 
       {/* LANGUAGE SELECTOR MODULE */}
       <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 space-y-4 shadow-sm">

@@ -16,6 +16,10 @@ class CompanySetting extends Model
         'stripe_enabled',
         'notifications_enabled',
         'allow_partners',
+        'whatsapp_enabled',
+        'whatsapp_connected',
+        'whatsapp_phone',
+        'whatsapp_webhook_secret',
         'extra',
     ];
 
@@ -28,6 +32,8 @@ class CompanySetting extends Model
             'stripe_enabled' => 'boolean',
             'notifications_enabled' => 'boolean',
             'allow_partners' => 'boolean',
+            'whatsapp_enabled' => 'boolean',
+            'whatsapp_connected' => 'boolean',
             'extra' => 'array',
         ];
     }

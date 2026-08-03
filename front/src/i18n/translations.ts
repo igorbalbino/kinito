@@ -70,7 +70,7 @@ export const translations = {
       close: 'Fechar',
       loading: 'Carregando...',
       seeAll: 'Ver Todos',
-      system: 'FleetPulse Pro SaaS',
+      system: 'Kinito',
       madeBy: 'desenvolvido por creatioinc.com',
     },
     // Landing Page
@@ -275,7 +275,7 @@ export const translations = {
       close: 'Close',
       loading: 'Loading...',
       seeAll: 'View All',
-      system: 'FleetPulse Pro SaaS',
+      system: 'Kinito',
       madeBy: 'powered by creatioinc.com',
     },
     // Landing Page
@@ -480,7 +480,7 @@ export const translations = {
       close: 'Cerrar',
       loading: 'Cargando...',
       seeAll: 'Ver Todos',
-      system: 'FleetPulse Pro SaaS',
+      system: 'Kinito',
       madeBy: 'desarrollado por creatioinc.com',
     },
     // Landing Page
@@ -685,7 +685,7 @@ export const translations = {
       close: 'Chiudi',
       loading: 'Caricamento...',
       seeAll: 'Vedi Tutti',
-      system: 'FleetPulse Pro SaaS',
+      system: 'Kinito',
       madeBy: 'sviluppato da creatioinc.com',
     },
     // Landing Page

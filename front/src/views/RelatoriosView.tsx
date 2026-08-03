@@ -48,7 +48,7 @@ export const RelatoriosView: React.FC = () => {
       }));
     }
 
-    downloadCSV(`relatorio_${reportType}_fleetpulse.csv`, rows);
+    downloadCSV(`relatorio_${reportType}_kinito.csv`, rows);
     setDownloadSuccess(true);
     setTimeout(() => setDownloadSuccess(false), 3000);
   };

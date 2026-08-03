@@ -1,4 +1,4 @@
-# KINITO API — Documentação inicial
+# Kinito API — Documentação inicial
 
 Base URL: `/api/v1`  
 Auth: Laravel Sanctum Bearer Token  
@@ -92,6 +92,16 @@ POST /api/v1/auth/register
 | POST | `/empresas/{id}/partnerships` |
 | PATCH | `/empresas/{id}/partnerships/{partnership}` |
 | POST | `/empresas/{id}/subscribe` |
+| GET | `/empresas/{id}/whatsapp` |
+| POST | `/empresas/{id}/whatsapp/connect` |
+| DELETE | `/empresas/{id}/whatsapp` |
+
+### WhatsApp (Baileys sidecar)
+
+- `GET` — status + QR (se aguardando scan)
+- `POST .../connect` — inicia sessão (`manage` policy: owner/admin)
+- `DELETE` — desconecta e limpa sessão no gateway
+- Webhooks públicos: `POST /webhooks/whatsapp`, `POST /webhooks/whatsapp/tick`
 
 ### Settings relevantes
 
@@ -102,12 +112,14 @@ POST /api/v1/auth/register
   "allow_scheduling": true,
   "stripe_enabled": false,
   "notifications_enabled": true,
-  "allow_partners": true
+  "allow_partners": true,
+  "whatsappEnabled": false,
+  "whatsappConnected": false,
+  "whatsappPhone": null
 }
 ```
 
 `modelo_corridas`: `INSTANTANEAS` | `AGENDAMENTO` | `AMBOS`
-
 ## Motoristas
 
 | Método | Endpoint |

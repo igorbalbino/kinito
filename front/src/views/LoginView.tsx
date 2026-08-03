@@ -1,35 +1,54 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Car, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, Building2, Users, CheckCircle2 } from 'lucide-react';
+import { BrandLogo } from '../components/common/BrandLogo';
 import { SEOHead } from '../components/common/SEOHead';
 import { useAppStore } from '../store/useAppStore';
 import { UserRole } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { LanguageSelector } from '../components/common/LanguageSelector';
+import { apiLogin, clearApiSession, isApiConfigured } from '../lib/api';
 
 export const LoginView: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { setActiveRole } = useAppStore();
 
-  const [email, setEmail] = useState('admin@fleetpulse.com');
-  const [password, setPassword] = useState('••••••••••••');
+  const [email, setEmail] = useState('admin@kinito.test');
+  const [password, setPassword] = useState('password');
   const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const rolePresets = [
-    { role: 'admin' as UserRole, label: 'Admin Master', email: 'admin@fleetpulse.com', icon: ShieldCheck },
-    { role: 'empresa' as UserRole, label: 'Empresa / Frota', email: 'contato@velocelog.com.br', icon: Building2 },
-    { role: 'motorista' as UserRole, label: 'Motorista', email: 'gabriel.silva@motorista.com', icon: UserCheck },
-    { role: 'cliente' as UserRole, label: 'Cliente VIP', email: 'lucas.santos@gmail.com', icon: Users },
+    { role: 'admin' as UserRole, label: 'Admin Master', email: 'admin@kinito.test', icon: ShieldCheck },
+    { role: 'empresa' as UserRole, label: 'Empresa / Frota', email: 'empresa1@kinito.test', icon: Building2 },
+    { role: 'motorista' as UserRole, label: 'Motorista', email: 'motorista1@kinito.test', icon: UserCheck },
+    { role: 'cliente' as UserRole, label: 'Cliente VIP', email: 'cliente1@kinito.test', icon: Users },
   ];
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     setActiveRole(selectedRole);
+
+    if (isApiConfigured()) {
+      try {
+        await apiLogin(email, password);
+        navigate('/dashboard');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Falha no login da API');
+        clearApiSession();
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setTimeout(() => {
+      setLoading(false);
       navigate('/dashboard');
     }, 300);
   };
@@ -39,11 +58,11 @@ export const LoginView: React.FC = () => {
       <SEOHead
         title={t.auth.loginTitle}
         description={t.auth.loginSub}
-        keywords={['login fleetpulse', 'acesso sistema de frota', 'login despacho de corridas']}
+        keywords={['login kinito', 'acesso sistema de frota', 'login despacho de corridas']}
         category="Autenticação SaaS"
         jsonLdSchema={{
           '@type': 'WebPage',
-          'name': 'Página de Acesso do Usuário FleetPulse Pro',
+          'name': 'Página de Acesso do Usuário Kinito',
           'about': 'Formulário de login pré-renderizado para rápido acesso operacional.',
         }}
         prerenderRoutes={['/', '/login', '/register', '/dashboard']}
@@ -52,14 +71,12 @@ export const LoginView: React.FC = () => {
       {/* Header Bar */}
       <header className="p-4 sm:p-6 flex items-center justify-between max-w-7xl mx-auto w-full">
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
-            FP
-          </div>
+          <BrandLogo className="w-10 h-10 shadow-lg group-hover:scale-105 transition-transform" />
           <div>
             <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-slate-100 block leading-none">
-              FleetPulse Pro
+              Kinito
             </span>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">SaaS de Despacho & Frota</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Gestão de Corridas & Frota</span>
           </div>
         </Link>
 
@@ -172,6 +189,12 @@ export const LoginView: React.FC = () => {
               </label>
             </div>
 
+            {error && (
+              <p className="text-xs text-rose-600 dark:text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-2">
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -199,7 +222,7 @@ export const LoginView: React.FC = () => {
 
       {/* Simple Footer */}
       <footer className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">
-        FleetPulse Pro © {new Date().getFullYear()} • Powered by <a href="https://creatioinc.com" target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">creatioinc.com</a>
+        Kinito © {new Date().getFullYear()} • Powered by <a href="https://creatioinc.com" target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">creatioinc.com</a>
       </footer>
     </div>
   );

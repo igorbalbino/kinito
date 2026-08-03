@@ -15,7 +15,7 @@ Base de conhecimento modular. Cada pasta = tema. `.md` = regras curtas + relaç�
 | Financeiro | [06-financeiro](06-financeiro/) |
 | Relatórios | [07-relatorios](07-relatorios/) |
 | Planos SaaS | [08-planos](08-planos/) |
-| Notificações | [09-notificacoes](09-notificacoes/) |
+| Notificações | [09-notificacoes](09-notificacoes/) (+ [whatsapp](09-notificacoes/whatsapp.md)) |
 | Logs / auditoria | [10-logs-auditoria](10-logs-auditoria/) |
 | Config | [11-config](11-config/) |
 | Frontend ↔ API | [12-mapa-front-api](12-mapa-front-api/) |

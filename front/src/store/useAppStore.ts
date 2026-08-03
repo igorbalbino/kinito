@@ -140,7 +140,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       id: `aud-${Date.now()}`,
       timestamp: new Date().toISOString(),
       action: 'TOGGLE_FINANCIAL_MODE',
-      user: 'admin@fleetpulse.com',
+      user: 'admin@kinito.test',
       role: get().activeRole,
       targetResource: 'FINANCIAL_CONFIG',
       previousValue: get().financialMode,

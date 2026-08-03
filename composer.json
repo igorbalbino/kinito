@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "kinito/kinito",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Kinito — SaaS de gestão de corridas, frotas e distribuição de serviços.",
+    "keywords": ["kinito", "laravel", "saas", "rides"],
     "license": "MIT",
     "require": {
         "php": "^8.3",

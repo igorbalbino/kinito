@@ -9,7 +9,7 @@ export const PerfilView: React.FC = () => {
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const roleProfiles = {
-    admin: { name: 'Administrador Master', email: 'admin@fleetpulse.com', roleTitle: 'Administrador do Sistema' },
+    admin: { name: 'Administrador Master', email: 'admin@kinito.test', roleTitle: 'Administrador do Sistema' },
     empresa: { name: 'Veloce Logística & Transp', email: 'contato@velocelog.com.br', roleTitle: 'Gestor de Frota Distribuidora' },
     motorista: { name: 'Gabriel Silva', email: 'gabriel.silva@motorista.com', roleTitle: 'Motorista Parceiro' },
     cliente: { name: 'Lucas Santos', email: 'lucas.santos@gmail.com', roleTitle: 'Cliente Corporativo VIP' },
@@ -27,8 +27,8 @@ export const PerfilView: React.FC = () => {
     <div className="space-y-6 pb-12 max-w-4xl animate-in fade-in duration-300">
       <SEOHead
         title="Perfil do Usuário & Configurações da Conta"
-        description="Gestão de dados pessoais do perfil ativo, atualização de e-mail, foto e chave de segurança para acesso à plataforma FleetPulse Pro."
-        keywords={['perfil de usuário', 'segurança de acesso', 'credenciais fleetpulse']}
+        description="Gestão de dados pessoais do perfil ativo, atualização de e-mail, foto e chave de segurança para acesso à plataforma Kinito."
+        keywords={['perfil de usuário', 'segurança de acesso', 'credenciais kinito']}
         category="Módulo de Perfil SaaS"
         jsonLdSchema={{
           '@type': 'WebPage',

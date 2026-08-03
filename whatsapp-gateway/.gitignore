@@ -1,0 +1,6 @@
+node_modules/
+sessions/
+sessions/**
+**/*.enc
+.env
+package-lock.json

@@ -12,7 +12,9 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RideController;
+use App\Http\Controllers\Api\CompanyWhatsAppController;
 use App\Http\Controllers\Api\StripeWebhookController;
+use App\Http\Controllers\Api\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -27,6 +29,8 @@ Route::prefix('v1')->group(function () {
     Route::post('/empresas/register', [CompanyController::class, 'register'])->middleware('throttle:10,1');
 
     Route::post('/webhooks/stripe', StripeWebhookController::class);
+    Route::post('/webhooks/whatsapp', WhatsAppWebhookController::class);
+    Route::post('/webhooks/whatsapp/tick', [WhatsAppWebhookController::class, 'tick']);
 
     Route::get('/plans', [PlanController::class, 'index']);
 
@@ -45,6 +49,10 @@ Route::prefix('v1')->group(function () {
         Route::post('/empresas/{company}/partnerships', [CompanyController::class, 'storePartnership']);
         Route::patch('/empresas/{company}/partnerships/{partnership}', [CompanyController::class, 'updatePartnership']);
         Route::post('/empresas/{company}/subscribe', [PlanController::class, 'subscribe']);
+
+        Route::get('/empresas/{company}/whatsapp', [CompanyWhatsAppController::class, 'status']);
+        Route::post('/empresas/{company}/whatsapp/connect', [CompanyWhatsAppController::class, 'connect']);
+        Route::delete('/empresas/{company}/whatsapp', [CompanyWhatsAppController::class, 'disconnect']);
 
         Route::get('/motoristas', [DriverController::class, 'index']);
         Route::get('/motoristas/{driver}', [DriverController::class, 'show']);

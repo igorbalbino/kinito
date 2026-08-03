@@ -1,6 +1,6 @@
 {
-  "name": "FleetPulse SaaS",
-  "description": "Plataforma SaaS de Gestão de Corridas e Distribuição de Serviços",
+  "name": "Kinito",
+  "description": "Plataforma SaaS de gestão de corridas, frotas e distribuição de serviços",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

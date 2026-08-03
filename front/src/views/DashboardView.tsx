@@ -102,7 +102,7 @@ export const DashboardView: React.FC = () => {
         category="Dashboard SaaS"
         jsonLdSchema={{
           '@type': 'WebPage',
-          'name': 'Dashboard de Operações FleetPulse Pro',
+          'name': 'Dashboard de Operações Kinito',
           'description': 'Visão consolidada de KPIs operacionais, volume de corridas e extrato de repasses.',
         }}
       />

@@ -23,4 +23,27 @@ return [
 
     'default_plan' => env('KINITO_DEFAULT_PLAN', 'starter'),
 
+    /*
+    | WhatsApp — troque o provider sem mudar o código de negócio.
+    | WHATSAPP_PROVIDER=log|baileys|meta
+    | Sidecar Baileys: pasta whatsapp-gateway/ (WHATSAPP_GATEWAY_*)
+    */
+    'whatsapp' => [
+        'enabled' => (bool) env('WHATSAPP_ENABLED', false),
+        'provider' => env('WHATSAPP_PROVIDER', 'log'),
+
+        'gateway' => [
+            'url' => env('WHATSAPP_GATEWAY_URL', env('WHATSAPP_BAILEYS_URL')),
+            'api_key' => env('WHATSAPP_GATEWAY_API_KEY', env('WHATSAPP_BAILEYS_TOKEN', 'kinito-gateway-dev')),
+            'timeout' => (int) env('WHATSAPP_GATEWAY_TIMEOUT', 20),
+        ],
+
+        'meta' => [
+            'token' => env('WHATSAPP_META_TOKEN'),
+            'phone_number_id' => env('WHATSAPP_META_PHONE_NUMBER_ID'),
+            'graph_version' => env('WHATSAPP_META_GRAPH_VERSION', 'v21.0'),
+            'timeout' => (int) env('WHATSAPP_META_TIMEOUT', 15),
+        ],
+    ],
+
 ];

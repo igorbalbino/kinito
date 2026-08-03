@@ -14,7 +14,14 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    /*
+    | Prefer Odara-style SMTP_* when set; fall back to Laravel MAIL_*.
+    | If SMTP_HOST (or MAIL_HOST) is filled, default mailer becomes smtp.
+    */
+    'default' => env(
+        'MAIL_MAILER',
+        filled(env('SMTP_HOST', env('MAIL_HOST'))) ? 'smtp' : 'log'
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -39,13 +46,17 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
+            // tls (STARTTLS :587) → scheme null; ssl/smtps (:465) → smtps
+            'scheme' => match (strtolower((string) env('SMTP_CRYPTO', env('MAIL_SCHEME', 'tls')))) {
+                'ssl', 'smtps' => 'smtps',
+                default => env('MAIL_SCHEME'),
+            },
             'url' => env('MAIL_URL'),
-            'host' => env('MAIL_HOST', '127.0.0.1'),
-            'port' => env('MAIL_PORT', 2525),
-            'username' => env('MAIL_USERNAME'),
-            'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            'host' => env('SMTP_HOST', env('MAIL_HOST', '127.0.0.1')),
+            'port' => (int) env('SMTP_PORT', env('MAIL_PORT', 587)),
+            'username' => env('SMTP_USER', env('MAIL_USERNAME')),
+            'password' => env('SMTP_PASS', env('MAIL_PASSWORD')),
+            'timeout' => 10,
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
@@ -111,8 +122,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+        'address' => env('MAIL_FROM', env('MAIL_FROM_ADDRESS', 'noreply@kinito.test')),
+        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Kinito')),
     ],
 
 ];

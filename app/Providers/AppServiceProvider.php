@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\WhatsApp\WhatsAppGateway;
+use App\Services\WhatsApp\WhatsAppManager;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -14,7 +16,11 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->singleton(WhatsAppManager::class);
+
+        $this->app->bind(WhatsAppGateway::class, function ($app) {
+            return $app->make(WhatsAppManager::class)->driver();
+        });
     }
 
     public function boot(): void

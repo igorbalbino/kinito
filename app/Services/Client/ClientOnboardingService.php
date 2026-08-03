@@ -98,16 +98,22 @@ class ClientOnboardingService
                 ]
             );
 
-            $this->notifications->notify(
+            $accessMessage = "Olá {$user->name}, sua conta foi criada pela empresa {$company->name}. Email: {$user->email}. Senha temporária: {$tempPassword}";
+
+            $channels = ['email'];
+            if (filled($user->phone) && config('kinito.whatsapp.enabled')) {
+                $channels[] = 'whatsapp';
+            }
+
+            $this->notifications->notifyChannels(
                 $user,
-                'Acesso KINITO',
-                "Olá {$user->name}, sua conta foi criada pela empresa {$company->name}. Email: {$user->email}. Senha temporária: {$tempPassword}",
+                'Acesso Kinito',
+                $accessMessage,
+                $channels,
                 'sistema',
-                'info',
-                'email'
+                'info'
             );
 
-            // WhatsApp stub prepared for future integration.
             $this->audit->log('CLIENT_CREATED_BY_ACTOR', $actor, $client, null, [
                 'company_id' => $company->id,
                 'origin' => $origin,

@@ -21,7 +21,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
 }) => {
   useEffect(() => {
     // 1. Update Document Title
-    const fullTitle = `${title} | FleetPulse Pro - SaaS de Despacho & Frota`;
+    const fullTitle = `${title} | Kinito - Gestão de Corridas`;
     document.title = fullTitle;
 
     // Helper function to update or create meta tag
@@ -38,7 +38,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     // 2. Standard Meta Tags
     updateMeta('name', 'description', description);
     updateMeta('name', 'keywords', keywords.join(', '));
-    updateMeta('name', 'author', 'FleetPulse Pro - CreatioInc');
+    updateMeta('name', 'author', 'Kinito');
     updateMeta('name', 'robots', 'index, follow');
     updateMeta('name', 'category', category);
 
@@ -46,7 +46,8 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     updateMeta('property', 'og:title', fullTitle);
     updateMeta('property', 'og:description', description);
     updateMeta('property', 'og:type', 'website');
-    updateMeta('property', 'og:site_name', 'FleetPulse Pro SaaS');
+    updateMeta('property', 'og:site_name', 'Kinito');
+    updateMeta('property', 'og:image', '/kinito.webp');
 
     // 4. Prerender & Prefetch Link Tags for Ultra-Fast Instant Route Opening
     if (prerenderRoutes && prerenderRoutes.length > 0) {
@@ -82,7 +83,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     const defaultSchema = {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
-      'name': 'FleetPulse Pro',
+      'name': 'Kinito',
       'applicationCategory': 'BusinessApplication',
       'operatingSystem': 'Web, iOS, Android',
       'offers': {
@@ -93,8 +94,8 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
       'description': description,
       'publisher': {
         '@type': 'Organization',
-        'name': 'CreatioInc',
-        'url': 'https://creatioinc.com',
+        'name': 'Kinito',
+        'logo': '/kinito.webp',
       },
       ...jsonLdSchema,
     };

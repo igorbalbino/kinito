@@ -59,7 +59,7 @@ class DatabaseSeeder extends Seeder
         $this->seedNotifications($admin, $companies);
         $this->seedAudits($admin);
 
-        $this->command?->info('KINITO seed concluído.');
+        $this->command?->info('Kinito seed concluído.');
         $this->command?->info('Admin: admin@kinito.test / password');
     }
 
@@ -166,7 +166,7 @@ class DatabaseSeeder extends Seeder
     private function seedPlatformSettings(): void
     {
         PlatformSetting::setValue('PAYMENT_PROVIDER', config('kinito.payment_provider', 'manual'));
-        PlatformSetting::setValue('PLATFORM_NAME', 'KINITO');
+        PlatformSetting::setValue('PLATFORM_NAME', 'Kinito');
     }
 
     private function seedAdmin(): User
@@ -523,7 +523,7 @@ class DatabaseSeeder extends Seeder
     private function seedNotifications(User $admin, array $companies): void
     {
         AppNotification::query()->updateOrCreate(
-            ['user_id' => $admin->id, 'title' => 'Bem-vindo ao KINITO'],
+            ['user_id' => $admin->id, 'title' => 'Bem-vindo ao Kinito'],
             [
                 'message' => 'Backend API operacional com seed inicial.',
                 'category' => 'sistema',

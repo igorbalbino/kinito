@@ -24,7 +24,7 @@ export const LogsView: React.FC = () => {
         category="Módulo de Segurança & Logs SaaS"
         jsonLdSchema={{
           '@type': 'WebPage',
-          'name': 'Logs Operacionais e Trilha de Auditoria FleetPulse',
+          'name': 'Logs Operacionais e Trilha de Auditoria Kinito',
           'about': 'Auditoria de segurança e registros de eventos técnicos.',
         }}
       />

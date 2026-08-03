@@ -17,6 +17,9 @@ class CompanySettingResource extends JsonResource
             'stripeEnabled' => $this->stripe_enabled,
             'notificationsEnabled' => $this->notifications_enabled,
             'allowPartners' => $this->allow_partners,
+            'whatsappEnabled' => (bool) $this->whatsapp_enabled,
+            'whatsappConnected' => (bool) $this->whatsapp_connected,
+            'whatsappPhone' => $this->whatsapp_phone,
             'extra' => $this->extra,
         ];
     }

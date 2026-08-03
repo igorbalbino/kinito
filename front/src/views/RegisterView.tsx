@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Building2, UserCheck, Users, ShieldCheck, Mail, Lock, User, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { BrandLogo } from '../components/common/BrandLogo';
 import { SEOHead } from '../components/common/SEOHead';
 import { useAppStore } from '../store/useAppStore';
 import { UserRole } from '../types';
@@ -37,7 +38,7 @@ export const RegisterView: React.FC = () => {
     setActiveRole(role);
     addNotification({
       title: 'Conta Criada com Sucesso',
-      message: `Bem-vindo(a) ao FleetPulse Pro, ${name || 'Gestor'}! Sua conta foi ativada.`,
+      message: `Bem-vindo(a) ao Kinito, ${name || 'Gestor'}! Sua conta foi ativada.`,
       type: 'success',
       category: 'sistema',
     });
@@ -51,12 +52,12 @@ export const RegisterView: React.FC = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-[#09090b] text-slate-900 dark:text-slate-100 flex flex-col justify-between font-sans selection:bg-indigo-600 selection:text-white transition-colors duration-200">
       <SEOHead
         title="Cadastro & Nova Conta SaaS"
-        description="Crie sua conta no FleetPulse Pro em menos de 1 minuto. Inicie o teste grátis com despacho tátil, split financeiro Stripe e gestão de frotas."
-        keywords={['cadastro fleetpulse', 'criar conta frota', 'registrar empresa de transporte']}
+        description="Crie sua conta no Kinito em menos de 1 minuto. Inicie o teste grátis com despacho, split financeiro e gestão de frotas."
+        keywords={['cadastro kinito', 'criar conta frota', 'registrar empresa de transporte']}
         category="Cadastro SaaS"
         jsonLdSchema={{
           '@type': 'WebPage',
-          'name': 'Página de Cadastro de Nova Conta FleetPulse Pro',
+          'name': 'Página de Cadastro de Nova Conta Kinito',
           'about': 'Formulário de cadastro pré-renderizado para rápido onboarding de parceiros e frotas.',
         }}
         prerenderRoutes={['/', '/login', '/register', '/dashboard']}
@@ -65,14 +66,12 @@ export const RegisterView: React.FC = () => {
       {/* Header Bar */}
       <header className="p-4 sm:p-6 flex items-center justify-between max-w-7xl mx-auto w-full">
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
-            FP
-          </div>
+          <BrandLogo className="w-10 h-10 shadow-lg group-hover:scale-105 transition-transform" />
           <div>
             <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-slate-100 block leading-none">
-              FleetPulse Pro
+              Kinito
             </span>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">SaaS de Despacho & Frota</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Gestão de Corridas & Frota</span>
           </div>
         </Link>
 
@@ -215,7 +214,7 @@ export const RegisterView: React.FC = () => {
                   className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span>
-                  Concordo com os <a href="#" onClick={(e) => { e.preventDefault(); alert('Termos de Uso do FleetPulse Pro'); }} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">Termos de Serviço</a> e a Política de Privacidade.
+                  Concordo com os <a href="#" onClick={(e) => { e.preventDefault(); alert('Termos de Uso do Kinito'); }} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">Termos de Serviço</a> e a Política de Privacidade.
                 </span>
               </label>
             </div>
@@ -247,7 +246,7 @@ export const RegisterView: React.FC = () => {
 
       {/* Simple Footer */}
       <footer className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">
-        FleetPulse Pro © {new Date().getFullYear()} • Powered by <a href="https://creatioinc.com" target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">creatioinc.com</a>
+        Kinito © {new Date().getFullYear()} • Powered by <a href="https://creatioinc.com" target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">creatioinc.com</a>
       </footer>
     </div>
   );

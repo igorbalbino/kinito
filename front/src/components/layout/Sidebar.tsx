@@ -21,6 +21,7 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
+import { BrandLogo } from '../common/BrandLogo';
 import { cn } from '../../lib/utils';
 import { useAppStore } from '../../store/useAppStore';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -77,16 +78,14 @@ export const Sidebar: React.FC = () => {
       {/* Brand Header */}
       <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200 dark:border-white/10">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md shrink-0">
-            FP
-          </div>
+          <BrandLogo className="w-8 h-8 rounded-lg shadow-md" />
           {!isSidebarCollapsed && (
             <div className="flex flex-col overflow-hidden">
               <span className="font-semibold text-base tracking-tight text-slate-900 dark:text-slate-100 truncate">
-                FleetPulse Pro
+                Kinito
               </span>
               <span className="text-[10px] font-medium uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
-                SaaS Dispatch
+                Gestão de Corridas
               </span>
             </div>
           )}
