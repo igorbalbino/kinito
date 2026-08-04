@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Services\Audit\AuditService;
 use App\Services\Notification\NotificationService;
+use App\Support\EnsureUserRoles;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -35,7 +36,7 @@ class ClientOnboardingService
                 'phone' => $data['phone'] ?? null,
                 'password' => $data['password'],
             ]);
-            $user->assignRole(UserRole::Cliente->value);
+            EnsureUserRoles::assign($user, UserRole::Cliente);
 
             $client = Client::query()->create([
                 'user_id' => $user->id,
@@ -85,7 +86,7 @@ class ClientOnboardingService
             }
 
             if (! $user->hasRole(UserRole::Cliente->value)) {
-                $user->assignRole(UserRole::Cliente->value);
+                EnsureUserRoles::assign($user, UserRole::Cliente);
             }
 
             $client = Client::query()->firstOrCreate(
@@ -112,25 +113,35 @@ class ClientOnboardingService
             if ($wasNewUser) {
                 $login = $user->email ?: $user->phone;
                 $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
-                $accessMessage = "A empresa {$company->name} cadastrou você no Kinito. "
+
+                // Never persist temporary passwords in in-app notifications (visible in the painel).
+                $safeMessage = "A empresa {$company->name} cadastrou você no Kinito. "
+                    ."Acesse {$link} com o login {$login}. "
+                    .'A senha temporária foi enviada por e-mail/WhatsApp e deve ser trocada no primeiro acesso.';
+
+                $privateMessage = "A empresa {$company->name} cadastrou você no Kinito.\n"
                     ."Acesse: {$link}\n"
                     ."Login: {$login}\n"
                     ."Senha temporária: {$tempPassword}\n"
                     .'No primeiro acesso você deverá trocar a senha.';
 
-                $channels = ['email'];
-                if (filled($user->phone) && config('kinito.whatsapp.enabled')) {
-                    $channels[] = 'whatsapp';
-                }
-
-                $this->notifications->notifyChannels(
+                $this->notifications->notify(
                     $user,
                     'Acesso Kinito',
-                    $accessMessage,
-                    $channels,
+                    $safeMessage,
                     'sistema',
-                    'info'
+                    'info',
+                    'in_app',
+                    $link,
                 );
+
+                if (filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+                    $this->notifications->sendEmail($user, 'Acesso Kinito', $privateMessage);
+                }
+
+                if (filled($user->phone) && config('kinito.whatsapp.enabled')) {
+                    $this->notifications->sendWhatsApp($user, 'Acesso Kinito', $privateMessage);
+                }
             }
 
             $this->audit->log('CLIENT_CREATED_BY_ACTOR', $actor, $client, null, [

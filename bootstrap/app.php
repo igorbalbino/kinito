@@ -14,7 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: 'api',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->statefulApi();
+        // API is token-based (Sanctum personal access tokens). Do not enable
+        // statefulApi() — it applies CSRF to requests from SPA origins and
+        // breaks Bearer-auth clients (Vite front on another port).
 
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,

@@ -9,14 +9,11 @@ import {
   ChevronRight,
   CreditCard,
   ExternalLink,
-  FileText,
-  HelpCircle,
   Home,
   LayoutDashboard,
   LogOut,
   Bell,
   Settings,
-  ShieldAlert,
   UserCheck,
   Users,
   Zap,
@@ -25,9 +22,13 @@ import { BrandLogo } from '../common/BrandLogo';
 import { cn } from '../../lib/utils';
 import { useAppStore } from '../../store/useAppStore';
 import { useTranslation } from '../../hooks/useTranslation';
+import { apiLogout } from '../../lib/api';
+import { ROLE_LABELS, sessionDisplayProfile } from '../../lib/sessionProfile';
+import { useNavigate } from 'react-router-dom';
 
 export const Sidebar: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const {
     isSidebarCollapsed,
     toggleSidebar,
@@ -36,16 +37,21 @@ export const Sidebar: React.FC = () => {
     financialMode,
     featureFlags,
     notifications,
+    resetDomainData,
   } = useAppStore();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const roleLabels = {
-    admin: { label: 'Administrador', badge: 'Admin Master', color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' },
-    empresa: { label: 'Empresa / Distribuidor', badge: 'Veloce Logística', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' },
-    motorista: { label: 'Motorista', badge: 'Gabriel Silva', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
-    cliente: { label: 'Cliente', badge: 'Lucas Santos', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' },
+  const handleLogout = async () => {
+    try {
+      await apiLogout();
+    } catch {
+      /* ignore */
+    }
+    resetDomainData();
+    navigate('/login');
   };
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const profile = sessionDisplayProfile(activeRole);
+  const availableRoles = profile.roles;
 
   const navItems = [
     { path: '/', label: t.nav.home, icon: Home, flag: null },
@@ -72,10 +78,9 @@ export const Sidebar: React.FC = () => {
     <aside
       className={cn(
         'sticky top-0 h-screen z-30 hidden md:flex flex-col border-r bg-white dark:bg-[#09090b] border-slate-200 dark:border-white/10 transition-all duration-300 select-none shrink-0',
-        isSidebarCollapsed ? 'w-18' : 'w-64'
+        isSidebarCollapsed ? 'w-[4.5rem]' : 'w-64'
       )}
     >
-      {/* Brand Header */}
       <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200 dark:border-white/10">
         <div className="flex items-center gap-3 overflow-hidden">
           <BrandLogo className="w-8 h-8 rounded-lg shadow-md" />
@@ -100,28 +105,39 @@ export const Sidebar: React.FC = () => {
         </button>
       </div>
 
-      {/* Role Profile Badge & Quick Selector */}
       {!isSidebarCollapsed && (
         <div className="p-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]">
           <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5 px-1">
-            Visão de Perfil Ativa
+            Sessão
           </div>
-          <div className="relative">
-            <select
-              value={activeRole}
-              onChange={(e) => setActiveRole(e.target.value as any)}
-              className="w-full text-xs font-medium py-1.5 px-2.5 rounded-md bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 cursor-pointer hover:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="admin" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-slate-100">👨‍💼 Administrador Master</option>
-              <option value="empresa" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-slate-100">🏢 Empresa / Distribuidor</option>
-              <option value="motorista" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-slate-100">🚗 Motorista (Gabriel Silva)</option>
-              <option value="cliente" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-slate-100">👤 Cliente (Lucas Santos)</option>
-            </select>
+          <div className={`mb-2 px-2.5 py-1.5 rounded-md border text-xs font-semibold ${ROLE_LABELS[activeRole].color}`}>
+            {profile.name}
+            <div className="text-[10px] font-medium opacity-80">{profile.badge}</div>
           </div>
+          {availableRoles.length > 1 && (
+            <div className="space-y-1" role="listbox" aria-label="Papel da sessão">
+              {availableRoles.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  role="option"
+                  aria-selected={activeRole === role}
+                  onClick={() => setActiveRole(role)}
+                  className={cn(
+                    'w-full text-left text-xs font-medium py-1.5 px-2.5 rounded-md border transition-colors',
+                    activeRole === role
+                      ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30 font-semibold'
+                      : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-indigo-500/40'
+                  )}
+                >
+                  {ROLE_LABELS[role].label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Navigation Links */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           // If flag exists and is disabled
@@ -159,7 +175,6 @@ export const Sidebar: React.FC = () => {
                 </span>
               )}
 
-              {/* Tooltip on collapsed hover */}
               {isSidebarCollapsed && (
                 <div className="absolute left-full ml-2 px-2.5 py-1 bg-white dark:bg-[#121215] text-slate-900 dark:text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 border border-slate-200 dark:border-white/10 shadow-xl">
                   {item.label}
@@ -170,7 +185,6 @@ export const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* Financial Processing Indicator at Bottom */}
       <div className="p-3 border-t border-white/10 bg-white/[0.02] space-y-2">
         <NavLink
           to="/configuracoes"
@@ -198,6 +212,15 @@ export const Sidebar: React.FC = () => {
             </div>
           )}
         </NavLink>
+
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          className="w-full flex items-center gap-2.5 p-2 rounded-md border border-transparent hover:border-rose-500/30 hover:bg-rose-500/10 text-xs text-slate-500 hover:text-rose-400 transition-all"
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          {!isSidebarCollapsed && <span className="font-semibold">{t.nav.logout}</span>}
+        </button>
 
         {!isSidebarCollapsed && (
           <div className="pt-1 text-[10px] text-center text-slate-500">

@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Building2, Car, DollarSign, Mail, Phone, Users } from 'lucide-react';
 import { formatBRL } from '../lib/utils';
 import { useAppStore } from '../store/useAppStore';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
+import { PageContainer } from '../components/layout/PageContainer';
 import { Company } from '../types';
 
 export const EmpresasView: React.FC = () => {
@@ -11,20 +12,9 @@ export const EmpresasView: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-300">
-      <SEOHead
-        title="Frotas Corporativas & Empresas Distribuidoras"
-        description="Gestão de empresas parceiras, frotas terceirizadas e planos corporativos. Acompanhamento de comissões por CNPJ e volumes de chamadas agrupados."
-        keywords={['gestão de frotas corporativas', 'empresas de logística', 'plano enterprise transporte', 'split por CNPJ']}
-        category="Módulo de Empresas SaaS"
-        jsonLdSchema={{
-          '@type': 'Table',
-          'name': 'Empresas & Frotas Cadastradas',
-          'about': 'Lista de empresas parceiras e métricas de desempenho corporativo.',
-        }}
-      />
+    <PageContainer>
+      <PageSEO page="empresas" />
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -39,7 +29,6 @@ export const EmpresasView: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid of Companies */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {companies.map((comp) => (
           <div
@@ -90,7 +79,6 @@ export const EmpresasView: React.FC = () => {
         ))}
       </div>
 
-      {/* Collaborators Modal */}
       {selectedCompany && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-4 text-xs">
@@ -117,8 +105,7 @@ export const EmpresasView: React.FC = () => {
         </div>
       )}
 
-      {/* Global Footer */}
       <Footer />
-    </div>
+    </PageContainer>
   );
 };

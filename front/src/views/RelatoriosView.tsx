@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { BarChart3, Download, FileSpreadsheet, FileText, Filter, CheckCircle2 } from 'lucide-react';
+import { BarChart3, Download, FileSpreadsheet, FileText, CheckCircle2 } from 'lucide-react';
 import { downloadCSV, formatBRL } from '../lib/utils';
 import { useAppStore } from '../store/useAppStore';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
+import { PageContainer } from '../components/layout/PageContainer';
 
 export const RelatoriosView: React.FC = () => {
-  const { rides, drivers, clients, companies } = useAppStore();
+  const { rides, drivers, clients } = useAppStore();
   const [reportType, setReportType] = useState('receita_faturamento');
   const [downloadSuccess, setDownloadSuccess] = useState(false);
 
@@ -54,20 +55,9 @@ export const RelatoriosView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-300">
-      <SEOHead
-        title="Central de Relatórios & Business Intelligence"
-        description="Geração e exportação de relatórios gerenciais CSV. Análise de faturamento bruto, margens de lucro, comissões de parceiros e produtividade da frota."
-        keywords={['relatórios de frota', 'business intelligence transporte', 'exportação CSV faturamento']}
-        category="Módulo de Relatórios SaaS"
-        jsonLdSchema={{
-          '@type': 'WebPage',
-          'name': 'Central de Exportação de Relatórios de Transportes',
-          'about': 'Ferramenta de exportação de dados analíticos em lote para contabilidade e auditoria.',
-        }}
-      />
+    <PageContainer>
+      <PageSEO page="relatorios" />
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -79,7 +69,6 @@ export const RelatoriosView: React.FC = () => {
         </div>
       </div>
 
-      {/* Report Builder Controls */}
       <div className="p-6 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-5">
         <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
           Selecione o Modelo de Relatório para Exportação
@@ -159,8 +148,7 @@ export const RelatoriosView: React.FC = () => {
         </div>
       </div>
 
-      {/* Global Footer */}
       <Footer />
-    </div>
+    </PageContainer>
   );
 };

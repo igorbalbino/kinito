@@ -5,7 +5,7 @@ import os from 'os';
 import path from 'path';
 
 test('assertSafeSessionId accepts numeric ids only', async () => {
-  process.env.WHATSAPP_SESSIONS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'medflow-session-'));
+  process.env.WHATSAPP_SESSIONS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'kinito-session-'));
   const { assertSafeSessionId, resolveSessionPath } = await import('../src/secure-session-store.js');
 
   assert.equal(assertSafeSessionId('42'), '42');
@@ -15,7 +15,7 @@ test('assertSafeSessionId accepts numeric ids only', async () => {
 });
 
 test('useSecureMultiFileAuthState encrypts creds when key is configured', async () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'medflow-session-'));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kinito-session-'));
   process.env.WHATSAPP_SESSIONS_DIR = tempRoot;
   process.env.WHATSAPP_SESSION_ENCRYPTION_KEY = 'a'.repeat(64);
 
@@ -40,7 +40,7 @@ test('useSecureMultiFileAuthState encrypts creds when key is configured', async 
 });
 
 test('ensureAuthSchema wipes legacy session data and writes schema v2 meta', async () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'medflow-session-'));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kinito-session-'));
   process.env.WHATSAPP_SESSIONS_DIR = tempRoot;
 
   const {

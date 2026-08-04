@@ -12,6 +12,7 @@ import {
   setApiCompanyId,
   WhatsAppStatus,
 } from '../../lib/api';
+import { SafeSelect } from '../common/SafeSelect';
 
 function statusLabel(wa: WhatsAppStatus | null): string {
   if (!wa) return '—';
@@ -152,7 +153,7 @@ export const WhatsAppConnectPanel: React.FC = () => {
 
       {isApiConfigured() && !getApiToken() && (
         <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
-          Faça login com a API ativa (e-mail/senha do seed, ex. empresa1@kinito.test / password) para conectar o WhatsApp.
+          Faça login com a API ativa para conectar o WhatsApp.
         </p>
       )}
 
@@ -162,21 +163,20 @@ export const WhatsAppConnectPanel: React.FC = () => {
             <label className="block space-y-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Empresa</span>
               {companies.length > 0 ? (
-                <select
-                  value={companyId ?? ''}
-                  onChange={(e) => {
-                    const id = Number(e.target.value);
+                <SafeSelect
+                  value={String(companyId ?? '')}
+                  onChange={(v) => {
+                    const id = Number(v);
                     setCompanyId(id);
                     setApiCompanyId(id);
                   }}
-                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2.5 text-xs text-slate-900 dark:text-slate-100"
-                >
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} (#{c.id})
-                    </option>
-                  ))}
-                </select>
+                  sanitizeLabels
+                  label="Empresa"
+                  options={companies.map((c) => ({
+                    value: String(c.id),
+                    label: `${c.name} (#${c.id})`,
+                  }))}
+                />
               ) : (
                 <input
                   type="number"

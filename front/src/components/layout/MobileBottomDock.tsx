@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Car, Plus, DollarSign, Menu, Hand } from 'lucide-react';
+import { LayoutDashboard, Car, Plus, DollarSign, Menu } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
 
@@ -19,9 +19,9 @@ export const MobileBottomDock: React.FC = () => {
   const navItems = [
     {
       label: 'Início',
-      path: '/',
+      path: '/dashboard',
       icon: LayoutDashboard,
-      active: location.pathname === '/',
+      active: location.pathname === '/dashboard',
     },
     {
       label: 'Corridas',
@@ -40,13 +40,11 @@ export const MobileBottomDock: React.FC = () => {
 
   return (
     <>
-      {/* Mobile Bottom Dock (Only on mobile < md) */}
       <nav
         id="mobile-bottom-dock"
         className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-[#0a0a0d]/95 backdrop-blur-xl border-t border-white/10 px-3 py-1.5 shadow-[0_-8px_30px_rgba(0,0,0,0.8)] select-none"
       >
         <div className="flex items-center justify-between max-w-md mx-auto relative h-14">
-          {/* Item 1: Dashboard */}
           <NavLink
             to="/dashboard"
             className={({ isActive }) =>
@@ -60,7 +58,6 @@ export const MobileBottomDock: React.FC = () => {
             <span className="text-[10px] tracking-tight">Painel</span>
           </NavLink>
 
-          {/* Item 2: Corridas */}
           <NavLink
             to="/corridas"
             className={({ isActive }) =>
@@ -81,7 +78,6 @@ export const MobileBottomDock: React.FC = () => {
             <span className="text-[10px] tracking-tight">Corridas</span>
           </NavLink>
 
-          {/* Center Prominent Primary Thumb Action: + Nova Corrida */}
           <div className="flex-1 flex items-center justify-center">
             <button
               onClick={() => setNewRideModalOpen(true)}
@@ -96,7 +92,6 @@ export const MobileBottomDock: React.FC = () => {
             </button>
           </div>
 
-          {/* Item 4: Financeiro */}
           <NavLink
             to="/financeiro"
             className={({ isActive }) =>
@@ -110,7 +105,6 @@ export const MobileBottomDock: React.FC = () => {
             <span className="text-[10px] tracking-tight">Financeiro</span>
           </NavLink>
 
-          {/* Item 5: Menu / Ergonomia Drawer Trigger */}
           <button
             onClick={() => setQuickActionSheetOpen(!isQuickActionSheetOpen)}
             className={cn(

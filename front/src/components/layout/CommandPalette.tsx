@@ -24,7 +24,6 @@ export const CommandPalette: React.FC = () => {
 
   const [query, setQuery] = useState('');
 
-  // Shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -66,7 +65,6 @@ export const CommandPalette: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-zinc-950/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-        {/* Search Input Bar */}
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-3">
           <Search className="w-5 h-5 text-zinc-400 shrink-0" />
           <input
@@ -85,9 +83,7 @@ export const CommandPalette: React.FC = () => {
           </button>
         </div>
 
-        {/* Results Body */}
         <div className="max-h-96 overflow-y-auto p-3 space-y-4 text-xs">
-          {/* Rides */}
           {filteredRides.length > 0 && (
             <div>
               <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 mb-1.5 flex items-center gap-1.5">
@@ -122,7 +118,6 @@ export const CommandPalette: React.FC = () => {
             </div>
           )}
 
-          {/* Drivers */}
           {filteredDrivers.length > 0 && (
             <div>
               <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 mb-1.5 flex items-center gap-1.5">
@@ -155,7 +150,6 @@ export const CommandPalette: React.FC = () => {
             </div>
           )}
 
-          {/* Clients */}
           {filteredClients.length > 0 && (
             <div>
               <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 mb-1.5 flex items-center gap-1.5">
@@ -187,7 +181,6 @@ export const CommandPalette: React.FC = () => {
             </div>
           )}
 
-          {/* Companies */}
           {filteredCompanies.length > 0 && (
             <div>
               <div className="text-[10px] uppercase font-bold text-zinc-400 px-2 mb-1.5 flex items-center gap-1.5">
@@ -220,7 +213,6 @@ export const CommandPalette: React.FC = () => {
           )}
         </div>
 
-        {/* Footer info */}
         <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 text-[11px] text-zinc-400 flex items-center justify-between">
           <span>Pressione <kbd className="font-mono bg-zinc-200 dark:bg-zinc-800 px-1 rounded">ESC</kbd> para sair</span>
           <span>Pesquisa Global em Tempo Real</span>

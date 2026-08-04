@@ -1,43 +1,52 @@
 import React, { useState } from 'react';
-import { KeyRound, Shield, User, CheckCircle2 } from 'lucide-react';
+import { KeyRound, Shield, CheckCircle2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
+import { PageContainer } from '../components/layout/PageContainer';
+import { sessionDisplayProfile } from '../lib/sessionProfile';
+import { changePassword, isApiConfigured, getApiToken } from '../lib/api';
 
 export const PerfilView: React.FC = () => {
   const { activeRole } = useAppStore();
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [pwdError, setPwdError] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const roleProfiles = {
-    admin: { name: 'Administrador Master', email: 'admin@kinito.test', roleTitle: 'Administrador do Sistema' },
-    empresa: { name: 'Veloce Logística & Transp', email: 'contato@velocelog.com.br', roleTitle: 'Gestor de Frota Distribuidora' },
-    motorista: { name: 'Gabriel Silva', email: 'gabriel.silva@motorista.com', roleTitle: 'Motorista Parceiro' },
-    cliente: { name: 'Lucas Santos', email: 'lucas.santos@gmail.com', roleTitle: 'Cliente Corporativo VIP' },
-  };
+  const profile = sessionDisplayProfile(activeRole);
 
-  const profile = roleProfiles[activeRole];
-
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPwdError(null);
+
+    if (newPassword || confirmPassword || currentPassword) {
+      if (newPassword !== confirmPassword) {
+        setPwdError('A confirmação de senha não confere.');
+        return;
+      }
+      if (isApiConfigured() && getApiToken()) {
+        try {
+          await changePassword(currentPassword, newPassword);
+        } catch (err) {
+          setPwdError(err instanceof Error ? err.message : 'Falha ao alterar senha');
+          return;
+        }
+      }
+    }
+
     setSavedSuccess(true);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-4xl animate-in fade-in duration-300">
-      <SEOHead
-        title="Perfil do Usuário & Configurações da Conta"
-        description="Gestão de dados pessoais do perfil ativo, atualização de e-mail, foto e chave de segurança para acesso à plataforma Kinito."
-        keywords={['perfil de usuário', 'segurança de acesso', 'credenciais kinito']}
-        category="Módulo de Perfil SaaS"
-        jsonLdSchema={{
-          '@type': 'WebPage',
-          'name': 'Perfil de Usuário Autenticado',
-          'about': 'Configurações de conta e segurança do operador ou motorista.',
-        }}
-      />
+    <PageContainer narrow>
+      <PageSEO page="perfil" />
 
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
           Meu Perfil & Configurações de Segurança
@@ -47,7 +56,7 @@ export const PerfilView: React.FC = () => {
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="p-6 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-6 text-xs">
+      <form onSubmit={handleSave} autoComplete="off" className="p-6 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-6 text-xs">
         <div className="flex items-center gap-4 pb-6 border-b border-zinc-100 dark:border-zinc-800">
           <div className="w-16 h-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xl uppercase shadow-md">
             {profile.name.slice(0, 2)}
@@ -66,6 +75,8 @@ export const PerfilView: React.FC = () => {
             <label className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">Nome de Exibição</label>
             <input
               type="text"
+              name="display_name"
+              autoComplete="off"
               defaultValue={profile.name}
               className="w-full mt-1 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold"
             />
@@ -75,6 +86,8 @@ export const PerfilView: React.FC = () => {
             <label className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">Endereço de E-mail</label>
             <input
               type="email"
+              name="display_email"
+              autoComplete="off"
               defaultValue={profile.email}
               className="w-full mt-1 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold"
             />
@@ -86,11 +99,29 @@ export const PerfilView: React.FC = () => {
             <KeyRound className="w-4 h-4 text-indigo-500" /> Alterar Senha de Acesso
           </h4>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {pwdError && <p className="text-xs text-rose-500 font-medium">{pwdError}</p>}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">Senha Atual</label>
+              <input
+                type="password"
+                name="kinito_pwd_current"
+                autoComplete="off"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full mt-1 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-xs"
+              />
+            </div>
             <div>
               <label className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">Nova Senha</label>
               <input
                 type="password"
+                name="kinito_pwd_new"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••••••"
                 className="w-full mt-1 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-xs"
               />
@@ -99,6 +130,10 @@ export const PerfilView: React.FC = () => {
               <label className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">Confirmar Nova Senha</label>
               <input
                 type="password"
+                name="kinito_pwd_confirm"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••••••"
                 className="w-full mt-1 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-xs"
               />
@@ -108,7 +143,7 @@ export const PerfilView: React.FC = () => {
 
         <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2 text-zinc-500">
-            <Shield className="w-4 h-4 text-emerald-500" /> Autenticação 2FA Habilitada
+            <Shield className="w-4 h-4 text-emerald-500" /> Conta autenticada via API
           </div>
 
           <div className="flex items-center gap-3">
@@ -127,8 +162,7 @@ export const PerfilView: React.FC = () => {
         </div>
       </form>
 
-      {/* Global Footer */}
       <Footer />
-    </div>
+    </PageContainer>
   );
 };

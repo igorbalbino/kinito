@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Building2, CreditCard, ShieldCheck, User, UserCheck, Wallet } from 'lucide-react';
+import { Building2, CreditCard, ShieldCheck, User, UserCheck, Wallet } from 'lucide-react';
 import { formatBRL, formatPercent } from '../../lib/utils';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -19,12 +19,12 @@ export const StripeFlowTimeline: React.FC<StripeFlowTimelineProps> = ({ grossVal
   const driverNet = parseFloat((grossValue - stripeFee - platformFee - companyFee).toFixed(2));
 
   return (
-    <div className="p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CreditCard className="w-5 h-5 text-indigo-500" />
-          <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
-            Fluxo de Distribuição Financeira {financialMode === 'stripe' ? '(Stripe Connect Split)' : '(Calculado Manualmente)'}
+    <div className="p-4 sm:p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-5 overflow-hidden w-full min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <CreditCard className="w-5 h-5 text-indigo-500 shrink-0" />
+          <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+            Fluxo financeiro {financialMode === 'stripe' ? '(Stripe)' : '(manual)'}
           </h3>
         </div>
         {financialMode === 'stripe' ? (
@@ -39,9 +39,7 @@ export const StripeFlowTimeline: React.FC<StripeFlowTimelineProps> = ({ grossVal
         )}
       </div>
 
-      {/* Flow Nodes */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 relative">
-        {/* Node 1: Cliente */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 relative min-w-0">
         <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 space-y-1.5 text-center">
           <div className="w-8 h-8 mx-auto rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center">
             <User className="w-4 h-4" />
@@ -51,7 +49,6 @@ export const StripeFlowTimeline: React.FC<StripeFlowTimelineProps> = ({ grossVal
           <div className="text-[10px] text-zinc-400">Valor Bruto</div>
         </div>
 
-        {/* Node 2: Stripe Gateway */}
         <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 space-y-1.5 text-center">
           <div className="w-8 h-8 mx-auto rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
             <CreditCard className="w-4 h-4" />
@@ -63,7 +60,6 @@ export const StripeFlowTimeline: React.FC<StripeFlowTimelineProps> = ({ grossVal
           <div className="text-[10px] text-zinc-400">Taxa Processamento</div>
         </div>
 
-        {/* Node 3: Plataforma */}
         <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 space-y-1.5 text-center">
           <div className="w-8 h-8 mx-auto rounded-full bg-purple-500/10 text-purple-500 flex items-center justify-center">
             <Building2 className="w-4 h-4" />
@@ -75,7 +71,6 @@ export const StripeFlowTimeline: React.FC<StripeFlowTimelineProps> = ({ grossVal
           <div className="text-[10px] text-zinc-400">Comissão ({formatPercent(platformRate)})</div>
         </div>
 
-        {/* Node 4: Empresa Distribuidora */}
         <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 space-y-1.5 text-center">
           <div className="w-8 h-8 mx-auto rounded-full bg-sky-500/10 text-sky-500 flex items-center justify-center">
             <UserCheck className="w-4 h-4" />
@@ -87,8 +82,7 @@ export const StripeFlowTimeline: React.FC<StripeFlowTimelineProps> = ({ grossVal
           <div className="text-[10px] text-zinc-400">Comissão ({formatPercent(companyRate)})</div>
         </div>
 
-        {/* Node 5: Motorista */}
-        <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/10 space-y-1.5 text-center">
+        <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/10 space-y-1.5 text-center sm:col-span-2 xl:col-span-1">
           <div className="w-8 h-8 mx-auto rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
             <Wallet className="w-4 h-4" />
           </div>
@@ -100,7 +94,6 @@ export const StripeFlowTimeline: React.FC<StripeFlowTimelineProps> = ({ grossVal
         </div>
       </div>
 
-      {/* Breakdown Bar */}
       <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
         <div className="flex justify-between text-xs font-medium text-zinc-600 dark:text-zinc-400">
           <span>Detalhamento do Split da Corrida</span>

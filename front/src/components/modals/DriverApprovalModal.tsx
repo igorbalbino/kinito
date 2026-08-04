@@ -1,7 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, FileCheck, ShieldAlert, UserCheck, X, XCircle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Driver } from '../../types';
+import {
+  approveDriverApi,
+  blockDriverApi,
+  getApiCompanyId,
+} from '../../lib/api';
+import { normalizeDriver } from '../../lib/normalize';
+import { unwrapResource } from '../../lib/sessionProfile';
 
 interface DriverApprovalModalProps {
   driver: Driver | null;
@@ -9,9 +16,45 @@ interface DriverApprovalModalProps {
 }
 
 export const DriverApprovalModal: React.FC<DriverApprovalModalProps> = ({ driver, onClose }) => {
-  const { updateDriverDocument, updateDriverStatus } = useAppStore();
+  const { updateDriverDocument, upsertDriver, selectedCompanyId } = useAppStore();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!driver) return null;
+
+  const companyId = getApiCompanyId() || Number(selectedCompanyId || driver.companyId || 0) || 0;
+
+  const handleBlock = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await blockDriverApi(driver.id);
+      upsertDriver(normalizeDriver(unwrapResource(res)));
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao bloquear');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    setError(null);
+    if (!companyId) {
+      setError('Selecione uma empresa para vincular o motorista.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await approveDriverApi(driver.id, companyId);
+      upsertDriver(normalizeDriver(unwrapResource(res)));
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao aprovar');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div
@@ -24,10 +67,8 @@ export const DriverApprovalModal: React.FC<DriverApprovalModalProps> = ({ driver
         className="w-full max-w-2xl bg-[#121215] border border-white/10 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in slide-in-from-bottom duration-300"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Tactile Handle for Mobile */}
         <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mt-3 sm:hidden" />
 
-        {/* Header */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
           <div className="flex items-center gap-3">
             <img src={driver.avatar} alt={driver.name} className="w-10 h-10 rounded-full bg-white/10 border border-white/10" />
@@ -41,6 +82,7 @@ export const DriverApprovalModal: React.FC<DriverApprovalModalProps> = ({ driver
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors active:scale-90"
             aria-label="Fechar"
@@ -49,15 +91,16 @@ export const DriverApprovalModal: React.FC<DriverApprovalModalProps> = ({ driver
           </button>
         </div>
 
-        {/* Documents list */}
         <div className="p-6 space-y-4 text-xs overflow-y-auto">
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 shrink-0" />
-            <span>Todos os 4 documentos obrigatórios devem estar aprovados para liberar o cadastro do motorista na frota.</span>
+            <span>Revise a documentação e aprove ou bloqueie o motorista na frota.</span>
           </div>
 
+          {error && <p className="text-rose-400 font-medium">{error}</p>}
+
           <div className="space-y-2">
-            {driver.documents.map((doc) => (
+            {(driver.documents?.length ? driver.documents : []).map((doc) => (
               <div
                 key={doc.id}
                 className="p-3.5 rounded-xl border border-white/10 bg-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
@@ -74,6 +117,7 @@ export const DriverApprovalModal: React.FC<DriverApprovalModalProps> = ({ driver
 
                 <div className="flex items-center gap-2 self-end sm:self-auto">
                   <button
+                    type="button"
                     onClick={() => updateDriverDocument(driver.id, doc.id, 'rejeitado')}
                     className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-90 min-h-[40px] ${
                       doc.status === 'rejeitado'
@@ -84,6 +128,7 @@ export const DriverApprovalModal: React.FC<DriverApprovalModalProps> = ({ driver
                     <XCircle className="w-4 h-4" /> Rejeitar
                   </button>
                   <button
+                    type="button"
                     onClick={() => updateDriverDocument(driver.id, doc.id, 'aprovado')}
                     className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-90 min-h-[40px] ${
                       doc.status === 'aprovado'
@@ -96,25 +141,26 @@ export const DriverApprovalModal: React.FC<DriverApprovalModalProps> = ({ driver
                 </div>
               </div>
             ))}
+            {!driver.documents?.length && (
+              <p className="text-slate-400">Nenhum documento listado — você ainda pode aprovar ou bloquear o motorista.</p>
+            )}
           </div>
 
           <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
             <button
-              onClick={() => {
-                updateDriverStatus(driver.id, 'bloqueado');
-                onClose();
-              }}
-              className="px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 font-bold hover:bg-rose-500/20 active:scale-95 transition-all min-h-[48px]"
+              type="button"
+              disabled={busy}
+              onClick={() => void handleBlock()}
+              className="px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 font-bold hover:bg-rose-500/20 active:scale-95 transition-all min-h-[48px] disabled:opacity-50"
             >
               Bloquear Motorista
             </button>
 
             <button
-              onClick={() => {
-                updateDriverStatus(driver.id, 'ativo');
-                onClose();
-              }}
-              className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-2 active:scale-95 transition-all min-h-[48px]"
+              type="button"
+              disabled={busy}
+              onClick={() => void handleApprove()}
+              className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-2 active:scale-95 transition-all min-h-[48px] disabled:opacity-50"
             >
               <UserCheck className="w-4 h-4" /> Aprovar e Liberar Motorista
             </button>

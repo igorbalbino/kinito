@@ -12,6 +12,7 @@ import {
   subscribeCompany,
   SubscriptionStatusPayload,
 } from '../../lib/api';
+import { SafeSelect } from '../common/SafeSelect';
 
 export const PlanBillingPanel: React.FC = () => {
   const [companyId, setCompanyId] = useState<number | null>(() => getApiCompanyId());
@@ -101,21 +102,21 @@ export const PlanBillingPanel: React.FC = () => {
       </div>
 
       {companies.length > 1 && (
-        <select
-          value={companyId ?? ''}
-          onChange={(e) => {
-            const id = Number(e.target.value);
+        <SafeSelect
+          className="w-full sm:w-72"
+          value={String(companyId ?? '')}
+          onChange={(v) => {
+            const id = Number(v);
             setCompanyId(id);
             setApiCompanyId(id);
           }}
-          className="w-full sm:w-72 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2 text-xs"
-        >
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+          sanitizeLabels
+          label="Empresa"
+          options={companies.map((c) => ({
+            value: String(c.id),
+            label: c.name,
+          }))}
+        />
       )}
 
       {!hasAccess && (

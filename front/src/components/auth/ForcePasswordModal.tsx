@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Lock, Loader2 } from 'lucide-react';
 import { changePassword, getStoredApiUser, isApiConfigured } from '../../lib/api';
 
 export const ForcePasswordModal: React.FC = () => {
   const user = getStoredApiUser();
-  const [open, setOpen] = useState(() => Boolean(isApiConfigured() && user?.mustChangePassword));
+  const mustChange = Boolean(isApiConfigured() && user?.mustChangePassword);
+  const [open, setOpen] = useState(mustChange);
   const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOpen(mustChange);
+  }, [mustChange]);
 
   if (!open) return null;
 
@@ -23,6 +28,9 @@ export const ForcePasswordModal: React.FC = () => {
     setError(null);
     try {
       await changePassword(currentPassword, password);
+      setCurrentPassword('');
+      setPassword('');
+      setConfirm('');
       setOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao trocar senha');
@@ -32,9 +40,10 @@ export const ForcePasswordModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <form
         onSubmit={(e) => void submit(e)}
+        autoComplete="off"
         className="w-full max-w-md rounded-2xl border border-white/10 bg-[#121215] p-6 space-y-4 shadow-2xl"
       >
         <div className="flex items-center gap-3">
@@ -48,9 +57,11 @@ export const ForcePasswordModal: React.FC = () => {
         </div>
 
         <label className="block space-y-1">
-          <span className="text-[11px] font-bold text-slate-400 uppercase">Senha temporária</span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase">Senha atual / temporária</span>
           <input
             type="password"
+            name="kinito_pwd_current"
+            autoComplete="off"
             required
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
@@ -61,6 +72,8 @@ export const ForcePasswordModal: React.FC = () => {
           <span className="text-[11px] font-bold text-slate-400 uppercase">Nova senha</span>
           <input
             type="password"
+            name="kinito_pwd_new"
+            autoComplete="new-password"
             required
             minLength={8}
             value={password}
@@ -72,6 +85,8 @@ export const ForcePasswordModal: React.FC = () => {
           <span className="text-[11px] font-bold text-slate-400 uppercase">Confirmar nova senha</span>
           <input
             type="password"
+            name="kinito_pwd_confirm"
+            autoComplete="new-password"
             required
             minLength={8}
             value={confirm}

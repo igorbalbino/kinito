@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Car, MapPin, Navigation, X } from 'lucide-react';
+import { Car, MapPin, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { fetchProviders, getApiToken, isApiConfigured } from '../../lib/api';
+import { createRide, fetchProviders } from '../../lib/api';
+import { normalizeRide } from '../../lib/normalize';
+import { unwrapResource } from '../../lib/sessionProfile';
+import { SafeSelect } from '../common/SafeSelect';
 
 interface NewRideModalProps {
   isOpen?: boolean;
@@ -13,8 +16,7 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
     clients,
     companies,
     drivers,
-    addRide,
-    financialMode,
+    upsertRide,
     isNewRideModalOpen,
     setNewRideModalOpen,
   } = useAppStore();
@@ -22,7 +24,7 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
   const isModalOpen = propIsOpen !== undefined ? propIsOpen : isNewRideModalOpen;
 
   const handleClose = () => {
-    if (propOnClose) propOnClose();
+    propOnClose?.();
     setNewRideModalOpen(false);
   };
 
@@ -32,9 +34,15 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
   const [clientId, setClientId] = useState(clients[0]?.id || '');
   const [companyId, setCompanyId] = useState(companies[0]?.id || '');
   const [driverId, setDriverId] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [originAddr, setOriginAddr] = useState('');
+  const [destAddr, setDestAddr] = useState('');
+  const [city, setCity] = useState('');
+  const [distanceKm, setDistanceKm] = useState(10);
+  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix' | 'faturado' | 'dinheiro'>('pix');
 
   useEffect(() => {
-    if (!isModalOpen || !isApiConfigured() || !getApiToken()) return;
+    if (!isModalOpen) return;
     fetchProviders()
       .then((list) => {
         if (!list.length) return;
@@ -45,69 +53,30 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
       .catch(() => undefined);
   }, [isModalOpen]);
 
-  const [originAddr, setOriginAddr] = useState('Av. Paulista, 1000 - Bela Vista');
-  const [destAddr, setDestAddr] = useState('Rua Faria Lima, 1800 - Pinheiros');
-  const [city, setCity] = useState('São Paulo, SP');
-  const [distanceKm, setDistanceKm] = useState(12.5);
-  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix' | 'faturado' | 'dinheiro'>('credit_card');
-
   if (!isModalOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    try {
+      const payload: Record<string, unknown> = {
+        client_id: Number(clientId || clients[0]?.id),
+        company_id: Number(companyId),
+        origin: { address: originAddr, lat: 0, lng: 0, city, neighborhood: '' },
+        destination: { address: destAddr, lat: 0, lng: 0, city, neighborhood: '' },
+        distance_km: distanceKm,
+        payment_method: paymentMethod,
+      };
+      if (driverId) payload.driver_id = Number(driverId);
 
-    const selectedClient = clients.find((c) => c.id === clientId) || clients[0];
-    const selectedCompany =
-      companies.find((comp) => comp.id === companyId) ||
-      ({ id: companyId, name: providerOptions.find((p) => p.id === companyId)?.name || 'Fornecedor' } as (typeof companies)[0]);
-    const selectedDriver = drivers.find((d) => d.id === driverId);
-
-    const grossValue = parseFloat((12.50 + distanceKm * 3.40).toFixed(2));
-    const stripeFee = financialMode === 'stripe' ? parseFloat((grossValue * 0.039 + 0.50).toFixed(2)) : 0;
-    const platformCommission = parseFloat((grossValue * 0.15).toFixed(2));
-    const companyCut = parseFloat((grossValue * 0.10).toFixed(2));
-    const driverNet = parseFloat((grossValue - stripeFee - platformCommission - companyCut).toFixed(2));
-
-    addRide({
-      clientId: selectedClient.id,
-      clientName: selectedClient.name,
-      clientPhone: selectedClient.phone,
-      clientAvatar: selectedClient.avatar,
-      companyId: selectedCompany.id,
-      companyName: selectedCompany.name,
-      driverId: selectedDriver?.id,
-      driverName: selectedDriver?.name,
-      driverPhone: selectedDriver?.phone,
-      driverAvatar: selectedDriver?.avatar,
-      driverVehicle: selectedDriver ? `${selectedDriver.vehicleModel} (${selectedDriver.vehiclePlate})` : undefined,
-      origin: {
-        address: originAddr,
-        lat: -23.5505,
-        lng: -46.6333,
-        city,
-        neighborhood: 'Centro'
-      },
-      destination: {
-        address: destAddr,
-        lat: -23.5605,
-        lng: -46.6433,
-        city,
-        neighborhood: 'Pinheiros'
-      },
-      status: selectedDriver ? 'atribuida' : 'pendente',
-      distanceKm,
-      durationMin: Math.round(distanceKm * 2.2),
-      grossValue,
-      stripeFee,
-      platformCommission,
-      companyCut,
-      driverNet,
-      paymentMethod,
-      paymentStatus: 'pendente',
-      notes: 'Despacho tátil imediato via painel mobile/desktop'
-    });
-
-    handleClose();
+      const res = await createRide(payload);
+      upsertRide(normalizeRide(unwrapResource(res)));
+      handleClose();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Falha ao criar corrida');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -121,18 +90,16 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
         className="w-full max-w-xl bg-[#121215] border border-white/10 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in slide-in-from-bottom duration-300"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Tactile Handle for Mobile */}
         <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mt-3 sm:hidden" />
 
-        {/* Modal Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
               <Car className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-slate-100">Nova Corrida & Despacho</h2>
-              <p className="text-xs text-slate-400">Insira a rota para atribuir e calcular splits em tempo real</p>
+              <h2 className="text-base font-semibold text-slate-100">Nova Corrida</h2>
+              <p className="text-xs text-slate-400">Origem, destino e despacho</p>
             </div>
           </div>
           <button
@@ -144,47 +111,50 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
           </button>
         </div>
 
-        {/* Form Content */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs overflow-y-auto flex-1" autoComplete="off">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-medium text-slate-300">Cliente Solicitante</label>
-              <select
+              <label className="text-[11px] font-medium text-slate-300">Cliente</label>
+              <SafeSelect
+                className="mt-1.5"
+                label="Cliente"
                 value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                className="w-full mt-1.5 p-3 rounded-xl bg-white/5 border border-white/10 text-slate-100 font-medium focus:border-indigo-500 focus:outline-none min-h-[44px]"
-              >
-                {clients.slice(0, 20).map((c) => (
-                  <option key={c.id} value={c.id} className="bg-[#121215] text-slate-100">
-                    {c.name} ({c.email})
-                  </option>
-                ))}
-              </select>
+                onChange={setClientId}
+                sanitizeLabels
+                buttonClassName="bg-white/5 border-white/10 text-slate-100"
+                options={clients.slice(0, 20).map((c) => ({
+                  value: String(c.id),
+                  label: `${c.name} (${c.email})`,
+                }))}
+              />
             </div>
 
             <div>
-              <label className="text-[11px] font-medium text-slate-300">Empresa Responsável</label>
-              <select
+              <label className="text-[11px] font-medium text-slate-300">Empresa</label>
+              <SafeSelect
+                className="mt-1.5"
+                label="Empresa"
                 value={companyId}
-                onChange={(e) => setCompanyId(e.target.value)}
-                className="w-full mt-1.5 p-3 rounded-xl bg-white/5 border border-white/10 text-slate-100 font-medium focus:border-indigo-500 focus:outline-none min-h-[44px]"
-              >
-                {providerOptions.map((comp) => (
-                  <option key={comp.id} value={comp.id} className="bg-[#121215] text-slate-100">
-                    {comp.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setCompanyId}
+                sanitizeLabels
+                buttonClassName="bg-white/5 border-white/10 text-slate-100"
+                options={providerOptions.map((comp) => ({
+                  value: String(comp.id),
+                  label: comp.name,
+                }))}
+              />
             </div>
           </div>
 
           <div className="space-y-3">
             <div>
               <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-emerald-400" /> Endereço de Origem
+                <MapPin className="w-3.5 h-3.5 text-emerald-400" /> Origem
               </label>
               <input
                 type="text"
+                name="ride_origin"
+                autoComplete="off"
                 value={originAddr}
                 onChange={(e) => setOriginAddr(e.target.value)}
                 required
@@ -194,10 +164,12 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
 
             <div>
               <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-rose-400" /> Endereço de Destino
+                <MapPin className="w-3.5 h-3.5 text-rose-400" /> Destino
               </label>
               <input
                 type="text"
+                name="ride_destination"
+                autoComplete="off"
                 value={destAddr}
                 onChange={(e) => setDestAddr(e.target.value)}
                 required
@@ -211,6 +183,8 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
               <label className="text-[11px] font-medium text-slate-300">Cidade</label>
               <input
                 type="text"
+                name="ride_city"
+                autoComplete="off"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 className="w-full mt-1.5 p-3 rounded-xl bg-white/5 border border-white/10 text-slate-100 font-medium focus:border-indigo-500 focus:outline-none min-h-[44px]"
@@ -218,7 +192,7 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
             </div>
 
             <div>
-              <label className="text-[11px] font-medium text-slate-300">Distância Estimated (KM)</label>
+              <label className="text-[11px] font-medium text-slate-300">Distância (km)</label>
               <input
                 type="number"
                 step="0.1"
@@ -230,38 +204,43 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
 
             <div>
               <label className="text-[11px] font-medium text-slate-300">Pagamento</label>
-              <select
+              <SafeSelect
+                className="mt-1.5"
+                label="Pagamento"
                 value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value as any)}
-                className="w-full mt-1.5 p-3 rounded-xl bg-white/5 border border-white/10 text-slate-100 font-medium focus:border-indigo-500 focus:outline-none min-h-[44px]"
-              >
-                <option value="credit_card" className="bg-[#121215]">Cartão de Crédito (Stripe)</option>
-                <option value="pix" className="bg-[#121215]">PIX Instantâneo</option>
-                <option value="faturado" className="bg-[#121215]">Faturado Corporativo</option>
-                <option value="dinheiro" className="bg-[#121215]">Dinheiro</option>
-              </select>
+                onChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
+                buttonClassName="bg-white/5 border-white/10 text-slate-100"
+                options={[
+                  { value: 'credit_card', label: 'Cartão' },
+                  { value: 'pix', label: 'PIX' },
+                  { value: 'faturado', label: 'Faturado' },
+                  { value: 'dinheiro', label: 'Dinheiro' },
+                ]}
+              />
             </div>
           </div>
 
           <div>
-            <label className="text-[11px] font-medium text-slate-300">Atribuir Motorista Imediato (Opcional)</label>
-            <select
+            <label className="text-[11px] font-medium text-slate-300">Motorista (opcional)</label>
+            <SafeSelect
+              className="mt-1.5"
+              label="Motorista"
               value={driverId}
-              onChange={(e) => setDriverId(e.target.value)}
-              className="w-full mt-1.5 p-3 rounded-xl bg-white/5 border border-white/10 text-slate-100 font-medium focus:border-indigo-500 focus:outline-none min-h-[44px]"
-            >
-              <option value="" className="bg-[#121215]">Deixar Pendente (Atribuição Automática por Raio)</option>
-              {drivers
-                .filter((d) => d.status === 'ativo')
-                .map((d) => (
-                  <option key={d.id} value={d.id} className="bg-[#121215]">
-                    {d.name} • {d.vehicleModel} ({d.vehiclePlate})
-                  </option>
-                ))}
-            </select>
+              onChange={setDriverId}
+              sanitizeLabels
+              buttonClassName="bg-white/5 border-white/10 text-slate-100"
+              options={[
+                { value: '', label: 'Pendente' },
+                ...drivers
+                  .filter((d) => d.status === 'ativo')
+                  .map((d) => ({
+                    value: String(d.id),
+                    label: `${d.name} • ${d.vehicleModel} (${d.vehiclePlate})`,
+                  })),
+              ]}
+            />
           </div>
 
-          {/* Bottom Thumb Buttons */}
           <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3 sticky bottom-0 bg-[#121215]">
             <button
               type="button"
@@ -272,9 +251,10 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
             </button>
             <button
               type="submit"
-              className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-600/30 active:scale-95 transition-all min-h-[48px] flex items-center justify-center gap-2"
+              disabled={submitting}
+              className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-600/30 active:scale-95 transition-all min-h-[48px] flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              <span>Criar & Despachar Corrida</span>
+              {submitting ? 'Criando...' : 'Criar corrida'}
             </button>
           </div>
         </form>

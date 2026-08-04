@@ -11,6 +11,7 @@ use App\Models\Plan;
 use App\Models\User;
 use App\Services\Audit\AuditService;
 use App\Services\Subscription\SubscriptionLifecycleService;
+use App\Support\EnsureUserRoles;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -34,7 +35,7 @@ class CompanyService
                 'password' => $data['password'],
             ]);
 
-            $user->assignRole(UserRole::Empresa->value);
+            EnsureUserRoles::assign($user, UserRole::Empresa);
 
             $company = Company::query()->create([
                 'owner_user_id' => $user->id,

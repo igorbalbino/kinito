@@ -1,253 +1,166 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Building2, UserCheck, Users, ShieldCheck, Mail, Lock, User, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Lock, Mail, User, UserCheck, Users } from 'lucide-react';
 import { BrandLogo } from '../components/common/BrandLogo';
 import { SEOHead } from '../components/common/SEOHead';
-import { useAppStore } from '../store/useAppStore';
-import { UserRole } from '../types';
-import { useTranslation } from '../hooks/useTranslation';
 import { LanguageSelector } from '../components/common/LanguageSelector';
+import { useTranslation } from '../hooks/useTranslation';
+import { useAppStore } from '../store/useAppStore';
+import { apiRegisterPerson, isApiConfigured } from '../lib/api';
+import { roleFromApi } from '../lib/mappers';
+import { UserRole } from '../types';
 
 export const RegisterView: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { setActiveRole, addNotification } = useAppStore();
+  const { setActiveRole } = useAppStore();
+  const seo = t.seo.register;
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [companyName, setCompanyName] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('empresa');
-  const [agreedTerms, setAgreedTerms] = useState(true);
+  const [role, setRole] = useState<'cliente' | 'motorista'>('cliente');
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehiclePlate, setVehiclePlate] = useState('');
+  const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const roleOptions = [
-    { role: 'empresa' as UserRole, label: 'Empresa / Gestor de Frota', desc: 'Controle corridas, faturamento e repasses Stripe', icon: Building2 },
-    { role: 'motorista' as UserRole, label: 'Motorista Autônomo', desc: 'Envie documentos de CNH e receba repasses em conta', icon: UserCheck },
-    { role: 'cliente' as UserRole, label: 'Cliente Corporativo', desc: 'Solicite faturamentos e acompanhe suas viagens', icon: Users },
-  ];
-
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreedTerms) {
-      alert('Você precisa aceitar os termos de uso para criar uma conta.');
+    if (!isApiConfigured()) {
+      setError('Configure VITE_API_URL para cadastrar.');
       return;
     }
     setLoading(true);
-
-    setActiveRole(role);
-    addNotification({
-      title: 'Conta Criada com Sucesso',
-      message: `Bem-vindo(a) ao Kinito, ${name || 'Gestor'}! Sua conta foi ativada.`,
-      type: 'success',
-      category: 'sistema',
-    });
-
-    setTimeout(() => {
+    setError(null);
+    try {
+      const apiRole = role === 'motorista' ? 'MOTORISTA' : 'CLIENTE';
+      const { user } = await apiRegisterPerson({
+        name,
+        email,
+        phone: phone || undefined,
+        password,
+        password_confirmation: password,
+        role: apiRole,
+        vehicle_model: role === 'motorista' ? vehicleModel : undefined,
+        vehicle_plate: role === 'motorista' ? vehiclePlate : undefined,
+        city: role === 'motorista' ? city : undefined,
+      });
+      setActiveRole(roleFromApi(user.roles) as UserRole);
       navigate('/dashboard');
-    }, 400);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha no cadastro');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#09090b] text-slate-900 dark:text-slate-100 flex flex-col justify-between font-sans selection:bg-indigo-600 selection:text-white transition-colors duration-200">
-      <SEOHead
-        title="Cadastro & Nova Conta SaaS"
-        description="Crie sua conta no Kinito em menos de 1 minuto. Inicie o teste grátis com despacho, split financeiro e gestão de frotas."
-        keywords={['cadastro kinito', 'criar conta frota', 'registrar empresa de transporte']}
-        category="Cadastro SaaS"
-        jsonLdSchema={{
-          '@type': 'WebPage',
-          'name': 'Página de Cadastro de Nova Conta Kinito',
-          'about': 'Formulário de cadastro pré-renderizado para rápido onboarding de parceiros e frotas.',
-        }}
-        prerenderRoutes={['/', '/login', '/register', '/dashboard']}
-      />
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-[#09090b] text-slate-900 dark:text-slate-100 flex flex-col">
+      <SEOHead title={seo.title} description={seo.description} keywords={seo.keywords} category={seo.category} canonicalUrl="/register" />
 
-      {/* Header Bar */}
       <header className="p-4 sm:p-6 flex items-center justify-between max-w-7xl mx-auto w-full">
-        <Link to="/" className="flex items-center gap-3 group">
-          <BrandLogo className="w-10 h-10 shadow-lg group-hover:scale-105 transition-transform" />
-          <div>
-            <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-slate-100 block leading-none">
-              Kinito
-            </span>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Gestão de Corridas & Frota</span>
-          </div>
+        <Link to="/" className="flex items-center gap-3">
+          <BrandLogo className="w-10 h-10" />
+          <span className="font-extrabold text-lg">Kinito</span>
         </Link>
-
         <div className="flex items-center gap-3">
           <LanguageSelector variant="compact" />
-          <Link
-            to="/login"
-            className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-          >
-            {t.auth.hasAccount} {t.nav.login}
-            <ArrowRight className="w-3.5 h-3.5" />
+          <Link to="/login" className="text-xs font-bold text-indigo-500">
+            {t.nav.login}
           </Link>
         </div>
       </header>
 
-      {/* Main Register Form */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
-        <div className="w-full max-w-xl bg-white dark:bg-[#121215] border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-          <div className="text-center space-y-1.5">
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-              {t.auth.registerTitle}
-            </h1>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              {t.auth.registerSub}
-            </p>
+      <main className="flex-1 flex items-center justify-center p-4">
+        <form
+          onSubmit={(e) => void handleRegister(e)}
+          className="w-full max-w-md bg-white dark:bg-[#121215] border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 space-y-4 shadow-2xl"
+        >
+          <h1 className="text-2xl font-black text-center">{t.auth.registerTitle}</h1>
+          <p className="text-xs text-slate-500 text-center">{t.auth.registerSub}</p>
+
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { id: 'cliente' as const, label: 'Cliente', icon: Users },
+              { id: 'motorista' as const, label: 'Motorista', icon: UserCheck },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setRole(id)}
+                className={`p-3 rounded-xl border text-left text-xs flex items-center gap-2 ${
+                  role === id
+                    ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-500/15 font-bold'
+                    : 'border-slate-200 dark:border-white/10'
+                }`}
+              >
+                <Icon className="w-4 h-4 text-indigo-500" />
+                {label}
+              </button>
+            ))}
           </div>
 
-          <form onSubmit={handleRegister} className="space-y-4">
-            {/* Account Type Selector */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                Tipo de Perfil
+          <label className="block space-y-1 text-xs font-bold">
+            Nome
+            <div className="relative">
+              <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input required value={name} onChange={(e) => setName(e.target.value)} className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5" />
+            </div>
+          </label>
+          <label className="block space-y-1 text-xs font-bold">
+            E-mail
+            <div className="relative">
+              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5" />
+            </div>
+          </label>
+          <label className="block space-y-1 text-xs font-bold">
+            Telefone
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5" />
+          </label>
+          <label className="block space-y-1 text-xs font-bold">
+            Senha
+            <div className="relative">
+              <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="password" name="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5" />
+            </div>
+          </label>
+
+          {role === 'motorista' && (
+            <>
+              <label className="block space-y-1 text-xs font-bold">
+                Modelo do veículo
+                <input required value={vehicleModel} onChange={(e) => setVehicleModel(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5" />
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {roleOptions.map((opt) => {
-                  const Icon = opt.icon;
-                  const isSelected = role === opt.role;
-                  return (
-                    <button
-                      key={opt.role}
-                      type="button"
-                      onClick={() => setRole(opt.role)}
-                      className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between space-y-2 ${
-                        isSelected
-                          ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-600 text-indigo-700 dark:text-indigo-300 font-bold shadow-sm'
-                          : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 text-indigo-500" />
-                      <div>
-                        <div className="text-xs font-bold leading-tight">{opt.label}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal mt-0.5 leading-snug">
-                          {opt.desc}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
-                  Nome Completo
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Seu nome"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
-                  E-mail Profissional
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {role === 'empresa' && (
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
-                  Nome da Empresa / Frota
-                </label>
-                <div className="relative">
-                  <Building2 className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Ex: Veloce Transporte Express"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
-                Crie uma Senha
+              <label className="block space-y-1 text-xs font-bold">
+                Placa
+                <input required value={vehiclePlate} onChange={(e) => setVehiclePlate(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5" />
               </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Mínimo de 8 caracteres"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="pt-1">
-              <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-600 dark:text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={agreedTerms}
-                  onChange={(e) => setAgreedTerms(e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span>
-                  Concordo com os <a href="#" onClick={(e) => { e.preventDefault(); alert('Termos de Uso do Kinito'); }} className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">Termos de Serviço</a> e a Política de Privacidade.
-                </span>
+              <label className="block space-y-1 text-xs font-bold">
+                Cidade
+                <input required value={city} onChange={(e) => setCity(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5" />
               </label>
-            </div>
+            </>
+          )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm shadow-lg shadow-indigo-600/30 active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <span>Criando Conta...</span>
-              ) : (
-                <>
-                  <span>Concluir Cadastro e Acessar</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
+          {error && <p className="text-xs text-rose-500 bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-2">{error}</p>}
 
-          <div className="pt-2 border-t border-slate-200 dark:border-white/10 text-center text-xs text-slate-500">
-            Já possui cadastro?{' '}
-            <Link to="/login" className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
-              Fazer login
+          <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl bg-indigo-600 text-white font-extrabold text-sm flex items-center justify-center gap-2">
+            {loading ? 'Criando...' : 'Criar conta'}
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          <p className="text-center text-xs text-slate-500">
+            Empresa?{' '}
+            <Link to="/para-empresas" className="font-bold text-indigo-500">
+              Cadastro empresarial
             </Link>
-          </div>
-        </div>
+          </p>
+        </form>
       </main>
-
-      {/* Simple Footer */}
-      <footer className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">
-        Kinito © {new Date().getFullYear()} • Powered by <a href="https://creatioinc.com" target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">creatioinc.com</a>
-      </footer>
     </div>
   );
 };

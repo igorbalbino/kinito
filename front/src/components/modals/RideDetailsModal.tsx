@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
 import {
   AlertTriangle,
-  Building2,
-  Calendar,
   CheckCircle2,
-  Clock,
   CreditCard,
   MapPin,
   Navigation,
   Phone,
   ShieldCheck,
-  Star,
   User,
   UserCheck,
   X,
@@ -20,6 +16,10 @@ import { formatBRL, formatDate } from '../../lib/utils';
 import { useAppStore } from '../../store/useAppStore';
 import { Ride } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
+import { SafeSelect } from '../common/SafeSelect';
+import { rideAction } from '../../lib/api';
+import { normalizeRide } from '../../lib/normalize';
+import { unwrapResource } from '../../lib/sessionProfile';
 
 interface RideDetailsModalProps {
   ride: Ride | null;
@@ -27,25 +27,38 @@ interface RideDetailsModalProps {
 }
 
 export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClose }) => {
-  const {
-    financialMode,
-    updateRideStatus,
-    updateRideFinancials,
-    cancelRide,
-    drivers,
-  } = useAppStore();
+  const { financialMode, updateRideFinancials, upsertRide, drivers } = useAppStore();
 
   const [isEditingFinancials, setIsEditingFinancials] = useState(false);
   const [grossInput, setGrossInput] = useState(ride?.grossValue || 0);
   const [driverNetInput, setDriverNetInput] = useState(ride?.driverNet || 0);
   const [platformFeeInput, setPlatformFeeInput] = useState(ride?.platformCommission || 0);
-
   const [selectedNewDriverId, setSelectedNewDriverId] = useState('');
   const [isReassigning, setIsReassigning] = useState(false);
   const [cancelReasonInput, setCancelReasonInput] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   if (!ride) return null;
+
+  const runAction = async (
+    action: 'reassign' | 'cancel' | 'finish' | 'start',
+    body: Record<string, unknown> = {},
+    after?: () => void,
+  ) => {
+    setActionError(null);
+    setActionBusy(true);
+    try {
+      const res = await rideAction(ride.id, action, body);
+      upsertRide(normalizeRide(unwrapResource(res)));
+      after?.();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Falha na ação');
+    } finally {
+      setActionBusy(false);
+    }
+  };
 
   const handleSaveFinancials = () => {
     updateRideFinancials(ride.id, {
@@ -58,14 +71,19 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
 
   const handleReassign = () => {
     if (!selectedNewDriverId) return;
-    updateRideStatus(ride.id, 'atribuida', selectedNewDriverId);
-    setIsReassigning(false);
+    void runAction('reassign', { driver_id: Number(selectedNewDriverId) }, () => setIsReassigning(false));
   };
 
   const handleCancel = () => {
-    cancelRide(ride.id, cancelReasonInput || 'Cancelada manualmente via painel');
-    setIsCancelling(false);
+    void runAction(
+      'cancel',
+      { reason: cancelReasonInput || 'Cancelada via painel' },
+      () => setIsCancelling(false),
+    );
   };
+
+  const handleFinish = () => void runAction('finish');
+  const handleStart = () => void runAction('start');
 
   return (
     <div
@@ -78,10 +96,8 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
         className="w-full max-w-3xl bg-[#121215] border border-white/10 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh] animate-in slide-in-from-bottom duration-300"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Tactile Handle Bar for Mobile */}
         <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mt-3 sm:hidden" />
 
-        {/* Header */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
@@ -108,9 +124,7 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
           </button>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
-          {/* Simulated Vector Route Visualizer */}
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 text-white relative overflow-hidden space-y-4">
             <div className="absolute top-2 right-2 px-2 py-1 rounded bg-zinc-800/80 text-[10px] text-zinc-300 font-mono flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
@@ -129,7 +143,6 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                 </div>
               </div>
 
-              {/* Route Line */}
               <div className="ml-3 border-l-2 border-dashed border-indigo-500/60 h-6 my-1" />
 
               <div className="flex items-start gap-3">
@@ -150,9 +163,7 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
             </div>
           </div>
 
-          {/* Client & Driver Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Client Card */}
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 space-y-2">
               <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-blue-500" /> Cliente Solicitante
@@ -168,7 +179,6 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
               </div>
             </div>
 
-            {/* Driver Card */}
             <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 space-y-2">
               <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
@@ -186,23 +196,27 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
 
               {isReassigning ? (
                 <div className="space-y-2 pt-1">
-                  <select
+                  <SafeSelect
                     value={selectedNewDriverId}
-                    onChange={(e) => setSelectedNewDriverId(e.target.value)}
-                    className="w-full p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs text-zinc-900 dark:text-zinc-100"
-                  >
-                    <option value="">Selecione outro motorista disponível...</option>
-                    {drivers
-                      .filter((d) => d.status === 'ativo')
-                      .map((drv) => (
-                        <option key={drv.id} value={drv.id}>
-                          {drv.name} ({drv.vehicleModel} - {drv.vehiclePlate})
-                        </option>
-                      ))}
-                  </select>
+                    onChange={setSelectedNewDriverId}
+                    sanitizeLabels
+                    placeholder="Selecione outro motorista disponível..."
+                    label="Motorista"
+                    options={[
+                      { value: '', label: 'Selecione outro motorista disponível...' },
+                      ...drivers
+                        .filter((d) => d.status === 'ativo')
+                        .map((drv) => ({
+                          value: String(drv.id),
+                          label: `${drv.name} (${drv.vehicleModel} - ${drv.vehiclePlate})`,
+                        })),
+                    ]}
+                  />
                   <button
-                    onClick={handleReassign}
-                    className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition-colors"
+                    type="button"
+                    onClick={() => void handleReassign()}
+                    disabled={actionBusy || !selectedNewDriverId}
+                    className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition-colors disabled:opacity-50"
                   >
                     Confirmar Reatribuição
                   </button>
@@ -223,7 +237,6 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
             </div>
           </div>
 
-          {/* Financial Breakdown Panel */}
           <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4">
             <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
               <div className="flex items-center gap-2">
@@ -250,7 +263,6 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
               </div>
             </div>
 
-            {/* Mode Banner */}
             {financialMode === 'stripe' ? (
               <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[11px] flex items-center justify-between">
                 <span className="flex items-center gap-1.5 font-medium">
@@ -336,9 +348,11 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
             )}
           </div>
 
-          {/* Cancellation Control if active */}
           {ride.status !== 'concluida' && ride.status !== 'cancelada' && (
-            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
+              {actionError && (
+                <p className="text-xs text-rose-500 font-medium">{actionError}</p>
+              )}
               {isCancelling ? (
                 <div className="w-full space-y-2">
                   <input
@@ -350,35 +364,53 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                   />
                   <div className="flex gap-2 justify-end">
                     <button
+                      type="button"
                       onClick={() => setIsCancelling(false)}
                       className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                      disabled={actionBusy}
                     >
                       Voltar
                     </button>
                     <button
-                      onClick={handleCancel}
-                      className="px-3 py-1.5 rounded bg-rose-600 text-white font-semibold"
+                      type="button"
+                      onClick={() => void handleCancel()}
+                      className="px-3 py-1.5 rounded bg-rose-600 text-white font-semibold disabled:opacity-50"
+                      disabled={actionBusy}
                     >
                       Confirmar Cancelamento
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between w-full">
+                <div className="flex items-center justify-between w-full gap-2 flex-wrap">
                   <button
+                    type="button"
                     onClick={() => setIsCancelling(true)}
                     className="text-rose-600 dark:text-rose-400 font-semibold hover:underline flex items-center gap-1"
+                    disabled={actionBusy}
                   >
                     <XCircle className="w-4 h-4" /> Cancelar Corrida
                   </button>
-                  <button
-                    onClick={() => {
-                      updateRideStatus(ride.id, 'concluida');
-                    }}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors shadow-xs"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Concluir Corrida Manualmente
-                  </button>
+                  <div className="flex gap-2">
+                    {ride.status === 'atribuida' && (
+                      <button
+                        type="button"
+                        onClick={() => void handleStart()}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
+                        disabled={actionBusy}
+                      >
+                        Iniciar Corrida
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void handleFinish()}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
+                      disabled={actionBusy}
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Concluir Corrida
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

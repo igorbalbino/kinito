@@ -1,18 +1,8 @@
 import React, { useState } from 'react';
 import {
   AlertTriangle,
-  ArrowDownRight,
-  ArrowUpRight,
-  Building2,
-  CheckCircle2,
-  Clock,
-  CreditCard,
   Download,
-  Filter,
-  RefreshCw,
-  Send,
   ShieldCheck,
-  Zap,
 } from 'lucide-react';
 import { downloadCSV, formatBRL, formatDate } from '../lib/utils';
 import { useAppStore } from '../store/useAppStore';
@@ -20,8 +10,10 @@ import { ManualFinancialNotice } from '../components/common/ManualFinancialNotic
 import { MetricCard } from '../components/common/MetricCard';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { StripeFlowTimeline } from '../components/common/StripeFlowTimeline';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
+import { PageContainer } from '../components/layout/PageContainer';
+import { SafeSelect } from '../components/common/SafeSelect';
 
 export const FinanceiroView: React.FC = () => {
   const {
@@ -60,23 +52,11 @@ export const FinanceiroView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-300">
-      <SEOHead
-        title="Módulo Financeiro, Split Stripe & Extrato de Repasses"
-        description="Controle financeiro em tempo real com conciliação automática via Stripe Connect. Transações detalhadas de taxas de gateway, comissões de plataforma e saldo para motoristas e frotas."
-        keywords={['split de pagamento stripe', 'conciliação de corridas', 'extrato financeiro frota', 'repasses automatizados']}
-        category="Módulo Financeiro SaaS"
-        jsonLdSchema={{
-          '@type': 'Table',
-          'name': 'Extrato de Transações Financeiras e Split Stripe',
-          'about': 'Detalhamento de receita bruta, taxas Stripe, comissões e repasses líquidos.',
-        }}
-      />
+    <PageContainer>
+      <PageSEO page="financeiro" />
 
-      {/* Banner */}
       <ManualFinancialNotice />
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -109,7 +89,6 @@ export const FinanceiroView: React.FC = () => {
         </div>
       </div>
 
-      {/* Stripe Specific Badges Header in Stripe Mode */}
       {financialMode === 'stripe' ? (
         <div className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-900 dark:text-indigo-200 flex flex-wrap items-center gap-3 text-xs">
           <span className="font-bold flex items-center gap-1.5">
@@ -127,7 +106,6 @@ export const FinanceiroView: React.FC = () => {
         </div>
       )}
 
-      {/* Financial KPIs Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <MetricCard
           title="Valor Bruto Processado"
@@ -161,10 +139,8 @@ export const FinanceiroView: React.FC = () => {
         />
       </div>
 
-      {/* Visual Timeline Split */}
       <StripeFlowTimeline grossValue={250} />
 
-      {/* Transactions Extrato Table */}
       <div className="p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
@@ -177,22 +153,40 @@ export const FinanceiroView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <select
+            <SafeSelect
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-900 dark:text-zinc-100 font-medium"
-            >
-              <option value="todos">Todos os Tipos</option>
-              <option value="corrida">Corridas</option>
-              <option value="repasse">Repasses</option>
-              <option value="comissao">Comissões</option>
-              <option value="estorno">Estornos</option>
-            </select>
+              onChange={setFilterType}
+              label="Tipo"
+              buttonClassName="bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700"
+              options={[
+                { value: 'todos', label: 'Todos os Tipos' },
+                { value: 'corrida', label: 'Corridas' },
+                { value: 'repasse', label: 'Repasses' },
+                { value: 'comissao', label: 'Comissões' },
+                { value: 'estorno', label: 'Estornos' },
+              ]}
+            />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+          {filteredTx.map((tx) => (
+            <div key={tx.id} className="p-4 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono font-bold text-indigo-600 text-xs">{tx.code}</span>
+                <StatusBadge type="payment" status={financialMode === 'stripe' ? tx.status : 'pendente'} size="sm" />
+              </div>
+              <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{tx.description}</div>
+              <div className="text-[11px] text-zinc-500 truncate">{tx.sender} → {tx.recipient}</div>
+              <div className="flex justify-between text-xs pt-1">
+                <span className="font-bold">{formatBRL(tx.amount)}</span>
+                <span className="text-zinc-400">{formatDate(tx.createdAt)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-xs">
             <thead>
               <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 font-medium bg-zinc-50/50 dark:bg-zinc-900/50">
                 <th className="py-3 px-4">Código TX</th>
@@ -228,8 +222,7 @@ export const FinanceiroView: React.FC = () => {
         </div>
       </div>
 
-      {/* Global Footer */}
       <Footer />
-    </div>
+    </PageContainer>
   );
 };

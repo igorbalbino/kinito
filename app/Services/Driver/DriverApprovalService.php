@@ -11,6 +11,7 @@ use App\Models\DriverDocument;
 use App\Models\User;
 use App\Services\Audit\AuditService;
 use App\Services\Notification\NotificationService;
+use App\Support\EnsureUserRoles;
 use Illuminate\Support\Facades\DB;
 
 class DriverApprovalService
@@ -32,7 +33,7 @@ class DriverApprovalService
                 'phone' => $data['phone'] ?? null,
                 'password' => $data['password'],
             ]);
-            $user->assignRole(UserRole::Motorista->value);
+            EnsureUserRoles::assign($user, UserRole::Motorista);
 
             $driver = Driver::query()->create([
                 'user_id' => $user->id,

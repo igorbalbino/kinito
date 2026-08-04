@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Mail, Phone, Plus, Search, Star, UserPlus, Users } from 'lucide-react';
+import { Mail, Phone, Search, UserPlus } from 'lucide-react';
 import { formatBRL } from '../lib/utils';
 import { useAppStore } from '../store/useAppStore';
 import { ClientModal } from '../components/modals/ClientModal';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
+import { PageContainer } from '../components/layout/PageContainer';
 import { Client } from '../types';
 
 export const ClientesView: React.FC = () => {
@@ -21,20 +22,9 @@ export const ClientesView: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-300">
-      <SEOHead
-        title="Gestão de Clientes & Solicitantes Corporativos"
-        description="Cadastro e acompanhamento de clientes corporativos e individuais. Histórico de chamadas, gastos totais acumulados e endereços favoritos para despacho de corridas."
-        keywords={['gestão de clientes de frota', 'faturamento corporativo de corridas', 'clientes VIP transporte']}
-        category="Módulo de Clientes SaaS"
-        jsonLdSchema={{
-          '@type': 'Table',
-          'name': 'Diretório de Clientes Corporativos e Particulares',
-          'about': 'Lista de clientes com histórico de faturamento e preferências de transporte.',
-        }}
-      />
+    <PageContainer>
+      <PageSEO page="clientes" />
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -56,7 +46,6 @@ export const ClientesView: React.FC = () => {
         </button>
       </div>
 
-      {/* Search Toolbar */}
       <div className="p-4 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-400" />
@@ -70,10 +59,38 @@ export const ClientesView: React.FC = () => {
         </div>
       </div>
 
-      {/* Clients Table */}
-      <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+      <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden min-w-0">
+        <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+          {filteredClients.slice(0, 20).map((client) => (
+            <button
+              key={client.id}
+              type="button"
+              onClick={() => setSelectedClient(client)}
+              className="w-full text-left p-4 space-y-2 active:bg-zinc-50 dark:active:bg-zinc-800/40"
+            >
+              <div className="flex items-center gap-3">
+                <img src={client.avatar} alt="" className="w-9 h-9 rounded-full bg-zinc-200 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-xs text-zinc-900 dark:text-zinc-100 truncate">{client.name}</div>
+                  <div className="text-[11px] text-zinc-500 truncate">{client.email}</div>
+                </div>
+                <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  client.status === 'vip' ? 'bg-amber-500/10 text-amber-500' :
+                  client.status === 'ativo' ? 'bg-emerald-500/10 text-emerald-500' :
+                  'bg-rose-500/10 text-rose-500'
+                }`}>
+                  {client.status}
+                </span>
+              </div>
+              <div className="flex justify-between text-[11px] text-zinc-500">
+                <span>{client.totalRides} corridas</span>
+                <span className="font-bold text-emerald-600">{formatBRL(client.totalSpent)}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-xs">
             <thead>
               <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 font-medium bg-zinc-50/50 dark:bg-zinc-900/50">
                 <th className="py-3 px-4">Cliente</th>
@@ -132,10 +149,8 @@ export const ClientesView: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Registration */}
       <ClientModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
-      {/* Client Detail Drawer / Modal */}
       {selectedClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-4 text-xs">
@@ -173,8 +188,7 @@ export const ClientesView: React.FC = () => {
         </div>
       )}
 
-      {/* Global Footer */}
       <Footer />
-    </div>
+    </PageContainer>
   );
 };

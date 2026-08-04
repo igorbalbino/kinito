@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Webhook inbound do whatsapp-gateway.
- * Headers: X-Internal-Api-Key, X-Medflow-Timestamp, X-Medflow-Signature
+ * Headers: X-Internal-Api-Key, X-Kinito-Timestamp, X-Kinito-Signature
+ * (fallback legado: X-Medflow-*)
  * Payload user_id = company/session id
  */
 class WhatsAppWebhookController extends Controller
@@ -73,8 +74,14 @@ class WhatsAppWebhookController extends Controller
             return true;
         }
 
-        $timestamp = (string) $request->header('X-Medflow-Timestamp', '');
-        $signature = (string) $request->header('X-Medflow-Signature', '');
+        $timestamp = (string) (
+            $request->header('X-Kinito-Timestamp')
+            ?: $request->header('X-Medflow-Timestamp', '')
+        );
+        $signature = (string) (
+            $request->header('X-Kinito-Signature')
+            ?: $request->header('X-Medflow-Signature', '')
+        );
         $body = $request->getContent();
 
         if ($timestamp === '' || $signature === '') {

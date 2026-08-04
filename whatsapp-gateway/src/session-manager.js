@@ -770,8 +770,8 @@ async function postSignedToBackend(session, url, payload) {
     headers: {
       'Content-Type': 'application/json',
       'X-Internal-Api-Key': apiKey,
-      'X-Medflow-Timestamp': String(timestamp),
-      'X-Medflow-Signature': signature,
+      'X-Kinito-Timestamp': String(timestamp),
+      'X-Kinito-Signature': signature,
     },
     body,
   });
@@ -1021,7 +1021,7 @@ async function startSession(session, sessionPath) {
       auth: state,
       printQRInTerminal: false,
       logger: { level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => ({ level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => {} }) },
-      browser: ['MedFlow', 'Chrome', '1.0.0'],
+      browser: ['Kinito', 'Chrome', '1.0.0'],
       syncFullHistory: false,
       markOnlineOnConnect: false,
     });

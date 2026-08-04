@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Bell, Check, CheckCheck, Filter, Plus } from 'lucide-react';
+import { Bell, Check, CheckCheck, Filter } from 'lucide-react';
 import { formatDate } from '../lib/utils';
+import { markAllNotificationsReadApi, markNotificationReadApi } from '../lib/api';
 import { useAppStore } from '../store/useAppStore';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
+import { PageContainer } from '../components/layout/PageContainer';
 
 export const NotificacoesView: React.FC = () => {
-  const { notifications, markNotificationRead, markAllNotificationsRead, addNotification } = useAppStore();
+  const { notifications, markNotificationRead, markAllNotificationsRead } = useAppStore();
   const [filterCategory, setFilterCategory] = useState<string>('todos');
 
   const filteredNotifs = notifications.filter((n) => {
@@ -14,30 +16,28 @@ export const NotificacoesView: React.FC = () => {
     return n.category === filterCategory;
   });
 
-  const handleSimulateNewNotification = () => {
-    addNotification({
-      title: 'Nova Corrida Solicitada no Sistema',
-      message: 'O cliente Pedro Rodrigues solicitou um despacho de corrida em Moema, São Paulo.',
-      category: 'corrida',
-      type: 'info'
-    });
+  const onRead = async (id: string) => {
+    markNotificationRead(id);
+    try {
+      await markNotificationReadApi(id);
+    } catch {
+      /* keep local */
+    }
+  };
+
+  const onReadAll = async () => {
+    markAllNotificationsRead();
+    try {
+      await markAllNotificationsReadApi();
+    } catch {
+      /* keep local */
+    }
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-300">
-      <SEOHead
-        title="Central de Notificações & Alertas em Tempo Real"
-        description="Histórico de alertas push, notificações de despacho de corridas, webhooks do Stripe Connect e avisos de sistema."
-        keywords={['notificações de transporte', 'alertas de corrida', 'push webhooks stripe']}
-        category="Módulo de Notificações SaaS"
-        jsonLdSchema={{
-          '@type': 'WebPage',
-          'name': 'Central de Notificações Operacionais',
-          'about': 'Alertas operacionais e atualização de status de corridas.',
-        }}
-      />
+    <PageContainer>
+      <PageSEO page="notificacoes" />
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -53,13 +53,7 @@ export const NotificacoesView: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={handleSimulateNewNotification}
-            className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Simular Nova Notificação
-          </button>
-          <button
-            onClick={markAllNotificationsRead}
+            onClick={() => void onReadAll()}
             className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-2 shadow-xs"
           >
             <CheckCheck className="w-4 h-4" /> Marcar Todas como Lidas
@@ -67,7 +61,6 @@ export const NotificacoesView: React.FC = () => {
         </div>
       </div>
 
-      {/* Category Filters */}
       <div className="p-4 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 flex items-center gap-2 text-xs overflow-x-auto">
         {['todos', 'corrida', 'financeiro', 'motorista', 'sistema'].map((cat) => (
           <button
@@ -84,12 +77,11 @@ export const NotificacoesView: React.FC = () => {
         ))}
       </div>
 
-      {/* List */}
       <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-3">
         {filteredNotifs.map((notif) => (
           <div
             key={notif.id}
-            onClick={() => markNotificationRead(notif.id)}
+            onClick={() => void onRead(notif.id)}
             className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-4 ${
               !notif.read
                 ? 'bg-indigo-50/40 dark:bg-indigo-950/20 border-indigo-500/30'
@@ -120,8 +112,7 @@ export const NotificacoesView: React.FC = () => {
         ))}
       </div>
 
-      {/* Global Footer */}
       <Footer />
-    </div>
+    </PageContainer>
   );
 };

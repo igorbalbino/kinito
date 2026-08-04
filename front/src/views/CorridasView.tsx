@@ -1,38 +1,32 @@
 import React, { useState } from 'react';
 import {
-  Calendar,
-  Car,
   Clock,
-  Filter,
   Grid,
   List,
   MapPin,
   Plus,
   Search,
-  SlidersHorizontal,
-  X,
-  Zap,
 } from 'lucide-react';
 import { formatBRL, formatDate } from '../lib/utils';
 import { useAppStore } from '../store/useAppStore';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { RideDetailsModal } from '../components/modals/RideDetailsModal';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
-import { Ride, RideStatus } from '../types';
+import { SafeSelect } from '../components/common/SafeSelect';
+import { PageContainer } from '../components/layout/PageContainer';
+import { Ride } from '../types';
 
 export const CorridasView: React.FC = () => {
-  const { rides, financialMode, setNewRideModalOpen } = useAppStore();
+  const { rides, setNewRideModalOpen, dataLoading, dataError } = useAppStore();
 
   const [viewMode, setViewMode] = useState<'table' | 'grid' | 'timeline'>('table');
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
 
-  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [paymentFilter, setPaymentFilter] = useState<string>('todos');
 
-  // Filtered dataset
   const filteredRides = rides.filter((r) => {
     const matchesSearch =
       r.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -48,20 +42,19 @@ export const CorridasView: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-300">
-      <SEOHead
-        title="Gestão de Corridas & Despacho Tátil"
-        description="Painel de controle de chamadas em tempo real. Filtre corridas por status (pendente, aceita, em andamento, concluída), atribua motoristas instantaneamente e consulte taxas de split."
-        keywords={['despacho de corridas', 'atribuição de motoristas', 'gestão de trajetos GPS', 'corridas corporativas']}
-        category="Módulo de Corridas SaaS"
-        jsonLdSchema={{
-          '@type': 'Table',
-          'name': 'Lista de Corridas & Serviços de Transporte',
-          'about': 'Tabela interativa de despacho e rastreamento de serviços executivos e frotas.',
-        }}
-      />
+    <PageContainer>
+      <PageSEO page="corridas" />
 
-      {/* Header */}
+      {dataLoading && (
+        <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Carregando corridas…</p>
+      )}
+      {dataError && (
+        <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{dataError}</p>
+      )}
+      {!dataLoading && !rides.length && (
+        <p className="text-xs text-zinc-500">Nenhuma corrida encontrada. Crie a primeira pelo botão Nova Corrida.</p>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -76,7 +69,6 @@ export const CorridasView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* View mode toggle */}
           <div className="p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1 text-xs">
             <button
               onClick={() => setViewMode('table')}
@@ -122,10 +114,8 @@ export const CorridasView: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Toolbar */}
       <div className="p-4 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-          {/* Search Box */}
           <div className="relative md:col-span-2">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-400" />
             <input
@@ -137,44 +127,66 @@ export const CorridasView: React.FC = () => {
             />
           </div>
 
-          {/* Status Select */}
           <div>
-            <select
+            <SafeSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium"
-            >
-              <option value="todos">Todos os Status</option>
-              <option value="pendente">Pendente</option>
-              <option value="atribuida">Atribuída</option>
-              <option value="em_andamento">Em Andamento</option>
-              <option value="concluida">Concluída</option>
-              <option value="cancelada">Cancelada</option>
-            </select>
+              onChange={setStatusFilter}
+              label="Status"
+              buttonClassName="bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700"
+              options={[
+                { value: 'todos', label: 'Todos os Status' },
+                { value: 'pendente', label: 'Pendente' },
+                { value: 'atribuida', label: 'Atribuída' },
+                { value: 'em_andamento', label: 'Em Andamento' },
+                { value: 'concluida', label: 'Concluída' },
+                { value: 'cancelada', label: 'Cancelada' },
+              ]}
+            />
           </div>
 
-          {/* Payment Method Select */}
           <div>
-            <select
+            <SafeSelect
               value={paymentFilter}
-              onChange={(e) => setPaymentFilter(e.target.value)}
-              className="w-full p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium"
-            >
-              <option value="todos">Todas as Formas de Pgto</option>
-              <option value="credit_card">Cartão de Crédito</option>
-              <option value="pix">PIX</option>
-              <option value="faturado">Faturado Corporativo</option>
-              <option value="dinheiro">Dinheiro</option>
-            </select>
+              onChange={setPaymentFilter}
+              label="Forma de pagamento"
+              buttonClassName="bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700"
+              options={[
+                { value: 'todos', label: 'Todas as Formas de Pgto' },
+                { value: 'credit_card', label: 'Cartão de Crédito' },
+                { value: 'pix', label: 'PIX' },
+                { value: 'faturado', label: 'Faturado Corporativo' },
+                { value: 'dinheiro', label: 'Dinheiro' },
+              ]}
+            />
           </div>
         </div>
       </div>
 
-      {/* VIEW MODE 1: TABLE */}
       {viewMode === 'table' && (
-        <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+        <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden min-w-0">
+          <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+            {filteredRides.slice(0, 15).map((ride) => (
+              <button
+                key={ride.id}
+                type="button"
+                onClick={() => setSelectedRide(ride)}
+                className="w-full text-left p-4 space-y-2 active:bg-zinc-50 dark:active:bg-zinc-800/40"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono font-bold text-indigo-600 text-xs">{ride.code}</span>
+                  <StatusBadge type="ride" status={ride.status} size="sm" />
+                </div>
+                <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{ride.clientName}</div>
+                <div className="text-[11px] text-zinc-500 truncate">{ride.origin.neighborhood} → {ride.destination.neighborhood}</div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-500">{ride.driverName || 'Sem motorista'}</span>
+                  <span className="font-bold">{formatBRL(ride.grossValue)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full min-w-[860px] text-left text-xs">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 font-medium bg-zinc-50/50 dark:bg-zinc-900/50">
                   <th className="py-3 px-4">Código</th>
@@ -225,7 +237,6 @@ export const CorridasView: React.FC = () => {
         </div>
       )}
 
-      {/* VIEW MODE 2: CARDS GRID */}
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredRides.slice(0, 12).map((ride) => (
@@ -265,7 +276,6 @@ export const CorridasView: React.FC = () => {
         </div>
       )}
 
-      {/* VIEW MODE 3: TIMELINE */}
       {viewMode === 'timeline' && (
         <div className="p-6 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-6">
           <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
@@ -297,11 +307,9 @@ export const CorridasView: React.FC = () => {
         </div>
       )}
 
-      {/* Details Modal */}
       <RideDetailsModal ride={selectedRide} onClose={() => setSelectedRide(null)} />
 
-      {/* Global Footer */}
       <Footer />
-    </div>
+    </PageContainer>
   );
 };

@@ -25,24 +25,24 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 }) => {
   return (
     <div className={cn(
-      'p-5 rounded-xl border transition-all duration-200',
+      'p-5 rounded-xl border transition-all duration-200 w-full min-w-0',
       'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800/80 hover:border-zinc-300 dark:hover:border-zinc-700/80 shadow-xs',
       className
     )}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+      <div className="flex items-start justify-between gap-3 min-w-0">
+        <div className="space-y-1 min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate">
             {title}
           </p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h3 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 break-words">
               {value}
             </h3>
-            {badge && <div>{badge}</div>}
+            {badge && <div className="shrink-0">{badge}</div>}
           </div>
         </div>
         {icon && (
-          <div className="p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-300">
+          <div className="p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-300 shrink-0">
             {icon}
           </div>
         )}

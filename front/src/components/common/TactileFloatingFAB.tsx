@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Hand, X, Zap, Car } from 'lucide-react';
+import { Plus, Search, Hand, Car } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { cn } from '../../lib/utils';
 
@@ -31,7 +31,6 @@ export const TactileFloatingFAB: React.FC = () => {
       id="tactile-floating-fab-container"
       className={cn('fixed z-40 md:hidden flex flex-col items-center transition-all duration-300', positionClass)}
     >
-      {/* Expanded Quick Action Wheel Arc */}
       {isOpen && (
         <div className="mb-3 flex flex-col gap-2.5 animate-in slide-in-from-bottom duration-200">
           <button
@@ -68,7 +67,6 @@ export const TactileFloatingFAB: React.FC = () => {
         </div>
       )}
 
-      {/* Main Trigger FAB */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(

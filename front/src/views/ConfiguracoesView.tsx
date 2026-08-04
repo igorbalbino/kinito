@@ -1,25 +1,23 @@
 import React from 'react';
 import {
   AlertTriangle,
-  CheckCircle2,
   CreditCard,
   Globe,
   Hand,
-  MoveRight,
   ShieldCheck,
   Sliders,
   Smartphone,
-  Zap,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
 import { FeatureFlags } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { Language } from '../i18n/translations';
 import { WhatsAppConnectPanel } from '../components/settings/WhatsAppConnectPanel';
 import { PlanBillingPanel } from '../components/settings/PlanBillingPanel';
+import { PageContainer } from '../components/layout/PageContainer';
 
 export const ConfiguracoesView: React.FC = () => {
   const { t, language, setLanguage, options } = useTranslation();
@@ -47,20 +45,9 @@ export const ConfiguracoesView: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 pb-24 max-w-5xl animate-in fade-in duration-300">
-      <SEOHead
-        title={t.settingsPage.title}
-        description={t.settingsPage.subtitle}
-        keywords={['configurações de frota', 'navegação tátil 1 mão', 'feature flags transporte', 'stripe connect config', 'idioma sistema']}
-        category="Módulo de Configurações SaaS"
-        jsonLdSchema={{
-          '@type': 'WebPage',
-          'name': t.settingsPage.title,
-          'about': t.settingsPage.subtitle,
-        }}
-      />
+    <PageContainer narrow className="pb-24">
+      <PageSEO page="configuracoes" />
 
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
           {t.settingsPage.title}
@@ -73,7 +60,6 @@ export const ConfiguracoesView: React.FC = () => {
       <PlanBillingPanel />
       <WhatsAppConnectPanel />
 
-      {/* LANGUAGE SELECTOR MODULE */}
       <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 space-y-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
@@ -112,7 +98,6 @@ export const ConfiguracoesView: React.FC = () => {
         </div>
       </div>
 
-      {/* ONE-HANDED ERGONOMICS CONTROL */}
       <div className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
@@ -167,7 +152,6 @@ export const ConfiguracoesView: React.FC = () => {
         </div>
       </div>
 
-      {/* STRIPE VS MANUAL FINANCIAL PROCESSING MODULE CONFIGURATION */}
       <div className="p-6 rounded-2xl border border-indigo-500/40 bg-white/5 shadow-lg space-y-5">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
@@ -192,7 +176,6 @@ export const ConfiguracoesView: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Option A: Stripe */}
           <div
             onClick={() => setFinancialMode('stripe')}
             className={`p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
@@ -225,7 +208,6 @@ export const ConfiguracoesView: React.FC = () => {
             )}
           </div>
 
-          {/* Option B: Manual */}
           <div
             onClick={() => setFinancialMode('manual')}
             className={`p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
@@ -259,7 +241,6 @@ export const ConfiguracoesView: React.FC = () => {
         </div>
       </div>
 
-      {/* FEATURE FLAGS SWITCHES */}
       <div className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
         <h3 className="font-semibold text-sm text-slate-100 flex items-center gap-2">
           <Sliders className="w-4 h-4 text-indigo-400" />
@@ -292,8 +273,7 @@ export const ConfiguracoesView: React.FC = () => {
         </div>
       </div>
 
-      {/* Global Footer */}
       <Footer />
-    </div>
+    </PageContainer>
   );
 };

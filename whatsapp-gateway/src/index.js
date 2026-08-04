@@ -25,7 +25,7 @@ const app = express();
 app.use(express.json());
 
 const PORT = process.env.WHATSAPP_GATEWAY_PORT || 3001;
-const API_KEY = process.env.GATEWAY_API_KEY || 'medflow-gateway-dev';
+const API_KEY = process.env.GATEWAY_API_KEY || 'kinito-gateway-dev';
 
 function authMiddleware(req, res, next) {
   const key = req.headers['x-gateway-key'] || req.headers['authorization']?.replace('Bearer ', '');
@@ -36,7 +36,7 @@ function authMiddleware(req, res, next) {
 }
 
 app.get('/health', (_req, res) => {
-  res.json({ ok: true, service: 'medflow-whatsapp-gateway' });
+  res.json({ ok: true, service: 'kinito-whatsapp-gateway' });
 });
 
 app.use(authMiddleware);
@@ -106,7 +106,7 @@ app.post('/sessions/:sessionId/send-media', parseSessionId, async (req, res) => 
 
 app.listen(PORT, () => {
   logSessionStorageMode();
-  console.log(`[gateway] MedFlow WhatsApp Gateway listening on port ${PORT}`);
+  console.log(`[gateway] Kinito WhatsApp Gateway listening on port ${PORT}`);
   restoreSessions().catch((err) => {
     console.error('[gateway] restoreSessions failed:', err?.message ?? err);
   });

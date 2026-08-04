@@ -1,35 +1,22 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Bell,
   Building2,
   Car,
-  ChevronRight,
   CreditCard,
   FileText,
   Hand,
-  History,
   LayoutDashboard,
   Moon,
   Search,
   Settings,
-  Shield,
-  Smartphone,
   Sun,
-  User,
   UserCheck,
   Users,
   X,
-  Zap,
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-
-const roleProfiles = {
-  admin: { name: 'Admin Geral (Veloce)', email: 'admin@velocelog.com.br', badge: 'Administrador Master' },
-  empresa: { name: 'Veloce Logística', email: 'contato@velocelog.com.br', badge: 'Empresa' },
-  motorista: { name: 'Gabriel Silva', email: 'gabriel.silva@motorista.com', badge: 'Motorista' },
-  cliente: { name: 'Lucas Santos', email: 'lucas.santos@gmail.com', badge: 'Cliente VIP' },
-};
+import { sessionDisplayProfile } from '../../lib/sessionProfile';
 
 export const MobileQuickDrawerSheet: React.FC = () => {
   const navigate = useNavigate();
@@ -50,6 +37,9 @@ export const MobileQuickDrawerSheet: React.FC = () => {
 
   if (!isQuickActionSheetOpen) return null;
 
+  const profile = sessionDisplayProfile(activeRole);
+  const availableRoles = profile.roles;
+
   const handleNavigate = (path: string) => {
     navigate(path);
     setQuickActionSheetOpen(false);
@@ -66,18 +56,16 @@ export const MobileQuickDrawerSheet: React.FC = () => {
         className="w-full max-w-lg bg-[#121215] border border-white/10 rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 space-y-6 max-h-[88vh] overflow-y-auto animate-in slide-in-from-bottom duration-300"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Tactile Handle for Mobile Drag gesture feeling */}
         <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-2 mb-2" />
 
-        {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-md">
-              V
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-md uppercase">
+              {profile.name.slice(0, 1)}
             </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-100">Painel Tátil Veloce</h3>
-              <p className="text-xs text-slate-400">Controles rápidos para uso com 1 mão</p>
+              <h3 className="text-base font-semibold text-slate-100">Painel rápido Kinito</h3>
+              <p className="text-xs text-slate-400">{profile.name} · {profile.badge}</p>
             </div>
           </div>
           <button
@@ -89,7 +77,6 @@ export const MobileQuickDrawerSheet: React.FC = () => {
           </button>
         </div>
 
-        {/* Global Dispatch Button */}
         <button
           onClick={() => {
             setQuickActionSheetOpen(false);
@@ -101,7 +88,6 @@ export const MobileQuickDrawerSheet: React.FC = () => {
           <span>Solicitar & Despachar Corrida</span>
         </button>
 
-        {/* Quick Search */}
         <button
           onClick={() => {
             setQuickActionSheetOpen(false);
@@ -113,7 +99,6 @@ export const MobileQuickDrawerSheet: React.FC = () => {
           <span>Buscar corridas, motoristas, frotas...</span>
         </button>
 
-        {/* Ergonomic Hand Switcher */}
         <div className="space-y-2">
           <label className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5 uppercase tracking-wider">
             <Hand className="w-3.5 h-3.5 text-indigo-400" /> Posição dos Controles Táteis
@@ -152,32 +137,33 @@ export const MobileQuickDrawerSheet: React.FC = () => {
           </div>
         </div>
 
-        {/* Role Switcher */}
-        <div className="space-y-2">
-          <label className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-            Simular Perfil de Usuário
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {(['admin', 'empresa', 'motorista', 'cliente'] as const).map((r) => (
-              <button
-                key={r}
-                onClick={() => setActiveRole(r)}
-                className={`p-3 rounded-xl border text-left text-xs font-medium flex items-center justify-between transition-all active:scale-95 min-h-[48px] ${
-                  activeRole === r
-                    ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                    : 'bg-white/5 border-white/10 text-slate-400'
-                }`}
-              >
-                <div>
-                  <div className="font-bold capitalize">{r}</div>
-                  <div className="text-[10px] text-slate-400 truncate">{roleProfiles[r].name}</div>
-                </div>
-              </button>
-            ))}
+        {availableRoles.length > 1 && (
+          <div className="space-y-2">
+            <label className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+              Papéis da conta
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {availableRoles.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setActiveRole(r)}
+                  className={`p-3 rounded-xl border text-left text-xs font-medium flex items-center justify-between transition-all active:scale-95 min-h-[48px] ${
+                    activeRole === r
+                      ? 'bg-indigo-600/20 border-indigo-500 text-white'
+                      : 'bg-white/5 border-white/10 text-slate-400'
+                  }`}
+                >
+                  <div>
+                    <div className="font-bold capitalize">{r}</div>
+                    <div className="text-[10px] text-slate-400 truncate">{sessionDisplayProfile(r).badge}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Modules Navigation Links */}
         <div className="space-y-2">
           <label className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
             Módulos do Sistema
@@ -242,7 +228,6 @@ export const MobileQuickDrawerSheet: React.FC = () => {
           </div>
         </div>
 
-        {/* Financial Mode Switch & Theme Toggle */}
         <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
           <button
             onClick={() => setFinancialMode(financialMode === 'stripe' ? 'manual' : 'stripe')}

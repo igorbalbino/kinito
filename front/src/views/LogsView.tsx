@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Activity, AlertTriangle, ShieldCheck, UserCheck } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import { useAppStore } from '../store/useAppStore';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
+import { PageContainer } from '../components/layout/PageContainer';
+import { SafeSelect } from '../components/common/SafeSelect';
 
 export const LogsView: React.FC = () => {
   const { logs, audits } = useAppStore();
@@ -16,20 +17,9 @@ export const LogsView: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-300">
-      <SEOHead
-        title="Logs & Trilha de Auditoria do Sistema"
-        description="Monitoramento técnico e registros de segurança do sistema. Trilha de auditoria de alterações de status, eventos de webhooks Stripe e acessos."
-        keywords={['logs do sistema', 'trilha de auditoria', 'auditoria de segurança transporte']}
-        category="Módulo de Segurança & Logs SaaS"
-        jsonLdSchema={{
-          '@type': 'WebPage',
-          'name': 'Logs Operacionais e Trilha de Auditoria Kinito',
-          'about': 'Auditoria de segurança e registros de eventos técnicos.',
-        }}
-      />
+    <PageContainer>
+      <PageSEO page="logs" />
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -40,7 +30,6 @@ export const LogsView: React.FC = () => {
           </p>
         </div>
 
-        {/* Tab switcher */}
         <div className="p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1 text-xs font-semibold">
           <button
             onClick={() => setActiveTab('logs')}
@@ -65,16 +54,18 @@ export const LogsView: React.FC = () => {
         <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">Eventos em Tempo Real</h3>
-            <select
+            <SafeSelect
               value={levelFilter}
-              onChange={(e) => setLevelFilter(e.target.value)}
-              className="p-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 border text-xs text-zinc-900 dark:text-zinc-100 font-medium"
-            >
-              <option value="todos">Todos os Níveis</option>
-              <option value="info">Info</option>
-              <option value="warning">Aviso</option>
-              <option value="security">Segurança</option>
-            </select>
+              onChange={setLevelFilter}
+              label="Nível"
+              buttonClassName="bg-zinc-50 dark:bg-zinc-800"
+              options={[
+                { value: 'todos', label: 'Todos os Níveis' },
+                { value: 'info', label: 'Info' },
+                { value: 'warning', label: 'Aviso' },
+                { value: 'security', label: 'Segurança' },
+              ]}
+            />
           </div>
 
           <div className="overflow-x-auto">
@@ -151,8 +142,7 @@ export const LogsView: React.FC = () => {
         </div>
       )}
 
-      {/* Global Footer */}
       <Footer />
-    </div>
+    </PageContainer>
   );
 };

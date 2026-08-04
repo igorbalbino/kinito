@@ -49,11 +49,90 @@ export function getApiToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+const SECRET_USER_KEYS = [
+  'password',
+  'password_confirmation',
+  'current_password',
+  'temporary_password',
+  'temporaryPassword',
+  'plain_password',
+  'plainPassword',
+] as const;
+
+/** Detects autofill/password tokens accidentally glued into name fields. */
+function looksLikePasswordToken(token: string): boolean {
+  if (token.length < 4 || /\s/.test(token)) return false;
+  if (/^(password|senha|admin|root|12345678?|qwerty|changeme|secret)$/i.test(token)) {
+    return true;
+  }
+  if (token.length < 6) return false;
+  const hasLetter = /[A-Za-zÀ-ÿ]/.test(token);
+  const hasDigit = /\d/.test(token);
+  const hasSpecial = /[^A-Za-zÀ-ÿ0-9]/.test(token);
+  // all-lowercase long token often is a dumped password (e.g. "minhasenha")
+  if (/^[a-z]{8,}$/.test(token)) return true;
+  return (hasLetter && hasDigit) || (hasLetter && hasSpecial) || (hasDigit && hasSpecial);
+}
+
+/**
+ * Cleans person/company display names polluted by browser autofill
+ * (password appended on a new line or as a trailing token).
+ */
+export function sanitizePersonName(value: unknown, fallback = 'Usuário'): string {
+  let name = String(value ?? '').replace(/\u0000/g, '').trim();
+  if (!name) return fallback;
+
+  // Password managers often dump the secret on the next line of the same field.
+  name = name.split(/\r?\n|\t| {2,}/)[0]?.trim() || fallback;
+
+  const parts = name.split(/\s+/).filter(Boolean);
+  while (parts.length > 1 && looksLikePasswordToken(parts[parts.length - 1]!)) {
+    parts.pop();
+  }
+  name = parts.join(' ').trim();
+
+  if (!name || looksLikePasswordToken(name)) {
+    return fallback;
+  }
+
+  return name.slice(0, 120);
+}
+
+function sanitizeCompanyList(
+  list: { id: number | string; name: string }[] | undefined,
+): { id: number | string; name: string }[] | undefined {
+  if (!list) return undefined;
+  return list.map((c) => ({
+    id: c.id,
+    name: sanitizePersonName(c.name, 'Empresa'),
+  }));
+}
+
+/** Never persist or expose credential fields from API payloads. */
+export function sanitizeApiUser(user: ApiUser): ApiUser {
+  const raw = { ...(user as ApiUser & Record<string, unknown>) };
+  for (const key of SECRET_USER_KEYS) {
+    delete raw[key];
+  }
+  const email = String(raw.email || '').trim();
+  const emailFallback = email.includes('@') ? email.split('@')[0]! : 'Usuário';
+  return {
+    id: raw.id,
+    name: sanitizePersonName(raw.name, emailFallback),
+    email,
+    phone: raw.phone ?? null,
+    mustChangePassword: Boolean(raw.mustChangePassword),
+    roles: Array.isArray(raw.roles) ? raw.roles.map(String) : undefined,
+    companies: sanitizeCompanyList(raw.companies),
+    ownedCompanies: sanitizeCompanyList(raw.ownedCompanies),
+  };
+}
+
 export function getStoredApiUser(): ApiUser | null {
   const raw = localStorage.getItem(USER_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as ApiUser;
+    return sanitizeApiUser(JSON.parse(raw) as ApiUser);
   } catch {
     return null;
   }
@@ -67,9 +146,10 @@ export function getApiCompanyId(): number | null {
 }
 
 export function setApiSession(token: string, user: ApiUser, companyId?: number | null): void {
+  const safeUser = sanitizeApiUser(user);
   localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-  const fromUser = Number(user.ownedCompanies?.[0]?.id ?? user.companies?.[0]?.id ?? 0);
+  localStorage.setItem(USER_KEY, JSON.stringify(safeUser));
+  const fromUser = Number(safeUser.ownedCompanies?.[0]?.id ?? safeUser.companies?.[0]?.id ?? 0);
   const resolved = companyId ?? (fromUser > 0 ? fromUser : null);
   if (resolved) {
     localStorage.setItem(COMPANY_KEY, String(resolved));
@@ -140,8 +220,9 @@ export async function apiLogin(login: string, password: string): Promise<{ token
     method: 'POST',
     body: JSON.stringify({ login, password, device_name: 'kinito-web' }),
   });
-  setApiSession(data.token, data.user);
-  return data;
+  const user = sanitizeApiUser(data.user);
+  setApiSession(data.token, user);
+  return { token: data.token, user };
 }
 
 export async function changePassword(currentPassword: string, password: string): Promise<ApiUser> {
@@ -153,9 +234,10 @@ export async function changePassword(currentPassword: string, password: string):
       password_confirmation: password,
     }),
   });
+  const user = sanitizeApiUser(data.user);
   const token = getApiToken();
-  if (token) setApiSession(token, data.user);
-  return data.user;
+  if (token) setApiSession(token, user);
+  return user;
 }
 
 export async function fetchPlans(): Promise<ApiPlan[]> {
@@ -235,4 +317,137 @@ export async function fetchCompanies(): Promise<{ id: number; name: string }[]> 
   return rows
     .map((c) => ({ id: Number(c.id), name: c.name }))
     .filter((c) => c.id > 0);
+}
+
+function paginated<T>(data: { data?: T[] } | T[]): T[] {
+  if (Array.isArray(data)) return data;
+  return Array.isArray(data?.data) ? data.data : [];
+}
+
+export async function apiRegisterPerson(payload: {
+  name: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+  role: 'CLIENTE' | 'MOTORISTA';
+  phone?: string;
+  vehicle_model?: string;
+  vehicle_plate?: string;
+  city?: string;
+  company_id?: number;
+}): Promise<{ token: string; user: ApiUser }> {
+  const data = await apiFetch<{ token: string; user: ApiUser }>('/api/v1/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, device_name: 'kinito-web' }),
+  });
+  setApiSession(data.token, data.user);
+  return data;
+}
+
+export async function apiRegisterCompany(payload: {
+  name: string;
+  email: string;
+  phone?: string;
+  password: string;
+  password_confirmation: string;
+  company_name: string;
+  cnpj: string;
+  company_email?: string;
+  company_phone?: string;
+  plan_id?: number;
+}): Promise<{ token: string; company: { id: number | string; name: string }; user?: ApiUser }> {
+  const data = await apiFetch<{
+    token: string;
+    company: { id: number | string; name: string };
+  }>('/api/v1/empresas/register', {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, device_name: 'kinito-web' }),
+  });
+  // Session user may not be in response — login after or store token
+  localStorage.setItem('kinito_api_token', data.token);
+  if (data.company?.id) {
+    localStorage.setItem('kinito_api_company_id', String(data.company.id));
+  }
+  return data;
+}
+
+export async function apiLogout(): Promise<void> {
+  try {
+    await apiFetch('/api/v1/auth/logout', { method: 'POST' });
+  } finally {
+    clearApiSession();
+  }
+}
+
+export async function fetchRides(): Promise<Record<string, unknown>[]> {
+  return paginated(await apiFetch('/api/v1/corridas'));
+}
+
+export async function createRide(payload: Record<string, unknown>): Promise<{ ride: Record<string, unknown> }> {
+  return apiFetch('/api/v1/corridas', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function rideAction(
+  rideId: string,
+  action: 'accept' | 'start' | 'finish' | 'cancel' | 'reassign',
+  body: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  return apiFetch(`/api/v1/corridas/${rideId}/${action}`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchClientsList(): Promise<Record<string, unknown>[]> {
+  return paginated(await apiFetch('/api/v1/clientes'));
+}
+
+export async function createClientApi(payload: Record<string, unknown>): Promise<{
+  client: Record<string, unknown>;
+  temporary_password?: string;
+}> {
+  return apiFetch('/api/v1/clientes', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function fetchDriversList(): Promise<Record<string, unknown>[]> {
+  return paginated(await apiFetch('/api/v1/motoristas'));
+}
+
+export async function approveDriverApi(id: string, companyId: number): Promise<Record<string, unknown>> {
+  return apiFetch(`/api/v1/motoristas/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ company_id: companyId }),
+  });
+}
+
+export async function blockDriverApi(id: string): Promise<Record<string, unknown>> {
+  return apiFetch(`/api/v1/motoristas/${id}/block`, { method: 'POST' });
+}
+
+export async function fetchCompaniesFull(): Promise<Record<string, unknown>[]> {
+  return paginated(await apiFetch('/api/v1/empresas'));
+}
+
+export async function fetchTransactions(): Promise<Record<string, unknown>[]> {
+  return paginated(await apiFetch('/api/v1/financeiro/transactions'));
+}
+
+export async function fetchNotifications(): Promise<Record<string, unknown>[]> {
+  return paginated(await apiFetch('/api/v1/notificacoes'));
+}
+
+export async function markNotificationReadApi(id: string): Promise<void> {
+  await apiFetch(`/api/v1/notificacoes/${id}/read`, { method: 'POST' });
+}
+
+export async function markAllNotificationsReadApi(): Promise<void> {
+  await apiFetch('/api/v1/notificacoes/read-all', { method: 'POST' });
+}
+
+export async function fetchRideLogs(): Promise<Record<string, unknown>[]> {
+  return paginated(await apiFetch('/api/v1/logs/rides'));
+}
+
+export async function fetchAudits(): Promise<Record<string, unknown>[]> {
+  return paginated(await apiFetch('/api/v1/logs/audits'));
 }
