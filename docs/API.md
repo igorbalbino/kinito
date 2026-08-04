@@ -91,7 +91,12 @@ POST /api/v1/auth/register
 | PUT | `/empresas/{id}/settings` |
 | POST | `/empresas/{id}/partnerships` |
 | PATCH | `/empresas/{id}/partnerships/{partnership}` |
-| POST | `/empresas/{id}/subscribe` |
+| POST | `/empresas/{id}/subscribe` | `mode=trial\|checkout\|auto` |
+| GET | `/empresas/{id}/subscription` |
+| GET | `/fornecedores` | marketplace (empresas com acesso) |
+| POST | `/webhooks/billing` | Stripe/mock billing SaaS |
+| GET | `/billing/mock/complete` | mock checkout (signed) |
+| POST | `/auth/change-password` |
 | GET | `/empresas/{id}/whatsapp` |
 | POST | `/empresas/{id}/whatsapp/connect` |
 | DELETE | `/empresas/{id}/whatsapp` |

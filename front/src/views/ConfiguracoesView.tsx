@@ -19,6 +19,7 @@ import { FeatureFlags } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { Language } from '../i18n/translations';
 import { WhatsAppConnectPanel } from '../components/settings/WhatsAppConnectPanel';
+import { PlanBillingPanel } from '../components/settings/PlanBillingPanel';
 
 export const ConfiguracoesView: React.FC = () => {
   const { t, language, setLanguage, options } = useTranslation();
@@ -69,6 +70,7 @@ export const ConfiguracoesView: React.FC = () => {
         </p>
       </div>
 
+      <PlanBillingPanel />
       <WhatsAppConnectPanel />
 
       {/* LANGUAGE SELECTOR MODULE */}

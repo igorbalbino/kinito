@@ -4,20 +4,22 @@ namespace App\Services\Company;
 
 use App\Enums\CompanyCollaboratorRole;
 use App\Enums\ModeloCorridas;
-use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\Plan;
-use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Audit\AuditService;
+use App\Services\Subscription\SubscriptionLifecycleService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CompanyService
 {
-    public function __construct(private readonly AuditService $audit) {}
+    public function __construct(
+        private readonly AuditService $audit,
+        private readonly SubscriptionLifecycleService $lifecycle,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -42,6 +44,8 @@ class CompanyService
                 'email' => $data['company_email'] ?? $data['email'],
                 'phone' => $data['company_phone'] ?? ($data['phone'] ?? null),
                 'commission_rate' => config('kinito.commissions.company_percent', 10),
+                'is_provider' => true,
+                'is_active' => true,
             ]);
 
             $company->users()->attach($user->id, [
@@ -59,22 +63,15 @@ class CompanyService
                 'allow_partners' => true,
             ]);
 
-            $plan = Plan::query()->where('slug', config('kinito.default_plan', 'starter'))->first()
-                ?? Plan::query()->where('is_active', true)->first();
-
-            if ($plan) {
-                Subscription::query()->create([
-                    'company_id' => $company->id,
-                    'plan_id' => $plan->id,
-                    'status' => SubscriptionStatus::Trialing,
-                    'starts_at' => now(),
-                    'trial_ends_at' => now()->addDays(14),
-                ]);
+            $subscription = null;
+            if (! empty($data['plan_id'])) {
+                $plan = Plan::query()->where('is_active', true)->findOrFail($data['plan_id']);
+                $subscription = $this->lifecycle->startTrial($company, $plan);
             }
 
             $this->audit->log('COMPANY_REGISTERED', $user, $company, null, $company->toArray());
 
-            return compact('user', 'company');
+            return compact('user', 'company', 'subscription');
         });
     }
 

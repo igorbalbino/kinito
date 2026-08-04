@@ -26,6 +26,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'avatar',
         'password',
         'is_active',
+        'must_change_password',
     ];
 
     protected $hidden = [
@@ -39,7 +40,27 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
         ];
+    }
+
+    public static function findForLogin(string $login): ?self
+    {
+        $login = trim($login);
+
+        if (str_contains($login, '@')) {
+            return static::query()->where('email', $login)->first();
+        }
+
+        $digits = preg_replace('/\D+/', '', $login) ?: $login;
+
+        return static::query()
+            ->where(function ($q) use ($login, $digits) {
+                $q->where('phone', $login)
+                    ->orWhere('phone', $digits)
+                    ->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '(', ''), ')', '') = ?", [$digits]);
+            })
+            ->first();
     }
 
     public function ownedCompanies(): HasMany

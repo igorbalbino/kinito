@@ -17,6 +17,7 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'avatar' => $this->avatar,
             'isActive' => $this->is_active,
+            'mustChangePassword' => (bool) $this->must_change_password,
             'emailVerifiedAt' => $this->email_verified_at,
             'roles' => $this->whenLoaded('roles', fn () => $this->getRoleNames()),
             'driver' => new DriverResource($this->whenLoaded('driver')),

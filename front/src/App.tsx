@@ -7,6 +7,7 @@ import { MobileBottomDock } from './components/layout/MobileBottomDock';
 import { MobileQuickDrawerSheet } from './components/modals/MobileQuickDrawerSheet';
 import { TactileFloatingFAB } from './components/common/TactileFloatingFAB';
 import { NewRideModal } from './components/modals/NewRideModal';
+import { ForcePasswordModal } from './components/auth/ForcePasswordModal';
 import { useAppStore } from './store/useAppStore';
 
 import { LandingView } from './views/LandingView';
@@ -69,6 +70,7 @@ const AppContent: React.FC = () => {
 
       {/* Global New Ride Modal */}
       <NewRideModal />
+      {!isStandalonePage && <ForcePasswordModal />}
 
       {/* Global Command Palette Search Modal */}
       <CommandPalette />

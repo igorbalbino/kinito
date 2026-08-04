@@ -24,6 +24,7 @@ class Company extends Model
         'is_partner_enabled',
         'is_active',
         'stripe_customer_id',
+        'trial_used_at',
     ];
 
     protected function casts(): array
@@ -34,6 +35,7 @@ class Company extends Model
             'is_provider' => 'boolean',
             'is_partner_enabled' => 'boolean',
             'is_active' => 'boolean',
+            'trial_used_at' => 'datetime',
         ];
     }
 

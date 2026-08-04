@@ -14,7 +14,7 @@ export const LoginView: React.FC = () => {
   const { t } = useTranslation();
   const { setActiveRole } = useAppStore();
 
-  const [email, setEmail] = useState('admin@kinito.test');
+  const [login, setLogin] = useState('admin@kinito.test');
   const [password, setPassword] = useState('password');
   const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
   const [rememberMe, setRememberMe] = useState(true);
@@ -36,7 +36,7 @@ export const LoginView: React.FC = () => {
 
     if (isApiConfigured()) {
       try {
-        await apiLogin(email, password);
+        await apiLogin(login, password);
         navigate('/dashboard');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Falha no login da API');
@@ -119,7 +119,7 @@ export const LoginView: React.FC = () => {
                     type="button"
                     onClick={() => {
                       setSelectedRole(preset.role);
-                      setEmail(preset.email);
+                      setLogin(preset.email);
                     }}
                     className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2 ${
                       isSelected
@@ -140,16 +140,16 @@ export const LoginView: React.FC = () => {
           <form onSubmit={handleLogin} className="space-y-4 pt-2">
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
-                E-mail Profissional
+                E-mail ou telefone
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
+                  value={login}
+                  onChange={(e) => setLogin(e.target.value)}
+                  placeholder="seu@email.com ou telefone"
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
                 />
               </div>
@@ -160,7 +160,7 @@ export const LoginView: React.FC = () => {
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                   Senha
                 </label>
-                <a href="#" onClick={(e) => { e.preventDefault(); alert('Recuperação de senha enviada para ' + email); }} className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline">
+                <a href="#" onClick={(e) => { e.preventDefault(); alert('Recuperação de senha enviada para ' + login); }} className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline">
                   Esqueceu a senha?
                 </a>
               </div>

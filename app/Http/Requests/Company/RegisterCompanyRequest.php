@@ -23,6 +23,7 @@ class RegisterCompanyRequest extends FormRequest
             'cnpj' => ['required', 'string', 'max:18', 'unique:companies,cnpj'],
             'company_email' => ['nullable', 'email'],
             'company_phone' => ['nullable', 'string', 'max:30'],
+            'plan_id' => ['nullable', 'integer', 'exists:plans,id'],
         ];
     }
 }

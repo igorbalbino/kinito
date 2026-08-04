@@ -15,6 +15,7 @@ use App\Models\RideLog;
 use App\Services\Audit\AuditService;
 use App\Services\Finance\FinanceService;
 use App\Services\Notification\NotificationService;
+use App\Services\Subscription\SubscriptionLifecycleService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -25,6 +26,7 @@ class RideService
         private readonly FinanceService $finance,
         private readonly AuditService $audit,
         private readonly NotificationService $notifications,
+        private readonly SubscriptionLifecycleService $subscriptions,
     ) {}
 
     /**
@@ -41,6 +43,11 @@ class RideService
             }
 
             $company = Company::query()->with('settings')->findOrFail($companyId);
+
+            if (! $this->subscriptions->companyHasAccess($company)) {
+                throw new InvalidArgumentException('Esta empresa está suspensa ou sem assinatura ativa e não pode receber corridas.');
+            }
+
             $status = $this->initialStatus($company, $data);
 
             $gross = isset($data['gross_value'])
@@ -196,8 +203,14 @@ class RideService
         }
 
         $prefs = $client->preferences;
+
         if ($prefs?->default_provider_mode === DefaultProviderMode::Company && $prefs->default_company_id) {
             return (int) $prefs->default_company_id;
+        }
+
+        if ($prefs?->default_provider_mode === DefaultProviderMode::All) {
+            // Marketplace: cliente deve escolher o fornecedor explicitamente.
+            return null;
         }
 
         return $client->companies()->wherePivot('is_active', true)->value('companies.id');

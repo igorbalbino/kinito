@@ -116,6 +116,19 @@ php artisan tinker
 ... );
 ```
 
+## Planos, trial e billing
+
+- Empresa escolhe o plano → **14 dias de trial** (`POST /empresas/{id}/subscribe` com `mode=trial` ou `plan_id` no register).
+- Após o trial: assina via `BillingGateway` (**Stripe** se `STRIPE_SECRET`, senão **mock**) ou fica suspensa (some do marketplace).
+- Cron: `php artisan subscriptions:expire-trials` (agendado hourly).
+- Interface: `App\Contracts\Billing\BillingGateway` — troque o driver sem mudar o lifecycle.
+
+```env
+BILLING_DRIVER=auto
+STRIPE_SECRET=           # vazio = mock
+STRIPE_WEBHOOK_SECRET=
+```
+
 ## WhatsApp (providers)
 
 Troca de driver só por `.env` — código de negócio usa `WhatsAppManager`.  
@@ -157,10 +170,10 @@ Checkup de riscos e integridade: [`docs/SECURITY.md`](docs/SECURITY.md).
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"admin@kinito.test\",\"password\":\"password\"}"
+  -d "{\"login\":\"admin@kinito.test\",\"password\":\"password\"}"
 ```
 
-Use o header: `Authorization: Bearer {token}`
+Login aceita e-mail ou telefone (`login`). Use o header: `Authorization: Bearer {token}`
 
 ## Documentação da API
 

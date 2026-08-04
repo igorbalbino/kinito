@@ -245,6 +245,7 @@ class DatabaseSeeder extends Seeder
             );
 
             $plan = Plan::query()->where('slug', $def['plan'])->first();
+            $company->update(['trial_used_at' => now()->subMonth(), 'is_provider' => true, 'is_active' => true]);
             Subscription::query()->updateOrCreate(
                 ['company_id' => $company->id, 'plan_id' => $plan->id],
                 [

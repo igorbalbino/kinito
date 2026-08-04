@@ -50,17 +50,18 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::query()->where('email', $request->string('email')->toString())->first();
+        $login = $request->string('login')->toString();
+        $user = User::findForLogin($login);
 
         if (! $user || ! Hash::check($request->string('password')->toString(), $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['Credenciais inválidas.'],
+                'login' => ['Credenciais inválidas.'],
             ]);
         }
 
         if (! $user->is_active) {
             throw ValidationException::withMessages([
-                'email' => ['Conta desativada.'],
+                'login' => ['Conta desativada.'],
             ]);
         }
 
@@ -71,6 +72,33 @@ class AuthController extends Controller
             'token' => $token,
             'token_type' => 'Bearer',
             'user' => new UserResource($user->load(['roles', 'driver.documents', 'client.preferences', 'companies', 'ownedCompanies'])),
+        ]);
+    }
+
+    public function changePassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Senha atual incorreta.'],
+            ]);
+        }
+
+        $user->forceFill([
+            'password' => $data['password'],
+            'must_change_password' => false,
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        return response()->json([
+            'message' => 'Senha atualizada com sucesso.',
+            'user' => new UserResource($user->fresh()->load(['roles', 'driver', 'client', 'companies', 'ownedCompanies'])),
         ]);
     }
 

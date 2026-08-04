@@ -4,6 +4,14 @@ return [
 
     'payment_provider' => env('PAYMENT_PROVIDER', 'manual'),
 
+    /*
+    | Billing SaaS (assinatura de planos) — separado do split de corridas.
+    | BILLING_DRIVER=auto|mock|stripe  (auto: stripe se STRIPE_SECRET, senão mock)
+    */
+    'billing' => [
+        'driver' => env('BILLING_DRIVER', 'auto'),
+    ],
+
     'stripe' => [
         'secret' => env('STRIPE_SECRET'),
         'key' => env('STRIPE_KEY'),

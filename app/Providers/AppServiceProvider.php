@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Contracts\Billing\BillingGateway;
 use App\Contracts\WhatsApp\WhatsAppGateway;
+use App\Services\Billing\BillingManager;
 use App\Services\WhatsApp\WhatsAppManager;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -17,9 +19,14 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(WhatsAppManager::class);
+        $this->app->singleton(BillingManager::class);
 
         $this->app->bind(WhatsAppGateway::class, function ($app) {
             return $app->make(WhatsAppManager::class)->driver();
+        });
+
+        $this->app->bind(BillingGateway::class, function ($app) {
+            return $app->make(BillingManager::class)->driver();
         });
     }
 

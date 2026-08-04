@@ -30,3 +30,5 @@ Thumbs.db
 .gitattributes
 .npmrc
 composer.lock
+
+docker-data

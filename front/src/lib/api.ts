@@ -6,9 +6,35 @@ export type ApiUser = {
   id: number | string;
   name: string;
   email: string;
+  phone?: string | null;
+  mustChangePassword?: boolean;
   roles?: string[];
   companies?: { id: number | string; name: string }[];
   ownedCompanies?: { id: number | string; name: string }[];
+};
+
+export type ApiPlan = {
+  id: number | string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  billingPeriod?: string;
+  features?: string[] | Record<string, unknown>;
+};
+
+export type SubscriptionStatusPayload = {
+  has_access: boolean;
+  trial_used: boolean;
+  trial_used_at?: string | null;
+  subscription?: {
+    id: number;
+    status: string;
+    plan_id?: number;
+    trial_ends_at?: string | null;
+    ends_at?: string | null;
+    plan?: ApiPlan;
+  } | null;
 };
 
 export function getApiBaseUrl(): string {
@@ -96,23 +122,74 @@ export async function apiFetch<T = unknown>(
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg =
+    const err = new Error(
       (data as { message?: string }).message ||
-      (data as { error?: string }).error ||
-      `HTTP ${res.status}`;
-    throw new Error(msg);
+        (data as { error?: string }).error ||
+        `HTTP ${res.status}`,
+    ) as Error & { code?: string; status?: number };
+    err.code = (data as { code?: string }).code;
+    err.status = res.status;
+    throw err;
   }
 
   return data as T;
 }
 
-export async function apiLogin(email: string, password: string): Promise<{ token: string; user: ApiUser }> {
+export async function apiLogin(login: string, password: string): Promise<{ token: string; user: ApiUser }> {
   const data = await apiFetch<{ token: string; user: ApiUser }>('/api/v1/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password, device_name: 'kinito-web' }),
+    body: JSON.stringify({ login, password, device_name: 'kinito-web' }),
   });
   setApiSession(data.token, data.user);
   return data;
+}
+
+export async function changePassword(currentPassword: string, password: string): Promise<ApiUser> {
+  const data = await apiFetch<{ user: ApiUser }>('/api/v1/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({
+      current_password: currentPassword,
+      password,
+      password_confirmation: password,
+    }),
+  });
+  const token = getApiToken();
+  if (token) setApiSession(token, data.user);
+  return data.user;
+}
+
+export async function fetchPlans(): Promise<ApiPlan[]> {
+  const data = await apiFetch<ApiPlan[] | { data: ApiPlan[] }>('/api/v1/plans');
+  if (Array.isArray(data)) return data;
+  return Array.isArray(data.data) ? data.data : [];
+}
+
+export async function fetchSubscriptionStatus(companyId: number): Promise<SubscriptionStatusPayload> {
+  return apiFetch<SubscriptionStatusPayload>(`/api/v1/empresas/${companyId}/subscription`);
+}
+
+export async function subscribeCompany(
+  companyId: number,
+  planId: number | string,
+  mode: 'trial' | 'checkout' | 'auto' = 'auto',
+): Promise<{
+  mode: string;
+  checkout?: { checkout_url?: string; session_id?: string; driver?: string } | null;
+  has_access?: boolean;
+  message?: string;
+}> {
+  return apiFetch(`/api/v1/empresas/${companyId}/subscribe`, {
+    method: 'POST',
+    body: JSON.stringify({ plan_id: planId, mode }),
+  });
+}
+
+export async function fetchProviders(): Promise<{ id: number; name: string }[]> {
+  const data = await apiFetch<{ data?: { id: number | string; name: string }[] } | { id: number | string; name: string }[]>(
+    '/api/v1/fornecedores',
+  );
+  const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+  return rows.map((c) => ({ id: Number(c.id), name: c.name })).filter((c) => c.id > 0);
 }
 
 export type WhatsAppStatus = {

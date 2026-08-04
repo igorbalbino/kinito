@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Car, MapPin, Navigation, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { fetchProviders, getApiToken, isApiConfigured } from '../../lib/api';
 
 interface NewRideModalProps {
   isOpen?: boolean;
@@ -25,9 +26,24 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
     setNewRideModalOpen(false);
   };
 
+  const [providerOptions, setProviderOptions] = useState<{ id: string; name: string }[]>(
+    () => companies.map((c) => ({ id: c.id, name: c.name })),
+  );
   const [clientId, setClientId] = useState(clients[0]?.id || '');
   const [companyId, setCompanyId] = useState(companies[0]?.id || '');
   const [driverId, setDriverId] = useState('');
+
+  useEffect(() => {
+    if (!isModalOpen || !isApiConfigured() || !getApiToken()) return;
+    fetchProviders()
+      .then((list) => {
+        if (!list.length) return;
+        const opts = list.map((c) => ({ id: String(c.id), name: c.name }));
+        setProviderOptions(opts);
+        setCompanyId((prev) => (opts.some((o) => o.id === prev) ? prev : opts[0].id));
+      })
+      .catch(() => undefined);
+  }, [isModalOpen]);
 
   const [originAddr, setOriginAddr] = useState('Av. Paulista, 1000 - Bela Vista');
   const [destAddr, setDestAddr] = useState('Rua Faria Lima, 1800 - Pinheiros');
@@ -41,7 +57,9 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
     e.preventDefault();
 
     const selectedClient = clients.find((c) => c.id === clientId) || clients[0];
-    const selectedCompany = companies.find((comp) => comp.id === companyId) || companies[0];
+    const selectedCompany =
+      companies.find((comp) => comp.id === companyId) ||
+      ({ id: companyId, name: providerOptions.find((p) => p.id === companyId)?.name || 'Fornecedor' } as (typeof companies)[0]);
     const selectedDriver = drivers.find((d) => d.id === driverId);
 
     const grossValue = parseFloat((12.50 + distanceKm * 3.40).toFixed(2));
@@ -151,7 +169,7 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
                 onChange={(e) => setCompanyId(e.target.value)}
                 className="w-full mt-1.5 p-3 rounded-xl bg-white/5 border border-white/10 text-slate-100 font-medium focus:border-indigo-500 focus:outline-none min-h-[44px]"
               >
-                {companies.map((comp) => (
+                {providerOptions.map((comp) => (
                   <option key={comp.id} value={comp.id} className="bg-[#121215] text-slate-100">
                     {comp.name}
                   </option>

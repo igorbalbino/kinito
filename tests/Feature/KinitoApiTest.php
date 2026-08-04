@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\Driver;
+use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -77,6 +80,22 @@ class KinitoApiTest extends TestCase
             'company_id' => $company->id,
             'modelo_corridas' => 'AMBOS',
         ]);
+
+        $plan = Plan::query()->create([
+            'slug' => 'test-plan',
+            'name' => 'Test',
+            'price' => 99,
+            'billing_period' => 'monthly',
+            'is_active' => true,
+        ]);
+        Subscription::query()->create([
+            'company_id' => $company->id,
+            'plan_id' => $plan->id,
+            'status' => SubscriptionStatus::Active,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
+        ]);
+        $company->update(['is_active' => true, 'is_provider' => true, 'trial_used_at' => now()]);
 
         $clientUser = User::factory()->create();
         $clientUser->assignRole(UserRole::Cliente->value);

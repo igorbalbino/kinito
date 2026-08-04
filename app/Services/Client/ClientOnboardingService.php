@@ -62,7 +62,8 @@ class ClientOnboardingService
     public function createByActor(array $data, User $actor, Company $company, string $origin = 'empresa'): array
     {
         return DB::transaction(function () use ($data, $actor, $company, $origin) {
-            $tempPassword = $data['password'] ?? Str::password(10);
+            $tempPassword = Str::password(10);
+            $wasNewUser = ! User::query()->where('email', $data['email'])->exists();
 
             $user = User::query()->firstOrCreate(
                 ['email' => $data['email']],
@@ -70,8 +71,18 @@ class ClientOnboardingService
                     'name' => $data['name'],
                     'phone' => $data['phone'] ?? null,
                     'password' => $tempPassword,
+                    'must_change_password' => true,
                 ]
             );
+
+            if ($wasNewUser) {
+                $user->forceFill([
+                    'must_change_password' => true,
+                    'password' => $tempPassword,
+                ])->save();
+            } elseif (! empty($data['phone']) && ! $user->phone) {
+                $user->update(['phone' => $data['phone']]);
+            }
 
             if (! $user->hasRole(UserRole::Cliente->value)) {
                 $user->assignRole(UserRole::Cliente->value);
@@ -98,28 +109,40 @@ class ClientOnboardingService
                 ]
             );
 
-            $accessMessage = "Olá {$user->name}, sua conta foi criada pela empresa {$company->name}. Email: {$user->email}. Senha temporária: {$tempPassword}";
+            if ($wasNewUser) {
+                $login = $user->email ?: $user->phone;
+                $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
+                $accessMessage = "A empresa {$company->name} cadastrou você no Kinito. "
+                    ."Acesse: {$link}\n"
+                    ."Login: {$login}\n"
+                    ."Senha temporária: {$tempPassword}\n"
+                    .'No primeiro acesso você deverá trocar a senha.';
 
-            $channels = ['email'];
-            if (filled($user->phone) && config('kinito.whatsapp.enabled')) {
-                $channels[] = 'whatsapp';
+                $channels = ['email'];
+                if (filled($user->phone) && config('kinito.whatsapp.enabled')) {
+                    $channels[] = 'whatsapp';
+                }
+
+                $this->notifications->notifyChannels(
+                    $user,
+                    'Acesso Kinito',
+                    $accessMessage,
+                    $channels,
+                    'sistema',
+                    'info'
+                );
             }
-
-            $this->notifications->notifyChannels(
-                $user,
-                'Acesso Kinito',
-                $accessMessage,
-                $channels,
-                'sistema',
-                'info'
-            );
 
             $this->audit->log('CLIENT_CREATED_BY_ACTOR', $actor, $client, null, [
                 'company_id' => $company->id,
                 'origin' => $origin,
             ]);
 
-            return compact('user', 'client', 'tempPassword');
+            return [
+                'user' => $user,
+                'client' => $client,
+                'tempPassword' => $wasNewUser ? $tempPassword : null,
+            ];
         });
     }
 }
