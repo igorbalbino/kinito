@@ -16,9 +16,11 @@ import { Footer } from '../components/layout/Footer';
 import { SafeSelect } from '../components/common/SafeSelect';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Ride } from '../types';
+import { isClientRole } from '../lib/navByRole';
 
 export const CorridasView: React.FC = () => {
-  const { rides, setNewRideModalOpen, dataLoading, dataError } = useAppStore();
+  const { rides, setNewRideModalOpen, dataLoading, dataError, activeRole } = useAppStore();
+  const clientMode = isClientRole(activeRole);
 
   const [viewMode, setViewMode] = useState<'table' | 'grid' | 'timeline'>('table');
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
@@ -30,7 +32,7 @@ export const CorridasView: React.FC = () => {
   const filteredRides = rides.filter((r) => {
     const matchesSearch =
       r.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (!clientMode && r.clientName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (r.driverName && r.driverName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       r.origin.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.destination.address.toLowerCase().includes(searchQuery.toLowerCase());
@@ -52,19 +54,25 @@ export const CorridasView: React.FC = () => {
         <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{dataError}</p>
       )}
       {!dataLoading && !rides.length && (
-        <p className="text-xs text-zinc-500">Nenhuma corrida encontrada. Crie a primeira pelo botão Nova Corrida.</p>
+        <p className="text-xs text-zinc-500">
+          {clientMode
+            ? 'Nenhuma corrida ainda. Peça a primeira pelo botão Solicitar.'
+            : 'Nenhuma corrida encontrada. Crie a primeira pelo botão Nova Corrida.'}
+        </p>
       )}
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-            Gestão de Corridas & Despacho
+            {clientMode ? 'Minhas corridas' : 'Gestão de Corridas & Despacho'}
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
               {filteredRides.length} de {rides.length}
             </span>
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Visualização em Tabela, Cards e Timeline em Tempo Real de Todos os Serviços.
+            {clientMode
+              ? 'Histórico das suas solicitações, valores e status.'
+              : 'Visualização em Tabela, Cards e Timeline em Tempo Real de Todos os Serviços.'}
           </p>
         </div>
 
@@ -92,24 +100,26 @@ export const CorridasView: React.FC = () => {
             >
               <Grid className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => setViewMode('timeline')}
-              className={`p-1.5 rounded-lg flex items-center gap-1 font-semibold transition-all ${
-                viewMode === 'timeline'
-                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xs'
-                  : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
-              }`}
-              title="Visão em Timeline"
-            >
-              <Clock className="w-4 h-4" />
-            </button>
+            {!clientMode && (
+              <button
+                onClick={() => setViewMode('timeline')}
+                className={`p-1.5 rounded-lg flex items-center gap-1 font-semibold transition-all ${
+                  viewMode === 'timeline'
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+                title="Visão em Timeline"
+              >
+                <Clock className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           <button
             onClick={() => setNewRideModalOpen(true)}
             className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 min-h-[44px] active:scale-95"
           >
-            <Plus className="w-4 h-4" /> Nova Corrida
+            <Plus className="w-4 h-4" /> {clientMode ? 'Solicitar' : 'Nova Corrida'}
           </button>
         </div>
       </div>
@@ -122,7 +132,11 @@ export const CorridasView: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por código, cliente, motorista, endereço..."
+              placeholder={
+                clientMode
+                  ? 'Buscar por código ou endereço...'
+                  : 'Buscar por código, cliente, motorista, endereço...'
+              }
               className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
@@ -176,27 +190,45 @@ export const CorridasView: React.FC = () => {
                   <span className="font-mono font-bold text-indigo-600 text-xs">{ride.code}</span>
                   <StatusBadge type="ride" status={ride.status} size="sm" />
                 </div>
-                <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{ride.clientName}</div>
-                <div className="text-[11px] text-zinc-500 truncate">{ride.origin.neighborhood} → {ride.destination.neighborhood}</div>
+                {!clientMode && (
+                  <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{ride.clientName}</div>
+                )}
+                <div className="text-[11px] text-zinc-500 truncate">
+                  {ride.origin.address || ride.origin.neighborhood} →{' '}
+                  {ride.destination.address || ride.destination.neighborhood}
+                </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-zinc-500">{ride.driverName || 'Sem motorista'}</span>
+                  <span className="text-zinc-500">
+                    {clientMode ? formatDate(ride.requestedAt) : ride.driverName || 'Sem motorista'}
+                  </span>
                   <span className="font-bold">{formatBRL(ride.grossValue)}</span>
                 </div>
               </button>
             ))}
           </div>
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-xs">
+            <table className="w-full min-w-[720px] text-left text-xs">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 font-medium bg-zinc-50/50 dark:bg-zinc-900/50">
                   <th className="py-3 px-4">Código</th>
-                  <th className="py-3 px-4">Cliente</th>
-                  <th className="py-3 px-4">Motorista & Veículo</th>
-                  <th className="py-3 px-4">Origem → Destino</th>
-                  <th className="py-3 px-4">Distância</th>
-                  <th className="py-3 px-4">Valor Bruto</th>
-                  <th className="py-3 px-4">Líquido Motorista</th>
-                  <th className="py-3 px-4">Status</th>
+                  {clientMode ? (
+                    <>
+                      <th className="py-3 px-4">Trajeto</th>
+                      <th className="py-3 px-4">Valor</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Data</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="py-3 px-4">Cliente</th>
+                      <th className="py-3 px-4">Motorista & Veículo</th>
+                      <th className="py-3 px-4">Origem → Destino</th>
+                      <th className="py-3 px-4">Distância</th>
+                      <th className="py-3 px-4">Valor Bruto</th>
+                      <th className="py-3 px-4">Líquido Motorista</th>
+                      <th className="py-3 px-4">Status</th>
+                    </>
+                  )}
                   <th className="py-3 px-4 text-right">Ações</th>
                 </tr>
               </thead>
@@ -204,23 +236,39 @@ export const CorridasView: React.FC = () => {
                 {filteredRides.slice(0, 15).map((ride) => (
                   <tr key={ride.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                     <td className="py-3 px-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">{ride.code}</td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-zinc-900 dark:text-zinc-100">{ride.clientName}</div>
-                      <div className="text-[10px] text-zinc-400">{ride.companyName}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-zinc-900 dark:text-zinc-100">{ride.driverName || 'Nenhum atribuído'}</div>
-                      <div className="text-[10px] text-zinc-400">{ride.driverVehicle || '-'}</div>
-                    </td>
-                    <td className="py-3 px-4 max-w-xs truncate text-zinc-600 dark:text-zinc-400">
-                      {ride.origin.neighborhood} → {ride.destination.neighborhood}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">{ride.distanceKm} km</td>
-                    <td className="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</td>
-                    <td className="py-3 px-4 font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(ride.driverNet)}</td>
-                    <td className="py-3 px-4">
-                      <StatusBadge type="ride" status={ride.status} size="sm" />
-                    </td>
+                    {clientMode ? (
+                      <>
+                        <td className="py-3 px-4 max-w-sm truncate text-zinc-600 dark:text-zinc-400">
+                          {ride.origin.address || ride.origin.neighborhood} →{' '}
+                          {ride.destination.address || ride.destination.neighborhood}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</td>
+                        <td className="py-3 px-4">
+                          <StatusBadge type="ride" status={ride.status} size="sm" />
+                        </td>
+                        <td className="py-3 px-4 text-zinc-500">{formatDate(ride.requestedAt)}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-zinc-900 dark:text-zinc-100">{ride.clientName}</div>
+                          <div className="text-[10px] text-zinc-400">{ride.companyName}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-zinc-900 dark:text-zinc-100">{ride.driverName || 'Nenhum atribuído'}</div>
+                          <div className="text-[10px] text-zinc-400">{ride.driverVehicle || '-'}</div>
+                        </td>
+                        <td className="py-3 px-4 max-w-xs truncate text-zinc-600 dark:text-zinc-400">
+                          {ride.origin.neighborhood} → {ride.destination.neighborhood}
+                        </td>
+                        <td className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">{ride.distanceKm} km</td>
+                        <td className="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</td>
+                        <td className="py-3 px-4 font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(ride.driverNet)}</td>
+                        <td className="py-3 px-4">
+                          <StatusBadge type="ride" status={ride.status} size="sm" />
+                        </td>
+                      </>
+                    )}
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => setSelectedRide(ride)}
@@ -263,11 +311,13 @@ export const CorridasView: React.FC = () => {
 
               <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs">
                 <div>
-                  <div className="text-[10px] text-zinc-400">Cliente</div>
-                  <div className="font-semibold text-zinc-900 dark:text-zinc-100">{ride.clientName}</div>
+                  <div className="text-[10px] text-zinc-400">{clientMode ? 'Data' : 'Cliente'}</div>
+                  <div className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {clientMode ? formatDate(ride.requestedAt) : ride.clientName}
+                  </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] text-zinc-400">Valor Bruto</div>
+                  <div className="text-[10px] text-zinc-400">Valor</div>
                   <div className="font-bold text-base text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</div>
                 </div>
               </div>
@@ -276,7 +326,7 @@ export const CorridasView: React.FC = () => {
         </div>
       )}
 
-      {viewMode === 'timeline' && (
+      {!clientMode && viewMode === 'timeline' && (
         <div className="p-6 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-6">
           <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
             Linha do Tempo de Execução dos Serviços

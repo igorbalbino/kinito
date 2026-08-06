@@ -21,7 +21,7 @@ import {
   TrendingUp,
   UserCheck,
 } from 'lucide-react';
-import { formatBRL } from '../lib/utils';
+import { formatBRL, formatDate } from '../lib/utils';
 import { useAppStore } from '../store/useAppStore';
 import { ManualFinancialNotice } from '../components/common/ManualFinancialNotice';
 import { MetricCard } from '../components/common/MetricCard';
@@ -31,15 +31,17 @@ import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
 import { PageContainer } from '../components/layout/PageContainer';
 import { RideDetailsModal } from '../components/modals/RideDetailsModal';
-import { NewRideModal } from '../components/modals/NewRideModal';
 import { Ride } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { rideAction } from '../lib/api';
 import { normalizeRide } from '../lib/normalize';
 import { unwrapResource } from '../lib/sessionProfile';
+import { isClientRole } from '../lib/navByRole';
+import { useNavigate } from 'react-router-dom';
 
 export const DashboardView: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const {
     activeRole,
     rides,
@@ -52,6 +54,7 @@ export const DashboardView: React.FC = () => {
   } = useAppStore();
 
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
+  const clientMode = isClientRole(activeRole);
 
   const completedRides = rides.filter((r) => r.status === 'concluida');
   const inProgressRides = rides.filter((r) => r.status === 'em_andamento' || r.status === 'atribuida');
@@ -116,29 +119,35 @@ export const DashboardView: React.FC = () => {
         <div className="text-xs text-rose-600 dark:text-rose-400 font-medium">{dataError}</div>
       )}
 
-      <ManualFinancialNotice />
+      {!clientMode && <ManualFinancialNotice />}
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 min-w-0">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 break-words">
-              {t.dashboard.title} ({activeRole === 'admin' ? 'Master Admin' : activeRole === 'empresa' ? 'Fleet Company' : activeRole === 'motorista' ? 'Driver' : 'Client'})
+              {clientMode
+                ? 'Olá! Pronto para sua próxima corrida?'
+                : `${t.dashboard.title} (${activeRole === 'admin' ? 'Master Admin' : activeRole === 'empresa' ? 'Fleet Company' : activeRole === 'motorista' ? 'Driver' : 'Client'})`}
             </h1>
-            <StatusBadge type="stripe_feature" status={financialMode === 'stripe' ? 'confirmed' : 'split'} size="sm" />
+            {!clientMode && (
+              <StatusBadge type="stripe_feature" status={financialMode === 'stripe' ? 'confirmed' : 'split'} size="sm" />
+            )}
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            {t.dashboard.subtitle}
+            {clientMode ? 'Peça uma corrida em poucos toques e acompanhe o histórico.' : t.dashboard.subtitle}
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={() => setNewRideModalOpen(true)}
-            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 min-h-[44px] active:scale-95"
-          >
-            <Plus className="w-4 h-4" /> {t.dashboard.quickNewRide}
-          </button>
-        </div>
+        {!clientMode && (
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => setNewRideModalOpen(true)}
+              className="w-full sm:w-auto px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 min-h-[44px] active:scale-95"
+            >
+              <Plus className="w-4 h-4" /> {t.dashboard.quickNewRide}
+            </button>
+          </div>
+        )}
       </div>
 
       {activeRole === 'admin' && (
@@ -509,15 +518,29 @@ export const DashboardView: React.FC = () => {
 
       {activeRole === 'cliente' && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-700 text-white space-y-4 shadow-xl">
+            <h2 className="text-2xl font-black">Pedir corrida agora</h2>
+            <p className="text-sm opacity-90 max-w-xl">
+              Informe origem e destino. Em poucos cliques sua solicitação está no ar.
+            </p>
+            <button
+              type="button"
+              onClick={() => setNewRideModalOpen(true)}
+              className="px-6 py-3.5 rounded-xl bg-white text-indigo-950 font-extrabold text-sm shadow-lg hover:bg-slate-100 active:scale-95 transition-all flex items-center justify-center gap-2 min-h-[48px]"
+            >
+              <Car className="w-5 h-5" /> Pedir corrida
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <MetricCard
-              title="Corridas Solicitadas"
+              title="Minhas corridas"
               value={rides.length}
               change={`${completedRides.length} concluídas`}
               icon={<Car className="w-5 h-5 text-amber-500" />}
             />
             <MetricCard
-              title="Gasto Total em Viagens"
+              title="Gasto total"
               value={formatBRL(totalGrossRevenue)}
               subtitle="Corridas concluídas"
               icon={<DollarSign className="w-5 h-5 text-indigo-500" />}
@@ -528,25 +551,61 @@ export const DashboardView: React.FC = () => {
               subtitle="Aguardando ou ativas"
               icon={<Car className="w-5 h-5 text-blue-500" />}
             />
-            <MetricCard
-              title="Canceladas"
-              value={cancelledRides.length}
-              icon={<Star className="w-5 h-5 text-emerald-500" />}
-            />
           </div>
 
-          <div className="p-8 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-700 text-white space-y-4 shadow-xl">
-            <h2 className="text-2xl font-black">Precisa de uma corrida agora?</h2>
-            <p className="text-sm opacity-90 max-w-xl">
-              Solicite pelo painel. Acompanhe status e valores com transparência.
-            </p>
-            <button
-              type="button"
-              onClick={() => setNewRideModalOpen(true)}
-              className="px-6 py-3.5 rounded-xl bg-white text-indigo-950 font-extrabold text-sm shadow-lg hover:bg-slate-100 active:scale-95 transition-all flex items-center justify-center gap-2 min-h-[48px]"
-            >
-              <Car className="w-5 h-5" /> Solicitar Corrida
-            </button>
+          <div className="p-4 sm:p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">Últimas corridas</h3>
+              <button
+                type="button"
+                onClick={() => navigate('/corridas')}
+                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                Ver todas
+              </button>
+            </div>
+            {rides.length === 0 ? (
+              <p className="text-xs text-zinc-500 py-4 text-center">Nenhuma corrida ainda. Peça a primeira!</p>
+            ) : (
+              <div className="space-y-2">
+                {rides.slice(0, 5).map((ride) => (
+                  <button
+                    key={ride.id}
+                    type="button"
+                    onClick={() => setSelectedRide(ride)}
+                    className="w-full text-left p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/40 space-y-1 active:scale-[0.99] transition-all"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-bold text-indigo-600 text-xs">{ride.code}</span>
+                      <StatusBadge type="ride" status={ride.status} size="sm" />
+                    </div>
+                    <div className="text-[11px] text-zinc-500 truncate">
+                      {ride.origin.neighborhood || ride.origin.address} → {ride.destination.neighborhood || ride.destination.address}
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-zinc-400">{formatDate(ride.requestedAt)}</span>
+                      <span className="font-bold">{formatBRL(ride.grossValue)}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => navigate('/financeiro')}
+                className="px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-semibold min-h-[40px]"
+              >
+                Meus gastos
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/corridas')}
+                className="px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-semibold min-h-[40px]"
+              >
+                Histórico completo
+              </button>
+            </div>
           </div>
         </>
       )}

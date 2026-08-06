@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\UserRole;
+use App\Services\Notification\NotificationService;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,6 +19,18 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
+
+    /** Envia verificação via SMTP direto (PHPMailer), não via MAIL_MAILER=log. */
+    public function sendEmailVerificationNotification(): void
+    {
+        app(NotificationService::class)->sendEmailVerification($this);
+    }
+
+    /** Redefinição de senha via SMTP direto. */
+    public function sendPasswordResetNotification($token): void
+    {
+        app(NotificationService::class)->sendPasswordResetEmail($this, (string) $token);
+    }
 
     protected $fillable = [
         'name',

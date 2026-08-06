@@ -10,6 +10,7 @@ use App\Models\CompanySetting;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\Audit\AuditService;
+use App\Services\Notification\NotificationService;
 use App\Services\Subscription\SubscriptionLifecycleService;
 use App\Support\EnsureUserRoles;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ class CompanyService
     public function __construct(
         private readonly AuditService $audit,
         private readonly SubscriptionLifecycleService $lifecycle,
+        private readonly NotificationService $notifications,
     ) {}
 
     /**
@@ -27,7 +29,7 @@ class CompanyService
      */
     public function register(array $data): array
     {
-        return DB::transaction(function () use ($data) {
+        $result = DB::transaction(function () use ($data) {
             $user = User::query()->create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -74,6 +76,10 @@ class CompanyService
 
             return compact('user', 'company', 'subscription');
         });
+
+        $this->notifications->sendRegistrationEmail($result['user']);
+
+        return $result;
     }
 
     /**

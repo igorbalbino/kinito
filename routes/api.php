@@ -93,6 +93,7 @@ Route::prefix('v1')->group(function () {
 
             Route::get('/financeiro/transactions', [FinanceController::class, 'transactions']);
             Route::get('/financeiro/summary', [FinanceController::class, 'summary']);
+            Route::get('/financeiro/meus-gastos', [FinanceController::class, 'mySpendings']);
 
             Route::get('/relatorios/own', [ReportController::class, 'own']);
             Route::get('/relatorios/received', [ReportController::class, 'received']);

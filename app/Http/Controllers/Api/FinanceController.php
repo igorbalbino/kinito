@@ -85,4 +85,45 @@ class FinanceController extends Controller
             'payment' => $payment,
         ], 201);
     }
+
+    /** Spending summary for the authenticated client (CLIENTE role). */
+    public function mySpendings(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->hasRole('CLIENTE'), 403);
+
+        $clientId = $request->user()->client?->id;
+        abort_unless($clientId, 404, 'Perfil de cliente não encontrado.');
+
+        $rides = Ride::query()
+            ->where('client_id', $clientId)
+            ->with(['company:id,name'])
+            ->latest()
+            ->limit(100)
+            ->get();
+
+        $billable = $rides->whereIn('status', [
+            RideStatus::Finalizada,
+            RideStatus::EmAndamento,
+            RideStatus::Aceita,
+        ]);
+
+        $items = $rides->map(fn (Ride $ride) => [
+            'id' => $ride->id,
+            'code' => $ride->code,
+            'status' => $ride->status?->value ?? (string) $ride->status,
+            'grossValue' => (float) $ride->gross_value,
+            'origin' => is_array($ride->origin) ? ($ride->origin['address'] ?? '') : '',
+            'destination' => is_array($ride->destination) ? ($ride->destination['address'] ?? '') : '',
+            'companyName' => $ride->company?->name,
+            'requestedAt' => optional($ride->created_at)?->toIso8601String(),
+            'completedAt' => optional($ride->completed_at)?->toIso8601String(),
+        ])->values();
+
+        return response()->json([
+            'items' => $items,
+            'totalSpent' => (float) $billable->sum('gross_value'),
+            'ridesCount' => $rides->count(),
+            'paymentProvider' => config('kinito.payment_provider'),
+        ]);
+    }
 }

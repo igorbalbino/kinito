@@ -102,7 +102,7 @@ export const MobileBottomDock: React.FC = () => {
             }
           >
             <DollarSign className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px] tracking-tight">Financeiro</span>
+            <span className="text-[10px] tracking-tight">Gastos</span>
           </NavLink>
 
           <button

@@ -16,12 +16,23 @@ return [
 
     /*
     | Prefer Odara-style SMTP_* when set; fall back to Laravel MAIL_*.
-    | If SMTP_HOST (or MAIL_HOST) is filled, default mailer becomes smtp.
+    | If SMTP_HOST is filled, never silently stick on "log" (common local leftover).
     */
-    'default' => env(
-        'MAIL_MAILER',
-        filled(env('SMTP_HOST', env('MAIL_HOST'))) ? 'smtp' : 'log'
-    ),
+    'default' => (static function (): string {
+        $host = env('SMTP_HOST', env('MAIL_HOST'));
+        $mailer = env('MAIL_MAILER');
+        $smtpReady = filled($host) && $host !== '127.0.0.1';
+
+        if ($smtpReady && (blank($mailer) || $mailer === 'log')) {
+            return 'smtp';
+        }
+
+        if (filled($mailer)) {
+            return (string) $mailer;
+        }
+
+        return $smtpReady ? 'smtp' : 'log';
+    })(),
 
     /*
     |--------------------------------------------------------------------------

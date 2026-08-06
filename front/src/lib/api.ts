@@ -383,6 +383,21 @@ export async function fetchRides(): Promise<Record<string, unknown>[]> {
   return paginated(await apiFetch('/api/v1/corridas'));
 }
 
+export async function fetchPlatformConfig(): Promise<{
+  paymentProvider?: string;
+  featureFlags?: Record<string, boolean>;
+}> {
+  return apiFetch('/api/v1/config');
+}
+
+export async function fetchMySpendings(): Promise<{
+  items: Record<string, unknown>[];
+  totalSpent: number;
+  ridesCount: number;
+}> {
+  return apiFetch('/api/v1/financeiro/meus-gastos');
+}
+
 export async function createRide(payload: Record<string, unknown>): Promise<{ ride: Record<string, unknown> }> {
   return apiFetch('/api/v1/corridas', { method: 'POST', body: JSON.stringify(payload) });
 }

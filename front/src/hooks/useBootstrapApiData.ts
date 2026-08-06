@@ -5,6 +5,7 @@ import {
   fetchCompaniesFull,
   fetchDriversList,
   fetchNotifications,
+  fetchPlatformConfig,
   fetchRideLogs,
   fetchRides,
   fetchTransactions,
@@ -27,6 +28,7 @@ import {
 } from '../lib/normalize';
 import { roleFromApi } from '../lib/mappers';
 import { useAppStore } from '../store/useAppStore';
+import type { FinancialMode } from '../types';
 
 export function useBootstrapApiData(enabled = true) {
   const {
@@ -41,6 +43,7 @@ export function useBootstrapApiData(enabled = true) {
     setDataMeta,
     setActiveRole,
     setSelectedCompanyId,
+    setFinancialMode,
     dataLoaded,
     dataLoading,
   } = useAppStore();
@@ -61,6 +64,11 @@ export function useBootstrapApiData(enabled = true) {
       }
       const companyId = getApiCompanyId();
       if (companyId) setSelectedCompanyId(String(companyId));
+
+      const config = await fetchPlatformConfig().catch(() => null);
+      if (config?.paymentProvider === 'stripe' || config?.paymentProvider === 'manual') {
+        setFinancialMode(config.paymentProvider as FinancialMode);
+      }
 
       const [rides, drivers, clients, companies, transactions, notifications, logs, audits] =
         await Promise.all([
@@ -97,6 +105,7 @@ export function useBootstrapApiData(enabled = true) {
     setCompanies,
     setDataMeta,
     setDrivers,
+    setFinancialMode,
     setLogs,
     setNotifications,
     setRides,

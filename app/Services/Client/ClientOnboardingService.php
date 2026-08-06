@@ -29,7 +29,7 @@ class ClientOnboardingService
      */
     public function selfRegister(array $data): array
     {
-        return DB::transaction(function () use ($data) {
+        $result = DB::transaction(function () use ($data) {
             $user = User::query()->create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -53,6 +53,10 @@ class ClientOnboardingService
 
             return compact('user', 'client');
         });
+
+        $this->notifications->sendRegistrationEmail($result['user']);
+
+        return $result;
     }
 
     /**
@@ -62,10 +66,10 @@ class ClientOnboardingService
      */
     public function createByActor(array $data, User $actor, Company $company, string $origin = 'empresa'): array
     {
-        return DB::transaction(function () use ($data, $actor, $company, $origin) {
-            $tempPassword = Str::password(10);
-            $wasNewUser = ! User::query()->where('email', $data['email'])->exists();
+        $tempPassword = Str::password(10);
+        $wasNewUser = ! User::query()->where('email', $data['email'])->exists();
 
+        $result = DB::transaction(function () use ($data, $actor, $company, $origin, $tempPassword, $wasNewUser) {
             $user = User::query()->firstOrCreate(
                 ['email' => $data['email']],
                 [
@@ -119,12 +123,6 @@ class ClientOnboardingService
                     ."Acesse {$link} com o login {$login}. "
                     .'A senha temporária foi enviada por e-mail/WhatsApp e deve ser trocada no primeiro acesso.';
 
-                $privateMessage = "A empresa {$company->name} cadastrou você no Kinito.\n"
-                    ."Acesse: {$link}\n"
-                    ."Login: {$login}\n"
-                    ."Senha temporária: {$tempPassword}\n"
-                    .'No primeiro acesso você deverá trocar a senha.';
-
                 $this->notifications->notify(
                     $user,
                     'Acesso Kinito',
@@ -134,14 +132,6 @@ class ClientOnboardingService
                     'in_app',
                     $link,
                 );
-
-                if (filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
-                    $this->notifications->sendEmail($user, 'Acesso Kinito', $privateMessage);
-                }
-
-                if (filled($user->phone) && config('kinito.whatsapp.enabled')) {
-                    $this->notifications->sendWhatsApp($user, 'Acesso Kinito', $privateMessage);
-                }
             }
 
             $this->audit->log('CLIENT_CREATED_BY_ACTOR', $actor, $client, null, [
@@ -150,10 +140,31 @@ class ClientOnboardingService
             ]);
 
             return [
-                'user' => $user,
+                'user' => $user->fresh(),
                 'client' => $client,
                 'tempPassword' => $wasNewUser ? $tempPassword : null,
             ];
         });
+
+        if ($wasNewUser && $result['tempPassword']) {
+            $user = $result['user'];
+            $login = $user->email ?: $user->phone;
+            $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
+            $privateMessage = "A empresa {$company->name} cadastrou você no Kinito.\n"
+                ."Acesse: {$link}\n"
+                ."Login: {$login}\n"
+                ."Senha temporária: {$result['tempPassword']}\n"
+                .'No primeiro acesso você deverá trocar a senha.';
+
+            if (filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+                $this->notifications->sendEmail($user, 'Acesso Kinito', $privateMessage);
+            }
+
+            if (filled($user->phone) && config('kinito.whatsapp.enabled')) {
+                $this->notifications->sendWhatsApp($user, 'Acesso Kinito', $privateMessage);
+            }
+        }
+
+        return $result;
     }
 }

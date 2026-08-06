@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { formatBRL } from '../../lib/utils';
 import { useAppStore } from '../../store/useAppStore';
+import { canAccessRoute, isClientRole } from '../../lib/navByRole';
 
 export const CommandPalette: React.FC = () => {
   const navigate = useNavigate();
@@ -20,9 +21,11 @@ export const CommandPalette: React.FC = () => {
     drivers,
     clients,
     companies,
+    activeRole,
   } = useAppStore();
 
   const [query, setQuery] = useState('');
+  const clientMode = isClientRole(activeRole);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -50,17 +53,23 @@ export const CommandPalette: React.FC = () => {
     )
     .slice(0, 4);
 
-  const filteredDrivers = drivers
-    .filter((d) => d.name.toLowerCase().includes(query.toLowerCase()) || d.vehiclePlate.toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 3);
+  const filteredDrivers = clientMode || !canAccessRoute(activeRole, '/motoristas')
+    ? []
+    : drivers
+        .filter((d) => d.name.toLowerCase().includes(query.toLowerCase()) || d.vehiclePlate.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 3);
 
-  const filteredClients = clients
-    .filter((c) => c.name.toLowerCase().includes(query.toLowerCase()) || c.email.toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 3);
+  const filteredClients = clientMode || !canAccessRoute(activeRole, '/clientes')
+    ? []
+    : clients
+        .filter((c) => c.name.toLowerCase().includes(query.toLowerCase()) || c.email.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 3);
 
-  const filteredCompanies = companies
-    .filter((comp) => comp.name.toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 3);
+  const filteredCompanies = clientMode || !canAccessRoute(activeRole, '/empresas')
+    ? []
+    : companies
+        .filter((comp) => comp.name.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 3);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-zinc-950/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -71,7 +80,7 @@ export const CommandPalette: React.FC = () => {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Digite o código da corrida, nome do cliente, motorista ou empresa..."
+            placeholder={clientMode ? 'Buscar minhas corridas...' : 'Digite o código da corrida, nome do cliente, motorista ou empresa...'}
             autoFocus
             className="w-full bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
           />

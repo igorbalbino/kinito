@@ -9,7 +9,6 @@ import {
   ChevronRight,
   CreditCard,
   ExternalLink,
-  Home,
   LayoutDashboard,
   LogOut,
   Bell,
@@ -24,6 +23,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { useTranslation } from '../../hooks/useTranslation';
 import { apiLogout } from '../../lib/api';
 import { ROLE_LABELS, sessionDisplayProfile } from '../../lib/sessionProfile';
+import { canAccessRoute } from '../../lib/navByRole';
 import { useNavigate } from 'react-router-dom';
 
 export const Sidebar: React.FC = () => {
@@ -54,7 +54,6 @@ export const Sidebar: React.FC = () => {
   const availableRoles = profile.roles;
 
   const navItems = [
-    { path: '/', label: t.nav.home, icon: Home, flag: null },
     { path: '/dashboard', label: t.nav.dashboardLong, icon: LayoutDashboard, flag: null },
     { path: '/corridas', label: t.nav.rides, icon: Car, flag: null },
     { path: '/clientes', label: t.nav.clients, icon: Users, flag: 'moduloClientes' as const },
@@ -72,7 +71,11 @@ export const Sidebar: React.FC = () => {
     },
     { path: '/configuracoes', label: t.nav.settings, icon: Settings, flag: null },
     { path: '/perfil', label: t.nav.profile, icon: Zap, flag: null },
-  ];
+  ].filter((item) => {
+    if (!canAccessRoute(activeRole, item.path)) return false;
+    if (item.flag && !featureFlags[item.flag]) return false;
+    return true;
+  });
 
   return (
     <aside
@@ -140,11 +143,6 @@ export const Sidebar: React.FC = () => {
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          // If flag exists and is disabled
-          if (item.flag && !featureFlags[item.flag]) {
-            return null;
-          }
-
           const Icon = item.icon;
 
           return (

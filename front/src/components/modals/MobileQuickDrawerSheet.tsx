@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Bell,
   Building2,
   Car,
   CreditCard,
@@ -11,12 +12,28 @@ import {
   Search,
   Settings,
   Sun,
+  User,
   UserCheck,
   Users,
   X,
+  Zap,
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { sessionDisplayProfile } from '../../lib/sessionProfile';
+import { canAccessRoute, isClientRole, isFleetOperator } from '../../lib/navByRole';
+
+const MODULES = [
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/corridas', label: 'Corridas', icon: Car },
+  { path: '/financeiro', label: 'Financeiro', icon: CreditCard },
+  { path: '/motoristas', label: 'Motoristas', icon: UserCheck },
+  { path: '/clientes', label: 'Clientes', icon: Users },
+  { path: '/empresas', label: 'Empresas', icon: Building2 },
+  { path: '/relatorios', label: 'Relatórios', icon: FileText },
+  { path: '/notificacoes', label: 'Notificações', icon: Bell },
+  { path: '/configuracoes', label: 'Configurações', icon: Settings },
+  { path: '/perfil', label: 'Perfil', icon: User },
+] as const;
 
 export const MobileQuickDrawerSheet: React.FC = () => {
   const navigate = useNavigate();
@@ -39,6 +56,8 @@ export const MobileQuickDrawerSheet: React.FC = () => {
 
   const profile = sessionDisplayProfile(activeRole);
   const availableRoles = profile.roles;
+  const client = isClientRole(activeRole);
+  const modules = MODULES.filter((m) => canAccessRoute(activeRole, m.path));
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -85,7 +104,7 @@ export const MobileQuickDrawerSheet: React.FC = () => {
           className="w-full py-4 px-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-3 active:scale-95 transition-all min-h-[52px]"
         >
           <Car className="w-5 h-5" />
-          <span>Solicitar & Despachar Corrida</span>
+          <span>{client ? 'Pedir corrida agora' : 'Solicitar & Despachar Corrida'}</span>
         </button>
 
         <button
@@ -96,68 +115,25 @@ export const MobileQuickDrawerSheet: React.FC = () => {
           className="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-medium flex items-center gap-3 hover:bg-white/10 active:scale-95 transition-all min-h-[48px]"
         >
           <Search className="w-4 h-4 text-slate-400" />
-          <span>Buscar corridas, motoristas, frotas...</span>
+          <span>{client ? 'Buscar minhas corridas...' : 'Buscar corridas, motoristas, frotas...'}</span>
         </button>
-
-        <div className="space-y-2">
-          <label className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5 uppercase tracking-wider">
-            <Hand className="w-3.5 h-3.5 text-indigo-400" /> Posição dos Controles Táteis
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => setHandPreference('left')}
-              className={`p-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1 transition-all active:scale-95 min-h-[48px] ${
-                handPreference === 'left'
-                  ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                  : 'bg-white/5 border-white/10 text-slate-400'
-              }`}
-            >
-              <span>Esquerda</span>
-            </button>
-            <button
-              onClick={() => setHandPreference('center')}
-              className={`p-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1 transition-all active:scale-95 min-h-[48px] ${
-                handPreference === 'center'
-                  ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                  : 'bg-white/5 border-white/10 text-slate-400'
-              }`}
-            >
-              <span>Centro</span>
-            </button>
-            <button
-              onClick={() => setHandPreference('right')}
-              className={`p-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1 transition-all active:scale-95 min-h-[48px] ${
-                handPreference === 'right'
-                  ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                  : 'bg-white/5 border-white/10 text-slate-400'
-              }`}
-            >
-              <span>Direita</span>
-            </button>
-          </div>
-        </div>
 
         {availableRoles.length > 1 && (
           <div className="space-y-2">
-            <label className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-              Papéis da conta
-            </label>
+            <label className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Papel ativo</label>
             <div className="grid grid-cols-2 gap-2">
               {availableRoles.map((r) => (
                 <button
                   key={r}
                   type="button"
                   onClick={() => setActiveRole(r)}
-                  className={`p-3 rounded-xl border text-left text-xs font-medium flex items-center justify-between transition-all active:scale-95 min-h-[48px] ${
+                  className={`p-3 rounded-xl border text-xs font-semibold min-h-[48px] ${
                     activeRole === r
                       ? 'bg-indigo-600/20 border-indigo-500 text-white'
                       : 'bg-white/5 border-white/10 text-slate-400'
                   }`}
                 >
-                  <div>
-                    <div className="font-bold capitalize">{r}</div>
-                    <div className="text-[10px] text-slate-400 truncate">{sessionDisplayProfile(r).badge}</div>
-                  </div>
+                  {sessionDisplayProfile(r).badge}
                 </button>
               ))}
             </div>
@@ -165,81 +141,69 @@ export const MobileQuickDrawerSheet: React.FC = () => {
         )}
 
         <div className="space-y-2">
+          <label className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5 uppercase tracking-wider">
+            <Hand className="w-3.5 h-3.5 text-indigo-400" /> Posição dos Controles Táteis
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {(['left', 'center', 'right'] as const).map((side) => (
+              <button
+                key={side}
+                onClick={() => setHandPreference(side)}
+                className={`p-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1 transition-all active:scale-95 min-h-[48px] ${
+                  handPreference === side
+                    ? 'bg-indigo-600/20 border-indigo-500 text-white'
+                    : 'bg-white/5 border-white/10 text-slate-400'
+                }`}
+              >
+                <span>{side === 'left' ? 'Esquerda' : side === 'center' ? 'Centro' : 'Direita'}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
           <label className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-            Módulos do Sistema
+            {client ? 'Atalhos' : 'Módulos do Sistema'}
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleNavigate('/')}
-              className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs font-medium flex items-center gap-2.5 active:scale-95 transition-all min-h-[48px]"
-            >
-              <LayoutDashboard className="w-4 h-4 text-indigo-400" />
-              <span>Dashboard</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('/corridas')}
-              className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs font-medium flex items-center gap-2.5 active:scale-95 transition-all min-h-[48px]"
-            >
-              <Car className="w-4 h-4 text-indigo-400" />
-              <span>Corridas</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('/financeiro')}
-              className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs font-medium flex items-center gap-2.5 active:scale-95 transition-all min-h-[48px]"
-            >
-              <CreditCard className="w-4 h-4 text-indigo-400" />
-              <span>Financeiro</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('/motoristas')}
-              className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs font-medium flex items-center gap-2.5 active:scale-95 transition-all min-h-[48px]"
-            >
-              <UserCheck className="w-4 h-4 text-indigo-400" />
-              <span>Motoristas</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('/clientes')}
-              className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs font-medium flex items-center gap-2.5 active:scale-95 transition-all min-h-[48px]"
-            >
-              <Users className="w-4 h-4 text-indigo-400" />
-              <span>Clientes</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('/empresas')}
-              className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs font-medium flex items-center gap-2.5 active:scale-95 transition-all min-h-[48px]"
-            >
-              <Building2 className="w-4 h-4 text-indigo-400" />
-              <span>Empresas</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('/relatorios')}
-              className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs font-medium flex items-center gap-2.5 active:scale-95 transition-all min-h-[48px]"
-            >
-              <FileText className="w-4 h-4 text-indigo-400" />
-              <span>Relatórios</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('/configuracoes')}
-              className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs font-medium flex items-center gap-2.5 active:scale-95 transition-all min-h-[48px]"
-            >
-              <Settings className="w-4 h-4 text-indigo-400" />
-              <span>Configurações</span>
-            </button>
+            {modules.map((mod) => {
+              const Icon = mod.icon;
+              return (
+                <button
+                  key={mod.path}
+                  onClick={() => handleNavigate(mod.path)}
+                  className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs font-medium flex items-center gap-2.5 active:scale-95 transition-all min-h-[48px]"
+                >
+                  <Icon className="w-4 h-4 text-indigo-400" />
+                  <span>{mod.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
-          <button
-            onClick={() => setFinancialMode(financialMode === 'stripe' ? 'manual' : 'stripe')}
-            className={`flex-1 p-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 min-h-[48px] active:scale-95 transition-all ${
-              financialMode === 'stripe'
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full ${financialMode === 'stripe' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span>{financialMode === 'stripe' ? 'Modo Stripe Ativo' : 'Modo Manual'}</span>
-          </button>
+          {isFleetOperator(activeRole) ? (
+            <button
+              onClick={() => setFinancialMode(financialMode === 'stripe' ? 'manual' : 'stripe')}
+              className={`flex-1 p-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 min-h-[48px] active:scale-95 transition-all ${
+                financialMode === 'stripe'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${financialMode === 'stripe' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <span>{financialMode === 'stripe' ? 'Modo Stripe Ativo' : 'Modo Manual'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => handleNavigate('/perfil')}
+              className="flex-1 p-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-medium flex items-center justify-center gap-2 min-h-[48px]"
+            >
+              <Zap className="w-4 h-4 text-indigo-400" />
+              Meu perfil
+            </button>
+          )}
 
           <button
             onClick={toggleTheme}

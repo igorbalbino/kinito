@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Download,
+  FileText,
   ShieldCheck,
 } from 'lucide-react';
 import { downloadCSV, formatBRL, formatDate } from '../lib/utils';
@@ -14,6 +15,10 @@ import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
 import { PageContainer } from '../components/layout/PageContainer';
 import { SafeSelect } from '../components/common/SafeSelect';
+import { RideDetailsModal } from '../components/modals/RideDetailsModal';
+import { isClientRole } from '../lib/navByRole';
+import { downloadRideReceiptPdf } from '../lib/rideReceiptPdf';
+import type { Ride } from '../types';
 
 export const FinanceiroView: React.FC = () => {
   const {
@@ -21,9 +26,12 @@ export const FinanceiroView: React.FC = () => {
     setFinancialMode,
     transactions,
     rides,
+    activeRole,
   } = useAppStore();
+  const clientMode = isClientRole(activeRole);
 
   const [filterType, setFilterType] = useState<string>('todos');
+  const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
 
   const completedRides = rides.filter((r) => r.status === 'concluida');
   const totalGross = completedRides.reduce((acc, r) => acc + r.grossValue, 0);
@@ -32,12 +40,35 @@ export const FinanceiroView: React.FC = () => {
   const totalCompanyCut = completedRides.reduce((acc, r) => acc + r.companyCut, 0);
   const totalDriverNet = completedRides.reduce((acc, r) => acc + r.driverNet, 0);
 
+  const clientSpendRides = useMemo(
+    () =>
+      [...rides]
+        .filter((r) => r.status !== 'cancelada' || r.grossValue > 0)
+        .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()),
+    [rides],
+  );
+  const clientTotalSpent = clientSpendRides
+    .filter((r) => r.status === 'concluida' || r.status === 'em_andamento' || r.status === 'atribuida')
+    .reduce((acc, r) => acc + r.grossValue, 0);
+
   const filteredTx = transactions.filter((tx) => {
     if (filterType === 'todos') return true;
     return tx.type === filterType;
   });
 
   const handleExportCSV = () => {
+    if (clientMode) {
+      const rows = clientSpendRides.map((r) => ({
+        Codigo: r.code,
+        Origem: r.origin.address,
+        Destino: r.destination.address,
+        Valor: r.grossValue,
+        Status: r.status,
+        Data: r.requestedAt,
+      }));
+      downloadCSV('meus_gastos_kinito.csv', rows);
+      return;
+    }
     const rows = filteredTx.map((tx) => ({
       Codigo: tx.code,
       Tipo: tx.type,
@@ -50,6 +81,132 @@ export const FinanceiroView: React.FC = () => {
     }));
     downloadCSV('extrato_financeiro_kinito.csv', rows);
   };
+
+  if (clientMode) {
+    return (
+      <PageContainer>
+        <PageSEO page="financeiro" />
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Meus gastos
+            </h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              Valores das suas corridas. Baixe o recibo em PDF no detalhe.
+            </p>
+          </div>
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" /> Exportar CSV
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <MetricCard title="Total gasto" value={formatBRL(clientTotalSpent)} subtitle="Corridas ativas e concluídas" />
+          <MetricCard title="Corridas" value={String(clientSpendRides.length)} subtitle="No histórico" />
+        </div>
+
+        {financialMode === 'manual' && (
+          <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs font-medium">
+            Pagamentos em modo manual: pague ao motorista ao final da corrida.
+          </div>
+        )}
+
+        <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden">
+          <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+            {clientSpendRides.map((ride) => (
+              <div key={ride.id} className="p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono font-bold text-indigo-600 text-xs">{ride.code}</span>
+                  <StatusBadge type="ride" status={ride.status} size="sm" />
+                </div>
+                <div className="text-[11px] text-zinc-500 truncate">
+                  {ride.origin.address} → {ride.destination.address}
+                </div>
+                <div className="flex justify-between items-center text-xs pt-1">
+                  <span className="font-bold">{formatBRL(ride.grossValue)}</span>
+                  <div className="flex gap-2">
+                    {(ride.status === 'concluida' || ride.status === 'cancelada') && (
+                      <button
+                        type="button"
+                        onClick={() => downloadRideReceiptPdf(ride, financialMode)}
+                        className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-semibold flex items-center gap-1"
+                      >
+                        <FileText className="w-3.5 h-3.5" /> PDF
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRide(ride)}
+                      className="px-2 py-1 rounded-lg bg-indigo-600 text-white font-semibold"
+                    >
+                      Detalhe
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!clientSpendRides.length && (
+              <p className="p-6 text-xs text-zinc-500">Nenhum gasto registrado ainda.</p>
+            )}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-xs">
+              <thead>
+                <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 font-medium bg-zinc-50/50 dark:bg-zinc-900/50">
+                  <th className="py-3 px-4">Código</th>
+                  <th className="py-3 px-4">Trajeto</th>
+                  <th className="py-3 px-4">Valor</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Data</th>
+                  <th className="py-3 px-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                {clientSpendRides.map((ride) => (
+                  <tr key={ride.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                    <td className="py-3 px-4 font-mono font-bold text-indigo-600">{ride.code}</td>
+                    <td className="py-3 px-4 max-w-xs truncate text-zinc-600 dark:text-zinc-400">
+                      {ride.origin.address} → {ride.destination.address}
+                    </td>
+                    <td className="py-3 px-4 font-bold">{formatBRL(ride.grossValue)}</td>
+                    <td className="py-3 px-4">
+                      <StatusBadge type="ride" status={ride.status} size="sm" />
+                    </td>
+                    <td className="py-3 px-4 text-zinc-400">{formatDate(ride.requestedAt)}</td>
+                    <td className="py-3 px-4 text-right space-x-2">
+                      {(ride.status === 'concluida' || ride.status === 'cancelada') && (
+                        <button
+                          type="button"
+                          onClick={() => downloadRideReceiptPdf(ride, financialMode)}
+                          className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-semibold inline-flex items-center gap-1"
+                        >
+                          <FileText className="w-3.5 h-3.5" /> PDF
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRide(ride)}
+                        className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-semibold"
+                      >
+                        Detalhe
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <RideDetailsModal ride={selectedRide} onClose={() => setSelectedRide(null)} />
+        <Footer />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>

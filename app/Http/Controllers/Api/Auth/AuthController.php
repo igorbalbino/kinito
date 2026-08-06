@@ -10,7 +10,6 @@ use App\Http\Resources\UserResource;
 use App\Services\Client\ClientOnboardingService;
 use App\Services\Driver\DriverApprovalService;
 use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,7 +35,8 @@ class AuthController extends Controller
             ? $this->drivers->selfRegister($data)
             : $this->clients->selfRegister($data);
 
-        event(new Registered($result['user']));
+        // Welcome + verify link already sent via NotificationService (PHPMailer).
+        // Avoid a second Laravel Mail notification on Registered.
 
         $token = $result['user']->createToken($request->input('device_name', 'api'))->plainTextToken;
 

@@ -18,6 +18,7 @@ import { Language } from '../i18n/translations';
 import { WhatsAppConnectPanel } from '../components/settings/WhatsAppConnectPanel';
 import { PlanBillingPanel } from '../components/settings/PlanBillingPanel';
 import { PageContainer } from '../components/layout/PageContainer';
+import { isClientRole, isFleetOperator } from '../lib/navByRole';
 
 export const ConfiguracoesView: React.FC = () => {
   const { t, language, setLanguage, options } = useTranslation();
@@ -28,7 +29,12 @@ export const ConfiguracoesView: React.FC = () => {
     setFinancialMode,
     handPreference,
     setHandPreference,
+    activeRole,
   } = useAppStore();
+
+  const clientMode = isClientRole(activeRole);
+  const showFleetSettings = isFleetOperator(activeRole);
+  const showAdminFlags = activeRole === 'admin';
 
   const flagLabels: { key: keyof FeatureFlags; title: string; desc: string }[] = [
     { key: 'saasMode', title: 'Modo SaaS Multi-tenant', desc: 'Isolamento de dados por empresas distribuidoras e frotas.' },
@@ -53,12 +59,18 @@ export const ConfiguracoesView: React.FC = () => {
           {t.settingsPage.title}
         </h1>
         <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-          {t.settingsPage.subtitle}
+          {clientMode
+            ? 'Preferências do seu painel: idioma e navegação no celular.'
+            : t.settingsPage.subtitle}
         </p>
       </div>
 
-      <PlanBillingPanel />
-      <WhatsAppConnectPanel />
+      {showFleetSettings && (
+        <>
+          <PlanBillingPanel />
+          <WhatsAppConnectPanel />
+        </>
+      )}
 
       <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 space-y-4 shadow-sm">
         <div className="flex items-center gap-3">
@@ -152,126 +164,130 @@ export const ConfiguracoesView: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-6 rounded-2xl border border-indigo-500/40 bg-white/5 shadow-lg space-y-5">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-base text-slate-100">
-                Processamento Financeiro (Stripe vs Manual)
-              </h3>
-              <p className="text-xs text-slate-400">
-                Alterne o fluxo operacional para simular chamadas e webhooks reais do Stripe
-              </p>
-            </div>
-          </div>
-
-          <StatusBadge
-            type="stripe_feature"
-            status={financialMode === 'stripe' ? 'confirmed' : 'split'}
-            size="sm"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div
-            onClick={() => setFinancialMode('stripe')}
-            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
-              financialMode === 'stripe'
-                ? 'border-emerald-500 bg-emerald-500/10 shadow-lg'
-                : 'border-white/10 hover:border-white/20'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                Opção 1: Stripe (Automático)
-              </span>
-              {financialMode === 'stripe' && (
-                <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
-              )}
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Exibe badges <strong>"Pagamento Confirmado"</strong>, <strong>"Webhook Recebido"</strong>, <strong>"Repasse Calculado"</strong> e <strong>"Comissão Automática"</strong>. Calcula automaticamente taxas de processamento, split por empresa e repasse direto do motorista.
-            </p>
-
-            {financialMode === 'stripe' && (
-              <div className="pt-2 flex flex-wrap gap-1.5">
-                <StatusBadge type="stripe_feature" status="confirmed" size="sm" />
-                <StatusBadge type="stripe_feature" status="webhook" size="sm" />
-                <StatusBadge type="stripe_feature" status="split" size="sm" />
-                <StatusBadge type="stripe_feature" status="auto_commission" size="sm" />
+      {showFleetSettings && (
+        <div className="p-6 rounded-2xl border border-indigo-500/40 bg-white/5 shadow-lg space-y-5">
+          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
+                <CreditCard className="w-5 h-5" />
               </div>
-            )}
-          </div>
-
-          <div
-            onClick={() => setFinancialMode('manual')}
-            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
-              financialMode === 'manual'
-                ? 'border-amber-500 bg-amber-500/10 shadow-lg'
-                : 'border-white/10 hover:border-white/20'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-                Opção 2: Manual (Incompleto)
-              </span>
-              {financialMode === 'manual' && (
-                <span className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
-              )}
+              <div>
+                <h3 className="font-semibold text-base text-slate-100">
+                  Processamento Financeiro (Stripe vs Manual)
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Alterne o fluxo operacional para simular chamadas e webhooks reais do Stripe
+                </p>
+              </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Oculta os badges do Stripe. Exibe campos editáveis para Valor da Corrida, Valor do Motorista e Comissão. Todos os indicadores financeiros passam a ser sinalizados como <strong>"Pendente"</strong> ou <strong>"Incompleto"</strong> com alertas visuais.
-            </p>
+            <StatusBadge
+              type="stripe_feature"
+              status={financialMode === 'stripe' ? 'confirmed' : 'split'}
+              size="sm"
+            />
+          </div>
 
-            {financialMode === 'manual' && (
-              <div className="pt-2">
-                <span className="px-2.5 py-1 rounded bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold">
-                  ⚠️ Estimativas Pendentes de Confirmação Manual
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              onClick={() => setFinancialMode('stripe')}
+              className={`p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
+                financialMode === 'stripe'
+                  ? 'border-emerald-500 bg-emerald-500/10 shadow-lg'
+                  : 'border-white/10 hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  Opção 1: Stripe (Automático)
                 </span>
+                {financialMode === 'stripe' && (
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+                )}
               </div>
-            )}
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Exibe badges <strong>"Pagamento Confirmado"</strong>, <strong>"Webhook Recebido"</strong>, <strong>"Repasse Calculado"</strong> e <strong>"Comissão Automática"</strong>. Calcula automaticamente taxas de processamento, split por empresa e repasse direto do motorista.
+              </p>
+
+              {financialMode === 'stripe' && (
+                <div className="pt-2 flex flex-wrap gap-1.5">
+                  <StatusBadge type="stripe_feature" status="confirmed" size="sm" />
+                  <StatusBadge type="stripe_feature" status="webhook" size="sm" />
+                  <StatusBadge type="stripe_feature" status="split" size="sm" />
+                  <StatusBadge type="stripe_feature" status="auto_commission" size="sm" />
+                </div>
+              )}
+            </div>
+
+            <div
+              onClick={() => setFinancialMode('manual')}
+              className={`p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
+                financialMode === 'manual'
+                  ? 'border-amber-500 bg-amber-500/10 shadow-lg'
+                  : 'border-white/10 hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  Opção 2: Manual (Incompleto)
+                </span>
+                {financialMode === 'manual' && (
+                  <span className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
+                )}
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Oculta os badges do Stripe. Exibe campos editáveis para Valor da Corrida, Valor do Motorista e Comissão. Todos os indicadores financeiros passam a ser sinalizados como <strong>"Pendente"</strong> ou <strong>"Incompleto"</strong> com alertas visuais.
+              </p>
+
+              {financialMode === 'manual' && (
+                <div className="pt-2">
+                  <span className="px-2.5 py-1 rounded bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold">
+                    ⚠️ Estimativas Pendentes de Confirmação Manual
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
-        <h3 className="font-semibold text-sm text-slate-100 flex items-center gap-2">
-          <Sliders className="w-4 h-4 text-indigo-400" />
-          Feature Flags do Sistema
-        </h3>
+      {showAdminFlags && (
+        <div className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
+          <h3 className="font-semibold text-sm text-slate-100 flex items-center gap-2">
+            <Sliders className="w-4 h-4 text-indigo-400" />
+            Feature Flags do Sistema
+          </h3>
 
-        <div className="divide-y divide-white/10">
-          {flagLabels.map((flag) => {
-            const isChecked = featureFlags[flag.key];
+          <div className="divide-y divide-white/10">
+            {flagLabels.map((flag) => {
+              const isChecked = featureFlags[flag.key];
 
-            return (
-              <div key={flag.key} className="py-3.5 flex items-center justify-between gap-4">
-                <div>
-                  <h4 className="font-medium text-xs text-slate-200">{flag.title}</h4>
-                  <p className="text-[11px] text-slate-400">{flag.desc}</p>
+              return (
+                <div key={flag.key} className="py-3.5 flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-medium text-xs text-slate-200">{flag.title}</h4>
+                    <p className="text-[11px] text-slate-400">{flag.desc}</p>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 min-h-[44px]">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleFeatureFlag(flag.key)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[12px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
                 </div>
-
-                <label className="relative inline-flex items-center cursor-pointer shrink-0 min-h-[44px]">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleFeatureFlag(flag.key)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[12px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       <Footer />
     </PageContainer>

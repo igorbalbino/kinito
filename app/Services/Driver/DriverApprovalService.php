@@ -26,7 +26,7 @@ class DriverApprovalService
      */
     public function selfRegister(array $data): array
     {
-        return DB::transaction(function () use ($data) {
+        $result = DB::transaction(function () use ($data) {
             $user = User::query()->create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -64,6 +64,10 @@ class DriverApprovalService
 
             return compact('user', 'driver');
         });
+
+        $this->notifications->sendRegistrationEmail($result['user']);
+
+        return $result;
     }
 
     public function approveForCompany(Driver $driver, Company $company, User $actor): Driver

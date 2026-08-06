@@ -86,7 +86,8 @@ php artisan serve
 
 ## E-mail (SMTP)
 
-Mesmos nomes do Odara — pode copiar as credenciais:
+Mesmos nomes do Odara — envio **direto via PHPMailer** (`App\Services\Mail\SmtpMailService`),
+independente de `MAIL_MAILER=log` do Laravel.
 
 ```env
 MAIL_MAILER=smtp
@@ -100,8 +101,9 @@ SMTP_PASS=sua-senha
 SMTP_CRYPTO=tls
 ```
 
-- Sem `SMTP_HOST`: use `MAIL_MAILER=log` (e-mails só no log; API não quebra).
+- Sem `SMTP_HOST`: e-mail não sai (aviso no log; API não quebra).
 - `SMTP_CRYPTO=tls` (porta 587) ou `ssl`/`smtps` (porta 465).
+- Cadastro (cliente/motorista/empresa) e onboarding de cliente enviam e-mail automaticamente.
 - Fallback Laravel: `MAIL_HOST` / `MAIL_USERNAME` / `MAIL_PASSWORD` / `MAIL_PORT`.
 - Alias Odara: `MAIL_FROM` sobrescreve `MAIL_FROM_ADDRESS`.
 

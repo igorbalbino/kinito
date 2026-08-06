@@ -9,6 +9,7 @@ import { TactileFloatingFAB } from './components/common/TactileFloatingFAB';
 import { NewRideModal } from './components/modals/NewRideModal';
 import { ForcePasswordModal } from './components/auth/ForcePasswordModal';
 import { RequireAuth } from './components/auth/RequireAuth';
+import { RequireRole } from './components/auth/RequireRole';
 import { useAppStore } from './store/useAppStore';
 import { useBootstrapApiData } from './hooks/useBootstrapApiData';
 
@@ -51,10 +52,12 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
-function Authed({ children }: { children: React.ReactNode }) {
+function Authed({ children, path }: { children: React.ReactNode; path?: string }) {
   return (
     <RequireAuth>
-      <AppShell>{children}</AppShell>
+      <RequireRole path={path}>
+        <AppShell>{children}</AppShell>
+      </RequireRole>
     </RequireAuth>
   );
 }
@@ -74,17 +77,17 @@ export default function App() {
         <Route path="/login" element={<LoginView />} />
         <Route path="/register" element={<RegisterView />} />
         <Route path="/register/empresa" element={<RegisterEmpresaView />} />
-        <Route path="/dashboard" element={<Authed><DashboardView /></Authed>} />
-        <Route path="/corridas" element={<Authed><CorridasView /></Authed>} />
-        <Route path="/clientes" element={<Authed><ClientesView /></Authed>} />
-        <Route path="/motoristas" element={<Authed><MotoristasView /></Authed>} />
-        <Route path="/empresas" element={<Authed><EmpresasView /></Authed>} />
-        <Route path="/financeiro" element={<Authed><FinanceiroView /></Authed>} />
-        <Route path="/relatorios" element={<Authed><RelatoriosView /></Authed>} />
-        <Route path="/logs" element={<Authed><LogsView /></Authed>} />
-        <Route path="/notificacoes" element={<Authed><NotificacoesView /></Authed>} />
-        <Route path="/perfil" element={<Authed><PerfilView /></Authed>} />
-        <Route path="/configuracoes" element={<Authed><ConfiguracoesView /></Authed>} />
+        <Route path="/dashboard" element={<Authed path="/dashboard"><DashboardView /></Authed>} />
+        <Route path="/corridas" element={<Authed path="/corridas"><CorridasView /></Authed>} />
+        <Route path="/clientes" element={<Authed path="/clientes"><ClientesView /></Authed>} />
+        <Route path="/motoristas" element={<Authed path="/motoristas"><MotoristasView /></Authed>} />
+        <Route path="/empresas" element={<Authed path="/empresas"><EmpresasView /></Authed>} />
+        <Route path="/financeiro" element={<Authed path="/financeiro"><FinanceiroView /></Authed>} />
+        <Route path="/relatorios" element={<Authed path="/relatorios"><RelatoriosView /></Authed>} />
+        <Route path="/logs" element={<Authed path="/logs"><LogsView /></Authed>} />
+        <Route path="/notificacoes" element={<Authed path="/notificacoes"><NotificacoesView /></Authed>} />
+        <Route path="/perfil" element={<Authed path="/perfil"><PerfilView /></Authed>} />
+        <Route path="/configuracoes" element={<Authed path="/configuracoes"><ConfiguracoesView /></Authed>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

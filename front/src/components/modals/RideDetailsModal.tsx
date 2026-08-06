@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   CreditCard,
+  FileText,
   MapPin,
   Navigation,
   Phone,
@@ -20,6 +21,8 @@ import { SafeSelect } from '../common/SafeSelect';
 import { rideAction } from '../../lib/api';
 import { normalizeRide } from '../../lib/normalize';
 import { unwrapResource } from '../../lib/sessionProfile';
+import { isClientRole, isFleetOperator } from '../../lib/navByRole';
+import { downloadRideReceiptPdf } from '../../lib/rideReceiptPdf';
 
 interface RideDetailsModalProps {
   ride: Ride | null;
@@ -27,7 +30,9 @@ interface RideDetailsModalProps {
 }
 
 export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClose }) => {
-  const { financialMode, updateRideFinancials, upsertRide, drivers } = useAppStore();
+  const { financialMode, updateRideFinancials, upsertRide, drivers, activeRole } = useAppStore();
+  const clientMode = isClientRole(activeRole);
+  const canDispatch = isFleetOperator(activeRole);
 
   const [isEditingFinancials, setIsEditingFinancials] = useState(false);
   const [grossInput, setGrossInput] = useState(ride?.grossValue || 0);
@@ -115,13 +120,24 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors active:scale-90"
-            aria-label="Fechar"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {(ride.status === 'concluida' || ride.status === 'cancelada') && (
+              <button
+                type="button"
+                onClick={() => downloadRideReceiptPdf(ride, financialMode)}
+                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-100 text-xs font-semibold flex items-center gap-1.5 min-h-[40px]"
+              >
+                <FileText className="w-4 h-4" /> PDF
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors active:scale-90"
+              aria-label="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
@@ -184,7 +200,7 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                 <span className="flex items-center gap-1.5">
                   <UserCheck className="w-3.5 h-3.5 text-emerald-500" /> Motorista Atribuído
                 </span>
-                {ride.status !== 'concluida' && ride.status !== 'cancelada' && (
+                {canDispatch && ride.status !== 'concluida' && ride.status !== 'cancelada' && (
                   <button
                     onClick={() => setIsReassigning(!isReassigning)}
                     className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
@@ -247,7 +263,7 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
               </div>
               <div className="flex items-center gap-2">
                 <StatusBadge type="payment" status={ride.paymentStatus} size="sm" />
-                {financialMode === 'manual' && !isEditingFinancials && (
+                {canDispatch && financialMode === 'manual' && !isEditingFinancials && (
                   <button
                     onClick={() => {
                       setGrossInput(ride.grossValue);
@@ -263,7 +279,12 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
               </div>
             </div>
 
-            {financialMode === 'stripe' ? (
+            {clientMode && financialMode === 'manual' ? (
+              <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[11px] flex items-center gap-1.5 font-medium">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>Pague ao motorista ao final da corrida.</span>
+              </div>
+            ) : financialMode === 'stripe' ? (
               <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[11px] flex items-center justify-between">
                 <span className="flex items-center gap-1.5 font-medium">
                   <ShieldCheck className="w-4 h-4 text-emerald-500" />
@@ -278,7 +299,7 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
               </div>
             )}
 
-            {isEditingFinancials ? (
+            {isEditingFinancials && canDispatch ? (
               <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl space-y-3">
                 <div className="grid grid-cols-3 gap-3">
                   <div>
@@ -325,30 +346,37 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-400">Valor Bruto</div>
-                  <div className="text-base font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</div>
+              clientMode ? (
+                <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 text-center">
+                  <div className="text-[10px] text-zinc-400">Valor da corrida</div>
+                  <div className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</div>
                 </div>
-                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-400">Taxa Stripe</div>
-                  <div className="text-base font-bold text-indigo-600 dark:text-indigo-400">
-                    {financialMode === 'stripe' ? formatBRL(ride.stripeFee) : 'R$ 0,00'}
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                  <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-400">Valor Bruto</div>
+                    <div className="text-base font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-400">Taxa Stripe</div>
+                    <div className="text-base font-bold text-indigo-600 dark:text-indigo-400">
+                      {financialMode === 'stripe' ? formatBRL(ride.stripeFee) : 'R$ 0,00'}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-400">Comissão Plataforma</div>
+                    <div className="text-base font-bold text-purple-600 dark:text-purple-400">{formatBRL(ride.platformCommission)}</div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Líquido Motorista</div>
+                    <div className="text-base font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(ride.driverNet)}</div>
                   </div>
                 </div>
-                <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
-                  <div className="text-[10px] text-zinc-400">Comissão Plataforma</div>
-                  <div className="text-base font-bold text-purple-600 dark:text-purple-400">{formatBRL(ride.platformCommission)}</div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Líquido Motorista</div>
-                  <div className="text-base font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(ride.driverNet)}</div>
-                </div>
-              </div>
+              )
             )}
           </div>
 
-          {ride.status !== 'concluida' && ride.status !== 'cancelada' && (
+          {!clientMode && ride.status !== 'concluida' && ride.status !== 'cancelada' && (
             <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
               {actionError && (
                 <p className="text-xs text-rose-500 font-medium">{actionError}</p>
