@@ -1,27 +1,15 @@
 # Notificações
 
-Tabela app: `app_notifications` (não confundir com `notifications` Laravel).
+Tabela app: `app_notifications` (≠ `notifications` Laravel).
 
-Canais: `email` · `whatsapp` · `push` (stub).
+Canais: `email` · `whatsapp` · `in_app` · `push` (stub).
 
-## WhatsApp (pluggable)
+## Entrada de negócio
 
-```
-NotificationService → WhatsAppManager → Gateway (log|baileys|meta)
-```
+`NotificationService` — orquestra in-app + canais.
 
-| Env | Efeito |
-|-----|--------|
-| `WHATSAPP_ENABLED` | liga/desliga |
-| `WHATSAPP_PROVIDER` | `log` / `baileys` / `meta` |
-| `WHATSAPP_GATEWAY_URL` | sidecar Baileys (`whatsapp-gateway/`) |
-| `WHATSAPP_GATEWAY_API_KEY` | = `GATEWAY_API_KEY` do sidecar |
-
-- Contract: `App\Contracts\WhatsApp\WhatsAppGateway`
-- Manager: `App\Services\WhatsApp\WhatsAppManager`
-- Drivers: `Drivers/Log|Baileys|MetaWhatsAppGateway`
-
-Trocar provider = mudar `.env`, sem alterar services de negócio.
+E-mail transacional → [email.md](email.md)  
+WhatsApp → [whatsapp.md](whatsapp.md)
 
 ## API
 
@@ -31,8 +19,12 @@ Trocar provider = mudar `.env`, sem alterar services de negócio.
 
 `/notificacoes`
 
-## Disparos atuais
+## Disparos relevantes
 
-Onboarding cliente (email + whatsapp se phone + enabled) · aprovação motorista
-
-Service: `NotificationService` · `notifyChannels([...])`
+| Evento | Canal |
+|--------|--------|
+| Cadastro / verificação / convite | e-mail HTML |
+| Credenciais pós-verify (convite) | e-mail |
+| Cliente/motorista escolhe fornecedor | e-mail para empresa |
+| Aprovação motorista | in-app (+ e-mail genérico se notify email) |
+| Troca fornecedor pendente (motorista) | in-app |

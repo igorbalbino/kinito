@@ -1,13 +1,21 @@
 # Divergências conhecidas
 
-| Tema | Front mock | Backend |
-|------------------|---------|
-| Ride status | 5 valores PT simples | 7 enums ricos |
-| Payment status | pago/pendente/estornado/falhou | FinancialStatus 6 valores |
-| Driver status | em_aprovacao | PENDENTE |
-| Register empresa | na mesma tela | endpoint separado |
-| Planos | `tier` string | `plans`+`subscriptions` |
-| Parceiros/fornecedor | quase ausente | modelado |
-| HTTP | nenhum | Sanctum completo |
+| Tema | Front | Backend | Notas |
+|------|-------|---------|-------|
+| Ride status | 5 valores PT | 7 enums | mapeados em `mappers.ts` |
+| Payment / financial status | subset | 6 FinancialStatus | map parcial |
+| Driver status | `em_aprovacao` | `PENDENTE` | map ok |
+| Geolocalização | flag UI | sem lat/lng motorista | marketplace fallback sem GPS |
+| Feature flags config | local store | `GET/PUT /config` admin | frota não persiste flags no back |
+| Financial mode Stripe/manual | store + bootstrap | `payment_provider` config | simulação operacional |
 
-Integração: Resources camelCase já próximos dos types; ajustar enums no front ou mapear na camada API client.
+Já alinhados (não são mais gap):
+
+- Register empresa separado + verificação e-mail
+- Fornecedor cliente/motorista (`/fornecedores`)
+- Modelo de corridas na config
+- Convites sem senha antecipada
+- WhatsApp sem select de empresa
+- Indicações no PlanBilling
+
+Resources camelCase ↔ types front via `normalize.ts`.

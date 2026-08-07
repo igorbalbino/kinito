@@ -1,15 +1,21 @@
 # Status operacional (API)
 
-`CRIADA` → `AGENDADA`|`DISPONIVEL` → `ACEITA` → `EM_ANDAMENTO` → `FINALIZADA`
-Qualquer ativo → `CANCELADA` (regras em `RideStatus::canTransitionTo`)
+`CRIADA` → `AGENDADA`|`DISPONIVEL` → `ACEITA` → `EM_ANDAMENTO` → `FINALIZADA`  
+Qualquer ativo → `CANCELADA` (`RideStatus::canTransitionTo`)
 
-Inicial depende de `modelo_corridas` + schedule → [../02-empresas/settings.md](../02-empresas/settings.md)
+## Inicial (`RideService::initialStatus`)
+
+| Modelo company | + schedule | Status |
+|----------------|------------|--------|
+| AGENDAMENTO / AMBOS | sim | `AGENDADA` |
+| INSTANTANEAS / AMBOS | não | `DISPONIVEL` |
+| AGENDAMENTO | sem schedule | `CRIADA` (fallback) |
 
 ## Financeiro separado
 
 `INCOMPLETO|PENDENTE|PAGO|RECEBIDO|REPASSADO|ESTORNADO`
 
-## Mapa → front mock
+## Mapa → front
 
 | API | Front |
 |-----|-------|

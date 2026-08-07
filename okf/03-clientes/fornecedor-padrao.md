@@ -1,27 +1,39 @@
-# Fornecedor padrão
+# Fornecedor padrão (cliente)
 
 `client_preferences`:
 
-| Mode | Efeito na criação de corrida |
-|------|------------------------------|
-| `COMPANY` | usa `default_company_id` se `company_id` omitido |
-| `ALL` | cliente deve escolher fornecedor (`GET /fornecedores`); marketplace só empresas com acesso (trial/ACTIVE) |
+| Mode | Efeito |
+|------|--------|
+| `COMPANY` | principal = `default_company_id`; resolução de corrida usa modelo dessa empresa |
+| `ALL` | marketplace: cliente escolhe `company_id` (ou UI obriga escolher) |
 
-Cliente criado por empresa → mode `COMPANY` + essa empresa.
+Cliente criado por empresa → `COMPANY` + essa empresa (visível em Config / Fornecedores).
 
-## Suspensão da empresa
+## UI
 
-Quando o trial/assinatura expira:
+- Config `?sec=fornecedor` — resumo + CTA
+- `/fornecedores` — lista `GET /fornecedores` · escolher empresa **ou** Todos/marketplace
 
-1. Empresa `is_active=false` some do marketplace
-2. Clientes com fornecedor padrão = essa empresa → mode `ALL` + snapshot em `extra.provider_restore`
+## Troca para empresa específica
+
+1. `PATCH /clientes/{id}` via `ProviderPreferenceService::updateClientProvider`
+2. `client_company` sync (`origin=self`, `is_active`)
+3. E-mail aos donos/colaboradores da empresa escolhida
+
+Mode `ALL` → não dispara e-mail de seleção.
+
+## Suspensão da empresa (assinatura)
+
+1. Empresa some do marketplace
+2. Clientes com principal = essa empresa → `ALL` + snapshot `extra.provider_restore`
 3. Ao pagar de novo → restaura `COMPANY` + `default_company_id`
-
-## Convite
-
-Cliente criado por empresa recebe mensagem fixa (e-mail/WhatsApp) com link, login e senha temporária.  
-`users.must_change_password=true` até `POST /auth/change-password`.
 
 ## Service
 
-`ClientOnboardingService` · resolução em `RideService::resolveCompanyId` · `SubscriptionLifecycleService`
+`ProviderPreferenceService` · `RideService::resolveCompanyId` · `SubscriptionLifecycleService`
+
+## Relaciona
+
+- Modelo empresa → [../02-empresas/modelo-corridas.md](../02-empresas/modelo-corridas.md)
+- Resolução corrida → [../05-corridas/resolucao-fornecedor.md](../05-corridas/resolucao-fornecedor.md)
+- E-mail → [../09-notificacoes/email.md](../09-notificacoes/email.md)

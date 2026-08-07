@@ -54,7 +54,12 @@ LARAVEL_WEBHOOK_URL=http://127.0.0.1:8000/api/v1/webhooks/whatsapp
 | POST | `/webhooks/whatsapp` (gateway → Laravel) |
 | POST | `/webhooks/whatsapp/tick` |
 
+## Front
+
+Config `?sec=whatsapp` · `WhatsAppConnectPanel` usa **só** a empresa da sessão (`getApiCompanyId`) — sem select de tenant.
+
 ## Relaciona
 
 - Notificações → [overview.md](overview.md)
-- Onboarding cliente → [../03-clientes/overview.md](../03-clientes/overview.md)
+- Config hub → [../11-config/overview.md](../11-config/overview.md)
+- Onboarding → [../03-clientes/convite.md](../03-clientes/convite.md)

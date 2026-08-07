@@ -4,14 +4,17 @@
 
 ## API
 
-`GET /plans` · CRUD admin · `POST /empresas/{id}/subscribe`
+`GET /plans` · CRUD admin · `POST /empresas/{id}/subscribe` (`mode=trial|checkout|auto`)  
+`GET /empresas/{id}/subscription` — inclui bloco **referral**
 
 Status sub: `TRIALING|ACTIVE|PAST_DUE|CANCELED|EXPIRED`
 
 ## Front
 
-Só `Company.tier` badge — mapear para `plan.slug` do Resource.
+Config `?sec=plano` · `PlanBillingPanel` (assinatura + indicações)
 
-## Futuro
+## Relaciona
 
-Stripe Billing via `stripe_price_id` / `stripe_subscription_id`.
+- Indicações empresa → [indicacoes.md](indicacoes.md)
+- Cadastro / trial → [../02-empresas/cadastro.md](../02-empresas/cadastro.md)
+- Billing → [../06-financeiro/stripe.md](../06-financeiro/stripe.md)
