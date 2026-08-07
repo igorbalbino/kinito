@@ -56,12 +56,14 @@ class RideService
                 ? (float) $data['gross_value']
                 : $this->estimateGross((float) ($data['distance_km'] ?? 0));
 
+            $assignDriverId = ! empty($data['driver_id']) ? (int) $data['driver_id'] : null;
+
             $ride = Ride::query()->create([
                 'code' => 'COR-'.now()->format('ymd').strtoupper(Str::random(5)),
                 'client_id' => $client->id,
                 'company_id' => $company->id,
                 'partner_company_id' => $data['partner_company_id'] ?? null,
-                'driver_id' => $data['driver_id'] ?? null,
+                'driver_id' => null,
                 'origin' => $data['origin'],
                 'destination' => $data['destination'],
                 'scheduled_date' => $data['scheduled_date'] ?? null,
@@ -77,8 +79,8 @@ class RideService
                 'requested_at' => now(),
             ]);
 
-            if (! empty($data['driver_id']) && $status === RideStatus::Disponivel) {
-                $ride->update(['status' => RideStatus::Aceita]);
+            if ($assignDriverId) {
+                $ride = $this->accept($ride, Driver::query()->findOrFail($assignDriverId));
             }
 
             $this->finance->applyToRide($ride->fresh(['company']), $gross);
@@ -108,9 +110,7 @@ class RideService
 
         if ($next === RideStatus::Finalizada) {
             $payload['completed_at'] = now();
-            $payload['financial_status'] = config('kinito.payment_provider') === 'manual'
-                ? FinancialStatus::Pendente
-                : FinancialStatus::Pago;
+            $payload['financial_status'] = FinancialStatus::Pendente;
         }
 
         if ($next === RideStatus::Cancelada) {

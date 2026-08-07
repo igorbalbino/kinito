@@ -6,6 +6,7 @@ use App\Enums\PartnershipStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Company\RegisterCompanyRequest;
 use App\Http\Resources\CompanyResource;
+use App\Http\Resources\CompanySettingResource;
 use App\Models\Company;
 use App\Models\CompanyPartnership;
 use App\Services\Company\CompanyService;
@@ -98,7 +99,7 @@ class CompanyController extends Controller
 
         return response()->json([
             'message' => 'Configurações atualizadas.',
-            'settings' => $settings,
+            'settings' => new CompanySettingResource($settings),
         ]);
     }
 

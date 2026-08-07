@@ -23,6 +23,10 @@ class CompanySetting extends Model
         'extra',
     ];
 
+    protected $hidden = [
+        'whatsapp_webhook_secret',
+    ];
+
     protected function casts(): array
     {
         return [

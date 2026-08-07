@@ -32,12 +32,21 @@ class RideController extends Controller
         if ($user->hasRole('ADMIN')) {
             // all
         } elseif ($user->hasRole('EMPRESA')) {
-            $ids = $user->ownedCompanies()->pluck('id')->merge($user->companies()->pluck('companies.id'));
+            $ids = $user->accessibleCompanyIds();
             $query->where(function ($q) use ($ids) {
                 $q->whereIn('company_id', $ids)->orWhereIn('partner_company_id', $ids);
             });
         } elseif ($user->hasRole('MOTORISTA')) {
-            $query->where('driver_id', $user->driver?->id);
+            $driverId = $user->driver?->id;
+            $companyIds = $user->accessibleCompanyIds();
+            $query->where(function ($q) use ($driverId, $companyIds) {
+                $q->where('driver_id', $driverId)
+                    ->orWhere(function ($q) use ($companyIds) {
+                        $q->whereNull('driver_id')
+                            ->whereIn('status', ['DISPONIVEL', 'AGENDADA'])
+                            ->whereIn('company_id', $companyIds);
+                    });
+            });
         } elseif ($user->hasRole('CLIENTE')) {
             $query->where('client_id', $user->client?->id);
         }
@@ -86,12 +95,21 @@ class RideController extends Controller
         $this->authorize('create', Ride::class);
 
         $data = $request->validated();
+        $user = $request->user();
 
-        if ($request->user()->hasRole('CLIENTE') && empty($data['client_id'])) {
-            $data['client_id'] = $request->user()->client?->id;
+        if (! $user->hasAnyRole(['ADMIN', 'EMPRESA'])) {
+            unset($data['driver_id'], $data['partner_company_id']);
         }
 
-        $ride = $this->rides->create($data, $request->user()->client);
+        if ($user->hasAnyRole(['EMPRESA', 'MOTORISTA']) && ! empty($data['company_id'])) {
+            abort_unless($user->canAccessCompany((int) $data['company_id']), 403, 'Sem permissão nesta empresa.');
+        }
+
+        if ($user->hasRole('CLIENTE') && empty($data['client_id'])) {
+            $data['client_id'] = $user->client?->id;
+        }
+
+        $ride = $this->rides->create($data, $user->client);
 
         return response()->json([
             'message' => 'Corrida criada.',
@@ -108,29 +126,36 @@ class RideController extends Controller
 
     public function accept(Request $request, Ride $ride): RideResource
     {
-        $this->authorize('view', $ride);
-        $driver = $request->user()->driver ?? Driver::query()->findOrFail($request->integer('driver_id'));
+        $this->authorize('accept', $ride);
+
+        $user = $request->user();
+        if ($user->hasRole('MOTORISTA')) {
+            $driver = $user->driver;
+            abort_unless($driver, 403, 'Perfil de motorista não encontrado.');
+        } else {
+            $driver = Driver::query()->findOrFail($request->integer('driver_id'));
+        }
 
         return new RideResource($this->rides->accept($ride, $driver)->load(['client.user', 'driver.user', 'company']));
     }
 
     public function start(Ride $ride): RideResource
     {
-        $this->authorize('view', $ride);
+        $this->authorize('operate', $ride);
 
         return new RideResource($this->rides->start($ride)->load(['client.user', 'driver.user', 'company']));
     }
 
     public function finish(Ride $ride): RideResource
     {
-        $this->authorize('view', $ride);
+        $this->authorize('operate', $ride);
 
         return new RideResource($this->rides->finish($ride)->load(['client.user', 'driver.user', 'company']));
     }
 
     public function cancel(Request $request, Ride $ride): RideResource
     {
-        $this->authorize('view', $ride);
+        $this->authorize('cancel', $ride);
 
         $data = $request->validate(['reason' => ['nullable', 'string']]);
 
