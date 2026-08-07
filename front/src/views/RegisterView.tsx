@@ -5,15 +5,11 @@ import { BrandLogo } from '../components/common/BrandLogo';
 import { SEOHead } from '../components/common/SEOHead';
 import { LanguageSelector } from '../components/common/LanguageSelector';
 import { useTranslation } from '../hooks/useTranslation';
-import { useAppStore } from '../store/useAppStore';
 import { apiRegisterPerson, isApiConfigured } from '../lib/api';
-import { roleFromApi } from '../lib/mappers';
-import { UserRole } from '../types';
 
 export const RegisterView: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { setActiveRole } = useAppStore();
   const seo = t.seo.register;
 
   const [name, setName] = useState('');
@@ -37,7 +33,7 @@ export const RegisterView: React.FC = () => {
     setError(null);
     try {
       const apiRole = role === 'motorista' ? 'MOTORISTA' : 'CLIENTE';
-      const { user } = await apiRegisterPerson({
+      await apiRegisterPerson({
         name,
         email,
         phone: phone || undefined,
@@ -48,8 +44,7 @@ export const RegisterView: React.FC = () => {
         vehicle_plate: role === 'motorista' ? vehiclePlate : undefined,
         city: role === 'motorista' ? city : undefined,
       });
-      setActiveRole(roleFromApi(user.roles) as UserRole);
-      navigate('/dashboard');
+      navigate(`/verificar-email-pendente?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha no cadastro');
     } finally {

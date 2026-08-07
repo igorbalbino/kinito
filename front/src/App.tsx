@@ -18,6 +18,7 @@ import { LandingEmpresasView } from './views/LandingEmpresasView';
 import { LoginView } from './views/LoginView';
 import { RegisterView } from './views/RegisterView';
 import { RegisterEmpresaView } from './views/RegisterEmpresaView';
+import { VerifyEmailView, PendingVerificationView } from './views/VerifyEmailView';
 import { ClientesView } from './views/ClientesView';
 import { ConfiguracoesView } from './views/ConfiguracoesView';
 import { CorridasView } from './views/CorridasView';
@@ -77,6 +78,8 @@ export default function App() {
         <Route path="/login" element={<LoginView />} />
         <Route path="/register" element={<RegisterView />} />
         <Route path="/register/empresa" element={<RegisterEmpresaView />} />
+        <Route path="/verificar-email" element={<VerifyEmailView />} />
+        <Route path="/verificar-email-pendente" element={<PendingVerificationView />} />
         <Route path="/dashboard" element={<Authed path="/dashboard"><DashboardView /></Authed>} />
         <Route path="/corridas" element={<Authed path="/corridas"><CorridasView /></Authed>} />
         <Route path="/clientes" element={<Authed path="/clientes"><ClientesView /></Authed>} />

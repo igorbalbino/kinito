@@ -9,6 +9,7 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Services\Client\ClientOnboardingService;
 use App\Services\Driver\DriverApprovalService;
+use App\Services\Notification\NotificationService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +26,7 @@ class AuthController extends Controller
     public function __construct(
         private readonly ClientOnboardingService $clients,
         private readonly DriverApprovalService $drivers,
+        private readonly NotificationService $notifications,
     ) {}
 
     public function register(RegisterRequest $request): JsonResponse
@@ -35,16 +37,10 @@ class AuthController extends Controller
             ? $this->drivers->selfRegister($data)
             : $this->clients->selfRegister($data);
 
-        // Welcome + verify link already sent via NotificationService (PHPMailer).
-        // Avoid a second Laravel Mail notification on Registered.
-
-        $token = $result['user']->createToken($request->input('device_name', 'api'))->plainTextToken;
-
         return response()->json([
-            'message' => 'Cadastro realizado com sucesso.',
-            'token' => $token,
-            'token_type' => 'Bearer',
-            'user' => new UserResource($result['user']->load(['roles', 'driver', 'client', 'companies', 'ownedCompanies'])),
+            'message' => 'Cadastro realizado. Confirme seu e-mail para acessar o painel.',
+            'email_verification_required' => true,
+            'email' => $result['user']->email,
         ], 201);
     }
 
@@ -63,6 +59,17 @@ class AuthController extends Controller
             throw ValidationException::withMessages([
                 'login' => ['Conta desativada.'],
             ]);
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.',
+                'errors' => [
+                    'login' => ['Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.'],
+                ],
+                'email_unverified' => true,
+                'email' => $user->email,
+            ], 422);
         }
 
         $token = $user->createToken($request->input('device_name', 'api'))->plainTextToken;
@@ -181,12 +188,34 @@ class AuthController extends Controller
             return response()->json(['message' => 'Link inválido.'], 403);
         }
 
-        if (! $user->hasVerifiedEmail()) {
+        $alreadyVerified = $user->hasVerifiedEmail();
+        $isInvitePendingCredentials = ! $alreadyVerified && $user->must_change_password;
+        $credentialsSent = false;
+
+        if (! $alreadyVerified) {
             $user->markEmailAsVerified();
             event(new Verified($user));
+
+            if ($isInvitePendingCredentials) {
+                $tempPassword = Str::password(10);
+                $user->forceFill([
+                    'password' => $tempPassword,
+                    'must_change_password' => true,
+                ])->save();
+
+                $companyName = $user->client?->companies()->orderByDesc('client_company.created_at')->value('companies.name');
+                $this->notifications->sendInviteCredentialsEmail($user->fresh(), $tempPassword, $companyName);
+                $credentialsSent = true;
+            }
         }
 
-        return response()->json(['message' => 'Email verificado com sucesso.']);
+        return response()->json([
+            'message' => $credentialsSent
+                ? 'E-mail confirmado. Enviamos sua senha temporária por e-mail.'
+                : 'E-mail verificado com sucesso.',
+            'credentials_sent' => $credentialsSent,
+            'already_verified' => $alreadyVerified,
+        ]);
     }
 
     public function sendVerification(Request $request): JsonResponse
@@ -195,8 +224,25 @@ class AuthController extends Controller
             return response()->json(['message' => 'Email já verificado.']);
         }
 
-        $request->user()->sendEmailVerificationNotification();
+        $this->notifications->sendEmailVerification($request->user());
 
         return response()->json(['message' => 'Link de verificação enviado.']);
+    }
+
+    /** Public resend for the “check your inbox” page (no auth). */
+    public function resendVerificationPublic(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::query()->where('email', $data['email'])->first();
+        if ($user && ! $user->hasVerifiedEmail()) {
+            $this->notifications->sendEmailVerification($user);
+        }
+
+        return response()->json([
+            'message' => 'Se o e-mail existir e ainda não estiver confirmado, enviamos um novo link.',
+        ]);
     }
 }

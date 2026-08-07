@@ -228,6 +228,13 @@ class DatabaseSeeder extends Seeder
                 ]
             );
 
+            if (! $company->referral_code) {
+                do {
+                    $code = strtoupper(Str::random(8));
+                } while (Company::query()->where('referral_code', $code)->exists());
+                $company->forceFill(['referral_code' => $code])->save();
+            }
+
             $company->users()->syncWithoutDetaching([
                 $user->id => ['role' => CompanyCollaboratorRole::Dono->value, 'is_active' => true],
             ]);

@@ -20,12 +20,11 @@ class CompanyController extends Controller
     public function register(RegisterCompanyRequest $request): JsonResponse
     {
         $result = $this->companies->register($request->validated());
-        $token = $result['user']->createToken($request->input('device_name', 'api'))->plainTextToken;
 
         return response()->json([
-            'message' => 'Empresa cadastrada com sucesso.',
-            'token' => $token,
-            'token_type' => 'Bearer',
+            'message' => 'Empresa cadastrada. Confirme seu e-mail para acessar o painel.',
+            'email_verification_required' => true,
+            'email' => $result['user']->email,
             'company' => new CompanyResource($result['company']->load(['settings', 'users', 'activeSubscription.plan'])),
         ], 201);
     }

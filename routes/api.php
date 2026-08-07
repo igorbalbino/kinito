@@ -27,6 +27,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/auth/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
         ->middleware(['signed', 'throttle:6,1'])
         ->name('verification.verify');
+    Route::post('/auth/email/resend', [AuthController::class, 'resendVerificationPublic'])
+        ->middleware('throttle:5,1');
 
     Route::post('/empresas/register', [CompanyController::class, 'register'])->middleware('throttle:10,1');
 
@@ -47,7 +49,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
         Route::post('/auth/email/verification-notification', [AuthController::class, 'sendVerification']);
 
-        Route::middleware('password.changed')->group(function () {
+        Route::middleware(['verified.api', 'password.changed'])->group(function () {
             Route::get('/dashboard', DashboardController::class);
 
             Route::get('/fornecedores', [ProviderController::class, 'index']);

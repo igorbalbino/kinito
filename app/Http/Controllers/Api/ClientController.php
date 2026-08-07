@@ -71,9 +71,13 @@ class ClientController extends Controller
         $origin = $request->user()->hasRole('MOTORISTA') ? 'motorista' : 'empresa';
         $result = $this->clients->createByActor($data, $request->user(), $company, $origin);
 
+        $invitePending = (bool) ($result['invite_pending'] ?? false);
+
         return response()->json([
-            'message' => 'Cliente criado e vinculado.',
-            'temporary_password' => $result['tempPassword'] ?? null,
+            'message' => $invitePending
+                ? 'Cliente criado. Enviamos um e-mail para ele confirmar a conta e receber a senha.'
+                : 'Cliente vinculado à empresa.',
+            'invite_pending' => $invitePending,
             'client' => new ClientResource($result['client']->load(['user', 'preferences', 'companies'])),
         ], 201);
     }

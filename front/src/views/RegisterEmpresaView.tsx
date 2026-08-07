@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Building2, Lock, Mail, User } from 'lucide-react';
 import { BrandLogo } from '../components/common/BrandLogo';
 import { SEOHead } from '../components/common/SEOHead';
 import { LanguageSelector } from '../components/common/LanguageSelector';
 import { useTranslation } from '../hooks/useTranslation';
-import { useAppStore } from '../store/useAppStore';
-import { apiLogin, apiRegisterCompany, fetchPlans, isApiConfigured, ApiPlan } from '../lib/api';
+import { apiRegisterCompany, fetchPlans, isApiConfigured, ApiPlan } from '../lib/api';
 import { SafeSelect } from '../components/common/SafeSelect';
 
 export const RegisterEmpresaView: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
-  const { setActiveRole, setSelectedCompanyId } = useAppStore();
   const seo = t.seo.registerEmpresa;
 
   const [name, setName] = useState('');
@@ -22,9 +21,15 @@ export const RegisterEmpresaView: React.FC = () => {
   const [companyName, setCompanyName] = useState('');
   const [cnpj, setCnpj] = useState('');
   const [planId, setPlanId] = useState<string>('');
+  const [referralCode, setReferralCode] = useState(() => (searchParams.get('ref') || '').toUpperCase());
   const [plans, setPlans] = useState<ApiPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (ref) setReferralCode(ref.toUpperCase());
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isApiConfigured()) return;
@@ -45,7 +50,7 @@ export const RegisterEmpresaView: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiRegisterCompany({
+      await apiRegisterCompany({
         name,
         email,
         phone: phone || undefined,
@@ -54,11 +59,9 @@ export const RegisterEmpresaView: React.FC = () => {
         company_name: companyName,
         cnpj,
         plan_id: planId ? Number(planId) : undefined,
+        referral_code: referralCode.trim() || undefined,
       });
-      await apiLogin(email, password);
-      setActiveRole('empresa');
-      if (result.company?.id) setSelectedCompanyId(String(result.company.id));
-      navigate('/configuracoes');
+      navigate(`/verificar-email-pendente?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha no cadastro empresarial');
     } finally {
@@ -149,6 +152,21 @@ export const RegisterEmpresaView: React.FC = () => {
                 />
               </label>
             )}
+            <label className="block space-y-1 text-xs font-bold sm:col-span-2">
+              Código de indicação (opcional)
+              <input
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                placeholder="Ex.: AB12CD34"
+                maxLength={32}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 font-mono tracking-wider"
+              />
+              {searchParams.get('ref') && (
+                <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                  Código preenchido pelo link de indicação.
+                </span>
+              )}
+            </label>
           </div>
 
           {error && <p className="text-xs text-rose-500 bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-2">{error}</p>}

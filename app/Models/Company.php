@@ -14,6 +14,7 @@ class Company extends Model
         'owner_user_id',
         'name',
         'slug',
+        'referral_code',
         'cnpj',
         'email',
         'phone',
@@ -103,5 +104,15 @@ class Company extends Model
     public function financialTransactions(): HasMany
     {
         return $this->hasMany(FinancialTransaction::class);
+    }
+
+    public function referralsMade(): HasMany
+    {
+        return $this->hasMany(CompanyReferral::class, 'referrer_company_id');
+    }
+
+    public function referredBy(): HasOne
+    {
+        return $this->hasOne(CompanyReferral::class, 'referred_company_id');
     }
 }

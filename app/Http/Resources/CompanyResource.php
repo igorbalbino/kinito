@@ -23,6 +23,7 @@ class CompanyResource extends JsonResource
             'isProvider' => $this->is_provider,
             'isPartnerEnabled' => $this->is_partner_enabled,
             'isActive' => $this->is_active,
+            'referralCode' => $this->referral_code,
             'trialUsedAt' => $this->trial_used_at?->toIso8601String(),
             'ownerUserId' => $this->owner_user_id,
             'tier' => $this->whenLoaded('activeSubscription', function () {

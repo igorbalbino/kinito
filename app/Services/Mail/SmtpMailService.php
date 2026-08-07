@@ -81,6 +81,11 @@ class SmtpMailService
                 'to' => $to,
                 'subject' => $subject,
                 'error' => $e->getMessage(),
+                'host' => $this->host(),
+                'port' => $this->port(),
+                'crypto' => $this->crypto(),
+                'username' => $this->username(),
+                'from' => $this->fromAddress(),
             ]);
 
             return false;

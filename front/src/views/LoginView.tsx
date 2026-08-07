@@ -44,7 +44,12 @@ export const LoginView: React.FC = () => {
       setActiveRole(roleFromApi(user.roles));
       navigate('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha no login da API');
+      const e = err as Error & { email_unverified?: boolean; email?: string };
+      if (e.email_unverified && e.email) {
+        navigate(`/verificar-email-pendente?email=${encodeURIComponent(e.email)}`);
+        return;
+      }
+      setError(e instanceof Error ? e.message : 'Falha no login da API');
       clearApiSession();
     } finally {
       setLoading(false);

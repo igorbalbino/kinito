@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PlanResource;
 use App\Models\Company;
 use App\Models\Plan;
+use App\Services\Referral\ReferralService;
 use App\Services\Subscription\SubscriptionLifecycleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,10 @@ use InvalidArgumentException;
 
 class PlanController extends Controller
 {
-    public function __construct(private readonly SubscriptionLifecycleService $lifecycle) {}
+    public function __construct(
+        private readonly SubscriptionLifecycleService $lifecycle,
+        private readonly ReferralService $referrals,
+    ) {}
 
     public function index(): AnonymousResourceCollection
     {
@@ -109,6 +113,7 @@ class PlanController extends Controller
             'trial_used' => (bool) $company->trial_used_at,
             'trial_used_at' => $company->trial_used_at,
             'subscription' => $sub?->load('plan'),
+            'referral' => $this->referrals->summaryFor($company),
         ]);
     }
 }

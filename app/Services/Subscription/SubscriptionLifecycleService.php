@@ -10,6 +10,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\Audit\AuditService;
 use App\Services\Billing\BillingManager;
+use App\Services\Referral\ReferralService;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -18,6 +19,7 @@ class SubscriptionLifecycleService
     public function __construct(
         private readonly AuditService $audit,
         private readonly BillingManager $billing,
+        private readonly ReferralService $referrals,
     ) {}
 
     public function companyHasAccess(Company $company): bool
@@ -85,7 +87,7 @@ class SubscriptionLifecycleService
 
     public function activatePaid(Company $company, Plan $plan, ?string $externalSubId = null): Subscription
     {
-        return DB::transaction(function () use ($company, $plan, $externalSubId) {
+        $subscription = DB::transaction(function () use ($company, $plan, $externalSubId) {
             $this->cancelOpenTrials($company);
 
             $endsAt = $this->periodEnd($plan);
@@ -113,6 +115,10 @@ class SubscriptionLifecycleService
 
             return $subscription->load('plan');
         });
+
+        $this->referrals->rewardOnFirstPaid($company, $subscription);
+
+        return $subscription;
     }
 
     public function suspendExpired(Company $company): ?Subscription

@@ -3,7 +3,6 @@ import { CheckCircle2, Loader2, MessageCircle, QrCode, RefreshCw, Unplug } from 
 import {
   connectWhatsApp,
   disconnectWhatsApp,
-  fetchCompanies,
   fetchWhatsAppStatus,
   getApiCompanyId,
   getApiToken,
@@ -12,7 +11,6 @@ import {
   setApiCompanyId,
   WhatsAppStatus,
 } from '../../lib/api';
-import { SafeSelect } from '../common/SafeSelect';
 
 function statusLabel(wa: WhatsAppStatus | null): string {
   if (!wa) return '—';
@@ -25,12 +23,23 @@ function statusLabel(wa: WhatsAppStatus | null): string {
 
 export const WhatsAppConnectPanel: React.FC = () => {
   const [companyId, setCompanyId] = useState<number | null>(() => getApiCompanyId());
-  const [companies, setCompanies] = useState<{ id: number; name: string }[]>(() => listSessionCompanies());
+  const [companyName, setCompanyName] = useState<string | null>(null);
   const [wa, setWa] = useState<WhatsAppStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const apiReady = isApiConfigured() && Boolean(getApiToken());
+
+  useEffect(() => {
+    const companies = listSessionCompanies();
+    const stored = getApiCompanyId();
+    const id = stored || companies[0]?.id || null;
+    if (id) {
+      setCompanyId(id);
+      setApiCompanyId(id);
+      setCompanyName(companies.find((c) => c.id === id)?.name || `Empresa #${id}`);
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!apiReady || !companyId) return;
@@ -44,32 +53,9 @@ export const WhatsAppConnectPanel: React.FC = () => {
   }, [apiReady, companyId]);
 
   useEffect(() => {
-    if (!apiReady) return;
-    const local = listSessionCompanies();
-    if (local.length) {
-      setCompanies(local);
-      if (!companyId && local[0]) {
-        setCompanyId(local[0].id);
-        setApiCompanyId(local[0].id);
-      }
-      return;
-    }
-    fetchCompanies()
-      .then((list) => {
-        setCompanies(list);
-        if (!companyId && list[0]) {
-          setCompanyId(list[0].id);
-          setApiCompanyId(list[0].id);
-        }
-      })
-      .catch(() => undefined);
-  }, [apiReady, companyId]);
-
-  useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  // Poll while waiting for QR scan
   useEffect(() => {
     if (!apiReady || !companyId) return;
     const waiting = Boolean(wa?.qr) || wa?.status === 'qr' || wa?.status === 'connecting';
@@ -128,8 +114,11 @@ export const WhatsAppConnectPanel: React.FC = () => {
               WhatsApp da empresa
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Conecte o número da frota via QR (gateway Baileys provisório). Usado para notificações até a API oficial.
+              Conecte o número da frota via QR. Cada conta empresa usa o próprio WhatsApp.
             </p>
+            {companyName && (
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-1">{companyName}</p>
+            )}
           </div>
         </div>
 
@@ -147,7 +136,7 @@ export const WhatsAppConnectPanel: React.FC = () => {
 
       {!isApiConfigured() && (
         <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
-          Defina <code className="font-mono">VITE_API_URL</code> no front (ex.: http://127.0.0.1:8000) e faça login de novo.
+          Defina <code className="font-mono">VITE_API_URL</code> no front e faça login de novo.
         </p>
       )}
 
@@ -157,79 +146,50 @@ export const WhatsAppConnectPanel: React.FC = () => {
         </p>
       )}
 
-      {apiReady && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="block space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Empresa</span>
-              {companies.length > 0 ? (
-                <SafeSelect
-                  value={String(companyId ?? '')}
-                  onChange={(v) => {
-                    const id = Number(v);
-                    setCompanyId(id);
-                    setApiCompanyId(id);
-                  }}
-                  sanitizeLabels
-                  label="Empresa"
-                  options={companies.map((c) => ({
-                    value: String(c.id),
-                    label: `${c.name} (#${c.id})`,
-                  }))}
-                />
-              ) : (
-                <input
-                  type="number"
-                  min={1}
-                  value={companyId ?? ''}
-                  onChange={(e) => {
-                    const id = Number(e.target.value);
-                    setCompanyId(id || null);
-                    if (id) setApiCompanyId(id);
-                  }}
-                  placeholder="ID da empresa"
-                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2.5 text-xs"
-                />
-              )}
-            </label>
+      {apiReady && !companyId && (
+        <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
+          Nenhuma empresa vinculada à sua sessão.
+        </p>
+      )}
 
-            <div className="flex flex-col justify-end gap-2 sm:items-end">
-              {(wa?.phone || wa?.stored_phone) && (
-                <p className="text-xs text-slate-600 dark:text-slate-300">
-                  Número: <strong>{wa.phone || wa.stored_phone}</strong>
-                </p>
-              )}
-              <div className="flex flex-wrap gap-2">
+      {apiReady && companyId && (
+        <>
+          <div className="flex flex-wrap items-center gap-2 justify-between">
+            {(wa?.phone || wa?.stored_phone) && (
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Número: <strong>{wa.phone || wa.stored_phone}</strong>
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2 ml-auto">
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Atualizar
+              </button>
+              {!connected ? (
                 <button
                   type="button"
-                  onClick={() => void refresh()}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10"
+                  disabled={loading}
+                  onClick={() => void onConnect()}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold disabled:opacity-50"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Atualizar
+                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <QrCode className="w-3.5 h-3.5" />}
+                  Gerar QR / Conectar
                 </button>
-                {!connected ? (
-                  <button
-                    type="button"
-                    disabled={loading || !companyId}
-                    onClick={() => void onConnect()}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold disabled:opacity-50"
-                  >
-                    {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <QrCode className="w-3.5 h-3.5" />}
-                    Gerar QR / Conectar
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={loading || !companyId}
-                    onClick={() => void onDisconnect()}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-xs font-bold disabled:opacity-50"
-                  >
-                    {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unplug className="w-3.5 h-3.5" />}
-                    Desconectar
-                  </button>
-                )}
-              </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => void onDisconnect()}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-xs font-bold disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unplug className="w-3.5 h-3.5" />}
+                  Desconectar
+                </button>
+              )}
             </div>
           </div>
 

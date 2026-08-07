@@ -61,21 +61,22 @@ class ClientOnboardingService
 
     /**
      * Company or driver creates a client and links them.
+     * New users get an invite e-mail (confirm first); password is sent only after verification.
      *
      * @param  array<string, mixed>  $data
      */
     public function createByActor(array $data, User $actor, Company $company, string $origin = 'empresa'): array
     {
-        $tempPassword = Str::password(10);
+        $placeholderPassword = Str::password(32);
         $wasNewUser = ! User::query()->where('email', $data['email'])->exists();
 
-        $result = DB::transaction(function () use ($data, $actor, $company, $origin, $tempPassword, $wasNewUser) {
+        $result = DB::transaction(function () use ($data, $actor, $company, $origin, $placeholderPassword, $wasNewUser) {
             $user = User::query()->firstOrCreate(
                 ['email' => $data['email']],
                 [
                     'name' => $data['name'],
                     'phone' => $data['phone'] ?? null,
-                    'password' => $tempPassword,
+                    'password' => $placeholderPassword,
                     'must_change_password' => true,
                 ]
             );
@@ -83,7 +84,8 @@ class ClientOnboardingService
             if ($wasNewUser) {
                 $user->forceFill([
                     'must_change_password' => true,
-                    'password' => $tempPassword,
+                    'password' => $placeholderPassword,
+                    'email_verified_at' => null,
                 ])->save();
             } elseif (! empty($data['phone']) && ! $user->phone) {
                 $user->update(['phone' => $data['phone']]);
@@ -115,17 +117,13 @@ class ClientOnboardingService
             );
 
             if ($wasNewUser) {
-                $login = $user->email ?: $user->phone;
                 $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
-
-                // Never persist temporary passwords in in-app notifications (visible in the painel).
                 $safeMessage = "A empresa {$company->name} cadastrou você no Kinito. "
-                    ."Acesse {$link} com o login {$login}. "
-                    .'A senha temporária foi enviada por e-mail/WhatsApp e deve ser trocada no primeiro acesso.';
+                    .'Confirme o e-mail enviado para ativar o acesso e receber a senha temporária.';
 
                 $this->notifications->notify(
                     $user,
-                    'Acesso Kinito',
+                    'Convite Kinito',
                     $safeMessage,
                     'sistema',
                     'info',
@@ -137,32 +135,18 @@ class ClientOnboardingService
             $this->audit->log('CLIENT_CREATED_BY_ACTOR', $actor, $client, null, [
                 'company_id' => $company->id,
                 'origin' => $origin,
+                'invite_pending' => $wasNewUser,
             ]);
 
             return [
                 'user' => $user->fresh(),
                 'client' => $client,
-                'tempPassword' => $wasNewUser ? $tempPassword : null,
+                'invite_pending' => $wasNewUser && ! $user->fresh()->hasVerifiedEmail(),
             ];
         });
 
-        if ($wasNewUser && $result['tempPassword']) {
-            $user = $result['user'];
-            $login = $user->email ?: $user->phone;
-            $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
-            $privateMessage = "A empresa {$company->name} cadastrou você no Kinito.\n"
-                ."Acesse: {$link}\n"
-                ."Login: {$login}\n"
-                ."Senha temporária: {$result['tempPassword']}\n"
-                .'No primeiro acesso você deverá trocar a senha.';
-
-            if (filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
-                $this->notifications->sendEmail($user, 'Acesso Kinito', $privateMessage);
-            }
-
-            if (filled($user->phone) && config('kinito.whatsapp.enabled')) {
-                $this->notifications->sendWhatsApp($user, 'Acesso Kinito', $privateMessage);
-            }
+        if ($wasNewUser && ($result['invite_pending'] ?? false)) {
+            $this->notifications->sendClientInviteEmail($result['user'], $company->name);
         }
 
         return $result;

@@ -4,7 +4,7 @@ namespace App\Services\Notification;
 
 use App\Models\AppNotification;
 use App\Models\User;
-use App\Services\Mail\SmtpMailService;
+use App\Services\Mail\MailService;
 use App\Services\WhatsApp\WhatsAppManager;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -13,12 +13,12 @@ class NotificationService
 {
     public function __construct(
         private readonly WhatsAppManager $whatsapp,
-        private readonly SmtpMailService $smtp,
+        private readonly MailService $mail,
     ) {}
 
     public function isSmtpConfigured(): bool
     {
-        return $this->smtp->isConfigured();
+        return $this->mail->isConfigured();
     }
 
     public function notify(
@@ -43,7 +43,7 @@ class NotificationService
         ]);
 
         match ($channel) {
-            'email' => $this->sendEmail($user, $title, $message),
+            'email' => $this->sendEmail($user, $title, $message, $link),
             'whatsapp' => $this->sendWhatsApp($user, $title, $message),
             default => null,
         };
@@ -73,17 +73,13 @@ class NotificationService
         return $created;
     }
 
-    public function sendEmail(User $user, string $title, string $message): bool
+    public function sendEmail(User $user, string $title, string $message, ?string $link = null): bool
     {
         if (! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
             return false;
         }
 
-        return $this->smtp->send(
-            $user->email,
-            '[Kinito] '.$title,
-            $message,
-        );
+        return $this->mail->sendNotification($user, $title, $message, $link);
     }
 
     /** Welcome + verification link after self-registration. */
@@ -93,16 +89,29 @@ class NotificationService
             return false;
         }
 
+        return $this->mail->sendRegistration($user, $this->verificationUrl($user));
+    }
+
+    /** Company invited a client: confirm email first (no password yet). */
+    public function sendClientInviteEmail(User $user, string $companyName): bool
+    {
+        if (! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        return $this->mail->sendClientInvite($user, $companyName, $this->verificationUrl($user));
+    }
+
+    /** Credentials after invite email was confirmed. */
+    public function sendInviteCredentialsEmail(User $user, string $temporaryPassword, ?string $companyName = null): bool
+    {
+        if (! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
         $loginUrl = rtrim((string) config('kinito.frontend_url'), '/').'/login';
-        $verifyUrl = $this->verificationUrl($user);
 
-        $body = "Olá, {$user->name}!\n\n"
-            ."Seu cadastro no Kinito foi realizado com sucesso.\n\n"
-            ."Confirme seu e-mail neste link (válido por 60 minutos):\n{$verifyUrl}\n\n"
-            ."Acesse o painel: {$loginUrl}\n\n"
-            .'Se você não fez este cadastro, ignore esta mensagem.';
-
-        return $this->smtp->send($user->email, '[Kinito] Bem-vindo — confirme seu e-mail', $body);
+        return $this->mail->sendInviteCredentials($user, $temporaryPassword, $loginUrl, $companyName);
     }
 
     public function sendEmailVerification(User $user): bool
@@ -111,13 +120,7 @@ class NotificationService
             return false;
         }
 
-        $verifyUrl = $this->verificationUrl($user);
-        $body = "Olá, {$user->name}!\n\n"
-            ."Confirme seu e-mail no Kinito clicando no link abaixo (válido por 60 minutos):\n\n"
-            ."{$verifyUrl}\n\n"
-            .'Se você não solicitou isto, ignore esta mensagem.';
-
-        return $this->smtp->send($user->email, '[Kinito] Confirme seu e-mail', $body);
+        return $this->mail->sendVerification($user, $this->verificationUrl($user));
     }
 
     public function sendPasswordResetEmail(User $user, string $token): bool
@@ -129,12 +132,7 @@ class NotificationService
         $frontend = rtrim((string) config('kinito.frontend_url'), '/');
         $url = $frontend.'/reset-password?token='.$token.'&email='.urlencode($user->email);
 
-        $body = "Olá, {$user->name}!\n\n"
-            ."Recebemos um pedido para redefinir sua senha no Kinito.\n\n"
-            ."Use o link abaixo:\n{$url}\n\n"
-            .'Se você não pediu isso, ignore esta mensagem.';
-
-        return $this->smtp->send($user->email, '[Kinito] Redefinir senha', $body);
+        return $this->mail->sendPasswordReset($user, $url);
     }
 
     public function sendWhatsApp(User $user, string $title, string $message): bool
@@ -163,9 +161,10 @@ class NotificationService
         return $result->success;
     }
 
-    private function verificationUrl(User $user): string
+    /** Signed API verify URL rewritten to the frontend page. */
+    public function verificationUrl(User $user): string
     {
-        return URL::temporarySignedRoute(
+        $apiUrl = URL::temporarySignedRoute(
             'verification.verify',
             now()->addMinutes(60),
             [
@@ -173,5 +172,20 @@ class NotificationService
                 'hash' => sha1($user->getEmailForVerification()),
             ]
         );
+
+        $query = [];
+        $parts = parse_url($apiUrl);
+        if (! empty($parts['query'])) {
+            parse_str($parts['query'], $query);
+        }
+
+        $frontend = rtrim((string) config('kinito.frontend_url'), '/');
+
+        return $frontend.'/verificar-email?'.http_build_query([
+            'id' => $user->getKey(),
+            'hash' => sha1($user->getEmailForVerification()),
+            'expires' => $query['expires'] ?? '',
+            'signature' => $query['signature'] ?? '',
+        ]);
     }
 }

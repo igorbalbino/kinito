@@ -35,6 +35,20 @@ export type SubscriptionStatusPayload = {
     ends_at?: string | null;
     plan?: ApiPlan;
   } | null;
+  referral?: {
+    referral_code?: string | null;
+    share_url?: string | null;
+    pending?: number;
+    rewarded?: number;
+    months_earned?: number;
+    recent?: Array<{
+      id: number;
+      status: string;
+      referred_company?: string | null;
+      rewarded_at?: string | null;
+      created_at?: string | null;
+    }>;
+  };
 };
 
 export function getApiBaseUrl(): string {
@@ -202,13 +216,23 @@ export async function apiFetch<T = unknown>(
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(
-      (data as { message?: string }).message ||
-        (data as { error?: string }).error ||
-        `HTTP ${res.status}`,
-    ) as Error & { code?: string; status?: number };
-    err.code = (data as { code?: string }).code;
+    const payload = data as {
+      message?: string;
+      error?: string;
+      code?: string;
+      email_unverified?: boolean;
+      email?: string;
+    };
+    const err = new Error(payload.message || payload.error || `HTTP ${res.status}`) as Error & {
+      code?: string;
+      status?: number;
+      email_unverified?: boolean;
+      email?: string;
+    };
+    err.code = payload.code;
     err.status = res.status;
+    err.email_unverified = Boolean(payload.email_unverified);
+    err.email = payload.email;
     throw err;
   }
 
@@ -335,13 +359,12 @@ export async function apiRegisterPerson(payload: {
   vehicle_plate?: string;
   city?: string;
   company_id?: number;
-}): Promise<{ token: string; user: ApiUser }> {
-  const data = await apiFetch<{ token: string; user: ApiUser }>('/api/v1/auth/register', {
+}): Promise<{ email_verification_required?: boolean; email?: string; message?: string }> {
+  clearApiSession();
+  return apiFetch('/api/v1/auth/register', {
     method: 'POST',
     body: JSON.stringify({ ...payload, device_name: 'kinito-web' }),
   });
-  setApiSession(data.token, data.user);
-  return data;
 }
 
 export async function apiRegisterCompany(payload: {
@@ -355,20 +378,38 @@ export async function apiRegisterCompany(payload: {
   company_email?: string;
   company_phone?: string;
   plan_id?: number;
-}): Promise<{ token: string; company: { id: number | string; name: string }; user?: ApiUser }> {
-  const data = await apiFetch<{
-    token: string;
-    company: { id: number | string; name: string };
-  }>('/api/v1/empresas/register', {
+  referral_code?: string;
+}): Promise<{
+  email_verification_required?: boolean;
+  email?: string;
+  message?: string;
+  company?: { id: number | string; name: string };
+}> {
+  clearApiSession();
+  return apiFetch('/api/v1/empresas/register', {
     method: 'POST',
     body: JSON.stringify({ ...payload, device_name: 'kinito-web' }),
   });
-  // Session user may not be in response — login after or store token
-  localStorage.setItem('kinito_api_token', data.token);
-  if (data.company?.id) {
-    localStorage.setItem('kinito_api_company_id', String(data.company.id));
-  }
-  return data;
+}
+
+export async function verifyEmailApi(params: {
+  id: string;
+  hash: string;
+  expires: string;
+  signature: string;
+}): Promise<{ message: string; credentials_sent?: boolean; already_verified?: boolean }> {
+  const qs = new URLSearchParams({
+    expires: params.expires,
+    signature: params.signature,
+  });
+  return apiFetch(`/api/v1/auth/email/verify/${params.id}/${params.hash}?${qs.toString()}`);
+}
+
+export async function resendVerificationEmail(email: string): Promise<{ message: string }> {
+  return apiFetch('/api/v1/auth/email/resend', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
 }
 
 export async function apiLogout(): Promise<void> {
@@ -419,7 +460,8 @@ export async function fetchClientsList(): Promise<Record<string, unknown>[]> {
 
 export async function createClientApi(payload: Record<string, unknown>): Promise<{
   client: Record<string, unknown>;
-  temporary_password?: string;
+  invite_pending?: boolean;
+  message?: string;
 }> {
   return apiFetch('/api/v1/clientes', { method: 'POST', body: JSON.stringify(payload) });
 }

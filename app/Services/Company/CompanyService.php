@@ -11,6 +11,7 @@ use App\Models\Plan;
 use App\Models\User;
 use App\Services\Audit\AuditService;
 use App\Services\Notification\NotificationService;
+use App\Services\Referral\ReferralService;
 use App\Services\Subscription\SubscriptionLifecycleService;
 use App\Support\EnsureUserRoles;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,7 @@ class CompanyService
         private readonly AuditService $audit,
         private readonly SubscriptionLifecycleService $lifecycle,
         private readonly NotificationService $notifications,
+        private readonly ReferralService $referrals,
     ) {}
 
     /**
@@ -43,6 +45,7 @@ class CompanyService
                 'owner_user_id' => $user->id,
                 'name' => $data['company_name'],
                 'slug' => Str::slug($data['company_name']).'-'.Str::lower(Str::random(4)),
+                'referral_code' => $this->referrals->generateUniqueCode(),
                 'cnpj' => $data['cnpj'],
                 'email' => $data['company_email'] ?? $data['email'],
                 'phone' => $data['company_phone'] ?? ($data['phone'] ?? null),
@@ -71,6 +74,8 @@ class CompanyService
                 $plan = Plan::query()->where('is_active', true)->findOrFail($data['plan_id']);
                 $subscription = $this->lifecycle->startTrial($company, $plan);
             }
+
+            $this->referrals->attachOnRegister($company, $data['referral_code'] ?? null);
 
             $this->audit->log('COMPANY_REGISTERED', $user, $company, null, $company->toArray());
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Copy, UserPlus, X } from 'lucide-react';
+import { Mail, UserPlus, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { createClientApi } from '../../lib/api';
 import { normalizeClient } from '../../lib/normalize';
@@ -17,8 +17,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose }) => 
   const [phone, setPhone] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [oneTimePassword, setOneTimePassword] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [invitePending, setInvitePending] = useState(false);
 
   if (!isOpen) return null;
 
@@ -27,8 +26,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose }) => 
     setEmail('');
     setPhone('');
     setCompanyId('');
-    setOneTimePassword(null);
-    setCopied(false);
+    setInvitePending(false);
     onClose();
   };
 
@@ -47,8 +45,8 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose }) => 
 
       const res = await createClientApi(payload);
       addClient(normalizeClient((res.client || res) as Record<string, unknown>));
-      if (res.temporary_password) {
-        setOneTimePassword(res.temporary_password);
+      if (res.invite_pending) {
+        setInvitePending(true);
       } else {
         resetAndClose();
       }
@@ -56,16 +54,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose }) => 
       alert(err instanceof Error ? err.message : 'Falha ao criar cliente');
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const copyPassword = async () => {
-    if (!oneTimePassword) return;
-    try {
-      await navigator.clipboard.writeText(oneTimePassword);
-      setCopied(true);
-    } catch {
-      /* ignore */
     }
   };
 
@@ -85,15 +73,15 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose }) => 
         <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
-              <UserPlus className="w-5 h-5" />
+              {invitePending ? <Mail className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
             </div>
             <div>
               <h3 className="font-semibold text-base text-slate-100">
-                {oneTimePassword ? 'Cliente criado' : 'Novo cliente'}
+                {invitePending ? 'Convite enviado' : 'Novo cliente'}
               </h3>
               <p className="text-xs text-slate-400">
-                {oneTimePassword
-                  ? 'Copie a senha agora — ela não será exibida de novo no painel.'
+                {invitePending
+                  ? 'Ele precisa confirmar o e-mail para receber a senha.'
                   : 'Dados de contato e vínculo'}
               </p>
             </div>
@@ -107,23 +95,11 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose }) => 
           </button>
         </div>
 
-        {oneTimePassword ? (
+        {invitePending ? (
           <div className="p-6 space-y-4 text-xs">
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200">
-              Senha temporária (exibição única). Não fica salva em notificações do painel.
-            </div>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 font-mono text-sm px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-100 select-all">
-                {oneTimePassword}
-              </code>
-              <button
-                type="button"
-                onClick={() => void copyPassword()}
-                className="px-3 py-2.5 rounded-xl bg-indigo-600 text-white font-bold min-h-[44px] inline-flex items-center gap-1.5"
-              >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copiado' : 'Copiar'}
-              </button>
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200">
+              Enviamos um e-mail de confirmação para o cliente. Depois que ele clicar no link, recebe a senha
+              temporária por e-mail e troca no primeiro acesso.
             </div>
             <button
               type="button"
@@ -134,7 +110,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose }) => 
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs" autoComplete="off">
+          <form onSubmit={(e) => void handleSubmit(e)} className="p-6 space-y-4 text-xs" autoComplete="off">
             <div>
               <label className="text-[11px] font-medium text-slate-300">Nome *</label>
               <input

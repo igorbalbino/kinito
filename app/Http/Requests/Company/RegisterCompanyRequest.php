@@ -24,6 +24,7 @@ class RegisterCompanyRequest extends FormRequest
             'company_email' => ['nullable', 'email'],
             'company_phone' => ['nullable', 'string', 'max:30'],
             'plan_id' => ['nullable', 'integer', 'exists:plans,id'],
+            'referral_code' => ['nullable', 'string', 'max:32'],
         ];
     }
 }

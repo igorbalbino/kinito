@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
+  ArrowLeft,
   CreditCard,
-  Globe,
   Hand,
+  MessageCircle,
   ShieldCheck,
   Sliders,
   Smartphone,
@@ -14,14 +16,16 @@ import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
 import { FeatureFlags } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
-import { Language } from '../i18n/translations';
 import { WhatsAppConnectPanel } from '../components/settings/WhatsAppConnectPanel';
 import { PlanBillingPanel } from '../components/settings/PlanBillingPanel';
 import { PageContainer } from '../components/layout/PageContainer';
-import { isClientRole, isFleetOperator } from '../lib/navByRole';
+import { isFleetOperator } from '../lib/navByRole';
+
+type ConfigSection = 'plano' | 'whatsapp' | 'mao' | 'financeiro' | 'flags';
 
 export const ConfiguracoesView: React.FC = () => {
-  const { t, language, setLanguage, options } = useTranslation();
+  const { t } = useTranslation();
+  const [params, setParams] = useSearchParams();
   const {
     featureFlags,
     toggleFeatureFlag,
@@ -32,9 +36,17 @@ export const ConfiguracoesView: React.FC = () => {
     activeRole,
   } = useAppStore();
 
-  const clientMode = isClientRole(activeRole);
   const showFleetSettings = isFleetOperator(activeRole);
   const showAdminFlags = activeRole === 'admin';
+  const section = (params.get('sec') as ConfigSection | null) || null;
+
+  const openSection = (sec: ConfigSection) => {
+    setParams({ sec });
+  };
+
+  const backToHub = () => {
+    setParams({});
+  };
 
   const flagLabels: { key: keyof FeatureFlags; title: string; desc: string }[] = [
     { key: 'saasMode', title: 'Modo SaaS Multi-tenant', desc: 'Isolamento de dados por empresas distribuidoras e frotas.' },
@@ -50,121 +62,151 @@ export const ConfiguracoesView: React.FC = () => {
     { key: 'auditoriaSistema', title: 'Trilha de Auditoria de Segurança', desc: 'Registra IP, data e usuário em alterações de estado.' },
   ];
 
+  const menuItems = useMemo(() => {
+    const items: { id: ConfigSection; title: string; desc: string; icon: React.ReactNode }[] = [];
+    if (showFleetSettings) {
+      items.push({
+        id: 'plano',
+        title: 'Plano e indicações',
+        desc: 'Assinatura, trial e código de indicação',
+        icon: <CreditCard className="w-5 h-5" />,
+      });
+      items.push({
+        id: 'whatsapp',
+        title: 'WhatsApp',
+        desc: 'Conectar o número da sua empresa',
+        icon: <MessageCircle className="w-5 h-5" />,
+      });
+    }
+    items.push({
+      id: 'mao',
+      title: 'Mão dominante',
+      desc: 'Ajuste de navegação com uma mão no celular',
+      icon: <Hand className="w-5 h-5" />,
+    });
+    if (showFleetSettings) {
+      items.push({
+        id: 'financeiro',
+        title: 'Financeiro',
+        desc: 'Modo Stripe ou processamento manual',
+        icon: <ShieldCheck className="w-5 h-5" />,
+      });
+    }
+    if (showAdminFlags) {
+      items.push({
+        id: 'flags',
+        title: 'Feature flags',
+        desc: 'Interruptores do sistema (admin)',
+        icon: <Sliders className="w-5 h-5" />,
+      });
+    }
+    return items;
+  }, [showFleetSettings, showAdminFlags]);
+
   return (
     <PageContainer narrow className="pb-24">
       <PageSEO page="configuracoes" />
 
-      <div>
-        <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          {t.settingsPage.title}
-        </h1>
-        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-          {clientMode
-            ? 'Preferências do seu painel: idioma e navegação no celular.'
-            : t.settingsPage.subtitle}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+            {t.settingsPage.title}
+          </h1>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+            {section ? 'Ajuste a opção selecionada.' : 'Escolha o que deseja configurar.'}
+          </p>
+        </div>
+        {section && (
+          <button
+            type="button"
+            onClick={backToHub}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-200"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Menu
+          </button>
+        )}
       </div>
 
-      {showFleetSettings && (
-        <>
-          <PlanBillingPanel />
-          <WhatsAppConnectPanel />
-        </>
+      {!section && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => openSection(item.id)}
+              className="text-left p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:border-indigo-500/40 transition-all space-y-2 active:scale-[0.99]"
+            >
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                {item.icon}
+              </div>
+              <div className="font-bold text-sm text-slate-900 dark:text-slate-100">{item.title}</div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{item.desc}</p>
+            </button>
+          ))}
+        </div>
       )}
 
-      <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 space-y-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
-            <Globe className="w-5 h-5" />
+      {section === 'plano' && showFleetSettings && <PlanBillingPanel />}
+      {section === 'whatsapp' && showFleetSettings && <WhatsAppConnectPanel />}
+
+      {section === 'mao' && (
+        <div className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-base text-slate-100">Modo Mão Dominante</h3>
+              <p className="text-xs text-slate-400">
+                Ajusta o botão flutuante e áreas de toque para fácil alcance do polegar.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
-              {t.settingsPage.languageTitle}
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Selecione o idioma de preferência do painel operacional (Português, English, Español, Italiano).
-            </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setHandPreference('right')}
+              className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 text-xs font-semibold min-h-[64px] active:scale-95 ${
+                handPreference === 'right'
+                  ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                  : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+              }`}
+            >
+              <Hand className="w-5 h-5 text-indigo-400" />
+              <span>Mão Direita</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setHandPreference('left')}
+              className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 text-xs font-semibold min-h-[64px] active:scale-95 ${
+                handPreference === 'left'
+                  ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                  : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+              }`}
+            >
+              <Hand className="w-5 h-5 text-indigo-400 -scale-x-100" />
+              <span>Mão Esquerda</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setHandPreference('center')}
+              className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 text-xs font-semibold min-h-[64px] active:scale-95 ${
+                handPreference === 'center'
+                  ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                  : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+              }`}
+            >
+              <Smartphone className="w-5 h-5 text-indigo-400" />
+              <span>Centralizado</span>
+            </button>
           </div>
         </div>
+      )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-          {options.map((opt) => {
-            const isSelected = opt.code === language;
-            return (
-              <button
-                key={opt.code}
-                type="button"
-                onClick={() => setLanguage(opt.code as Language)}
-                className={`p-4 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1.5 active:scale-95 ${
-                  isSelected
-                    ? 'bg-indigo-50 dark:bg-indigo-600/20 border-indigo-600 text-indigo-700 dark:text-white shadow-md font-bold'
-                    : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
-                }`}
-              >
-                <span className="text-3xl">{opt.flag}</span>
-                <span className="text-xs font-bold">{opt.label}</span>
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">{opt.code}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-            <Smartphone className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-base text-slate-100">
-              Modo Mão Dominante (Navegação Tátil com 1 Mão)
-            </h3>
-            <p className="text-xs text-slate-400">
-              Ajusta o botão flutuante e áreas de toque para fácil alcance do polegar direito ou esquerdo no celular.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-          <button
-            onClick={() => setHandPreference('right')}
-            className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 text-xs font-semibold min-h-[64px] active:scale-95 ${
-              handPreference === 'right'
-                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
-                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Hand className="w-5 h-5 text-indigo-400" />
-            <span>Mão Direita (Polegar no Canto Direito)</span>
-          </button>
-
-          <button
-            onClick={() => setHandPreference('left')}
-            className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 text-xs font-semibold min-h-[64px] active:scale-95 ${
-              handPreference === 'left'
-                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
-                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Hand className="w-5 h-5 text-indigo-400 -scale-x-100" />
-            <span>Mão Esquerda (Polegar no Canto Esquerdo)</span>
-          </button>
-
-          <button
-            onClick={() => setHandPreference('center')}
-            className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 text-xs font-semibold min-h-[64px] active:scale-95 ${
-              handPreference === 'center'
-                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
-                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Smartphone className="w-5 h-5 text-indigo-400" />
-            <span>Centralizado (Acesso Ambidestro)</span>
-          </button>
-        </div>
-      </div>
-
-      {showFleetSettings && (
+      {section === 'financeiro' && showFleetSettings && (
         <div className="p-6 rounded-2xl border border-indigo-500/40 bg-white/5 shadow-lg space-y-5">
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <div className="flex items-center gap-3">
@@ -176,11 +218,10 @@ export const ConfiguracoesView: React.FC = () => {
                   Processamento Financeiro (Stripe vs Manual)
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Alterne o fluxo operacional para simular chamadas e webhooks reais do Stripe
+                  Alterne o fluxo operacional para simular Stripe ou modo manual
                 </p>
               </div>
             </div>
-
             <StatusBadge
               type="stripe_feature"
               status={financialMode === 'stripe' ? 'confirmed' : 'split'}
@@ -197,28 +238,13 @@ export const ConfiguracoesView: React.FC = () => {
                   : 'border-white/10 hover:border-white/20'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  Opção 1: Stripe (Automático)
-                </span>
-                {financialMode === 'stripe' && (
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
-                )}
-              </div>
-
+              <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                Stripe (Automático)
+              </span>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Exibe badges <strong>"Pagamento Confirmado"</strong>, <strong>"Webhook Recebido"</strong>, <strong>"Repasse Calculado"</strong> e <strong>"Comissão Automática"</strong>. Calcula automaticamente taxas de processamento, split por empresa e repasse direto do motorista.
+                Badges de confirmação, webhook e split automático.
               </p>
-
-              {financialMode === 'stripe' && (
-                <div className="pt-2 flex flex-wrap gap-1.5">
-                  <StatusBadge type="stripe_feature" status="confirmed" size="sm" />
-                  <StatusBadge type="stripe_feature" status="webhook" size="sm" />
-                  <StatusBadge type="stripe_feature" status="split" size="sm" />
-                  <StatusBadge type="stripe_feature" status="auto_commission" size="sm" />
-                </div>
-              )}
             </div>
 
             <div
@@ -229,50 +255,33 @@ export const ConfiguracoesView: React.FC = () => {
                   : 'border-white/10 hover:border-white/20'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  Opção 2: Manual (Incompleto)
-                </span>
-                {financialMode === 'manual' && (
-                  <span className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
-                )}
-              </div>
-
+              <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                Manual
+              </span>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Oculta os badges do Stripe. Exibe campos editáveis para Valor da Corrida, Valor do Motorista e Comissão. Todos os indicadores financeiros passam a ser sinalizados como <strong>"Pendente"</strong> ou <strong>"Incompleto"</strong> com alertas visuais.
+                Valores editáveis e indicadores pendentes de liquidação.
               </p>
-
-              {financialMode === 'manual' && (
-                <div className="pt-2">
-                  <span className="px-2.5 py-1 rounded bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold">
-                    ⚠️ Estimativas Pendentes de Confirmação Manual
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         </div>
       )}
 
-      {showAdminFlags && (
+      {section === 'flags' && showAdminFlags && (
         <div className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
           <h3 className="font-semibold text-sm text-slate-100 flex items-center gap-2">
             <Sliders className="w-4 h-4 text-indigo-400" />
             Feature Flags do Sistema
           </h3>
-
           <div className="divide-y divide-white/10">
             {flagLabels.map((flag) => {
               const isChecked = featureFlags[flag.key];
-
               return (
                 <div key={flag.key} className="py-3.5 flex items-center justify-between gap-4">
                   <div>
                     <h4 className="font-medium text-xs text-slate-200">{flag.title}</h4>
                     <p className="text-[11px] text-slate-400">{flag.desc}</p>
                   </div>
-
                   <label className="relative inline-flex items-center cursor-pointer shrink-0 min-h-[44px]">
                     <input
                       type="checkbox"
@@ -280,7 +289,7 @@ export const ConfiguracoesView: React.FC = () => {
                       onChange={() => toggleFeatureFlag(flag.key)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[12px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[12px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600" />
                   </label>
                 </div>
               );
