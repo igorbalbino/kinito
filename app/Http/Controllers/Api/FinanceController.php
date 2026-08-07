@@ -78,10 +78,14 @@ class FinanceController extends Controller
     {
         $this->authorize('manage', $ride);
 
-        $payment = $this->finance->createPaymentIntentStub($ride);
+        $payment = $this->finance->createPaymentIntent($ride);
+        $driver = $this->finance->paymentDriver();
 
         return response()->json([
-            'message' => 'PaymentIntent preparado (stub Stripe).',
+            'message' => $driver === 'stripe'
+                ? 'PaymentIntent Stripe criado.'
+                : 'PaymentIntent mock preparado (STRIPE_SECRET ausente).',
+            'driver' => $driver,
             'payment' => $payment,
         ], 201);
     }

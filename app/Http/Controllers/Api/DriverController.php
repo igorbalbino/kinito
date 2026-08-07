@@ -29,8 +29,7 @@ class DriverController extends Controller
         $query = Driver::query()->with(['user', 'documents', 'companies', 'primaryCompany', 'previousPrimaryCompany']);
 
         if ($request->user()->hasRole('EMPRESA') && ! $request->user()->hasRole('ADMIN')) {
-            $companyIds = $request->user()->ownedCompanies()->pluck('id')
-                ->merge($request->user()->companies()->pluck('companies.id'));
+            $companyIds = $request->user()->accessibleCompanyIds();
             $query->whereHas('companies', fn ($q) => $q->whereIn('companies.id', $companyIds));
         }
 
@@ -72,6 +71,7 @@ class DriverController extends Controller
             : $request->user()->primaryCompany();
 
         abort_unless($company, 422, 'Informe a empresa para vincular o motorista.');
+        abort_unless($request->user()->canAccessCompany($company), 403, 'Sem permissão nesta empresa.');
 
         $result = $this->drivers->createByCompany($data, $request->user(), $company);
         $invitePending = (bool) ($result['invite_pending'] ?? false);
@@ -96,13 +96,22 @@ class DriverController extends Controller
     {
         $this->authorize('update', $driver);
 
-        $data = $request->validate([
+        $rules = [
             'vehicle_model' => ['sometimes', 'string', 'max:100'],
             'vehicle_plate' => ['sometimes', 'string', 'max:20'],
             'vehicle_color' => ['nullable', 'string', 'max:50'],
             'city' => ['nullable', 'string', 'max:100'],
-            'status' => ['sometimes', 'in:PENDENTE,ATIVO,BLOQUEADO,INDISPONIVEL'],
-        ]);
+        ];
+
+        $isSelfDriver = $request->user()->driver?->id === $driver->id
+            && ! $request->user()->hasRole('ADMIN')
+            && ! $request->user()->hasRole('EMPRESA');
+
+        if (! $isSelfDriver) {
+            $rules['status'] = ['sometimes', 'in:PENDENTE,ATIVO,BLOQUEADO,INDISPONIVEL'];
+        }
+
+        $data = $request->validate($rules);
 
         $driver->update($data);
 
@@ -199,11 +208,13 @@ class DriverController extends Controller
     private function resolveCompany(Request $request): Company
     {
         if ($request->filled('company_id')) {
-            return Company::query()->findOrFail($request->integer('company_id'));
+            $company = Company::query()->findOrFail($request->integer('company_id'));
+        } else {
+            $company = $request->user()->primaryCompany();
+            abort_unless($company, 422, 'Empresa não encontrada para o usuário.');
         }
 
-        $company = $request->user()->primaryCompany();
-        abort_unless($company, 422, 'Empresa não encontrada para o usuário.');
+        abort_unless($request->user()->canAccessCompany($company), 403, 'Sem permissão nesta empresa.');
 
         return $company;
     }

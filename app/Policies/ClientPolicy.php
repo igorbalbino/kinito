@@ -29,13 +29,20 @@ class ClientPolicy
         }
 
         if ($user->hasRole(UserRole::Empresa->value)) {
-            $companyIds = $user->ownedCompanies()->pluck('id')
-                ->merge($user->companies()->pluck('companies.id'));
+            $companyIds = $user->accessibleCompanyIds();
 
-            return $client->companies()->whereIn('companies.id', $companyIds)->exists();
+            return $companyIds->isNotEmpty()
+                && $client->companies()->whereIn('companies.id', $companyIds)->exists();
         }
 
-        return $user->hasRole(UserRole::Motorista->value);
+        if ($user->hasRole(UserRole::Motorista->value)) {
+            $companyIds = $user->accessibleCompanyIds();
+
+            return $companyIds->isNotEmpty()
+                && $client->companies()->whereIn('companies.id', $companyIds)->exists();
+        }
+
+        return false;
     }
 
     public function create(User $user): bool

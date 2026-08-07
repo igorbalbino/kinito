@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -119,5 +120,46 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->ownedCompanies()->first()
             ?? $this->companies()->wherePivot('is_active', true)->first();
+    }
+
+    /**
+     * Company IDs this user may act on (tenant scope).
+     * ADMIN is handled separately via canAccessCompany().
+     *
+     * @return Collection<int, int>
+     */
+    public function accessibleCompanyIds(): Collection
+    {
+        if ($this->hasRole(UserRole::Admin->value)) {
+            return collect();
+        }
+
+        if ($this->hasRole(UserRole::Empresa->value)) {
+            return $this->ownedCompanies()->pluck('id')
+                ->merge($this->companies()->pluck('companies.id'))
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+        }
+
+        if ($this->hasRole(UserRole::Motorista->value) && $this->driver) {
+            return $this->driver->companies()->pluck('companies.id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+        }
+
+        return collect();
+    }
+
+    public function canAccessCompany(Company|int $company): bool
+    {
+        if ($this->hasRole(UserRole::Admin->value)) {
+            return true;
+        }
+
+        $id = $company instanceof Company ? (int) $company->id : (int) $company;
+
+        return $this->accessibleCompanyIds()->contains($id);
     }
 }

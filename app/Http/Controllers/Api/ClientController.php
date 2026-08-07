@@ -30,8 +30,12 @@ class ClientController extends Controller
         }
 
         if ($request->user()->hasRole('EMPRESA') && ! $request->user()->hasRole('ADMIN')) {
-            $companyIds = $request->user()->ownedCompanies()->pluck('id')
-                ->merge($request->user()->companies()->pluck('companies.id'));
+            $companyIds = $request->user()->accessibleCompanyIds();
+            $query->whereHas('companies', fn ($q) => $q->whereIn('companies.id', $companyIds));
+        }
+
+        if ($request->user()->hasRole('MOTORISTA') && ! $request->user()->hasRole('ADMIN')) {
+            $companyIds = $request->user()->accessibleCompanyIds();
             $query->whereHas('companies', fn ($q) => $q->whereIn('companies.id', $companyIds));
         }
 
@@ -71,6 +75,7 @@ class ClientController extends Controller
         }
 
         abort_unless($company, 422, 'Informe a empresa para vincular o cliente.');
+        abort_unless($request->user()->canAccessCompany($company), 403, 'Sem permissão nesta empresa.');
 
         $origin = $request->user()->hasRole('MOTORISTA') ? 'motorista' : 'empresa';
         $result = $this->clients->createByActor($data, $request->user(), $company, $origin);

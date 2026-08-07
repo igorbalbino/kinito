@@ -28,10 +28,10 @@ class DriverPolicy
         }
 
         if ($user->hasRole(UserRole::Empresa->value)) {
-            $companyIds = $user->ownedCompanies()->pluck('id')
-                ->merge($user->companies()->pluck('companies.id'));
+            $companyIds = $user->accessibleCompanyIds();
 
-            return $driver->companies()->whereIn('companies.id', $companyIds)->exists();
+            return $companyIds->isNotEmpty()
+                && $driver->companies()->whereIn('companies.id', $companyIds)->exists();
         }
 
         return false;
@@ -47,8 +47,6 @@ class DriverPolicy
 
     public function update(User $user, Driver $driver): bool
     {
-        return $user->hasRole(UserRole::Admin->value)
-            || $user->hasRole(UserRole::Empresa->value)
-            || $user->driver?->id === $driver->id;
+        return $this->view($user, $driver);
     }
 }

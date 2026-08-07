@@ -4,10 +4,12 @@ SDK `stripe/stripe-php` instalado.
 
 ## Split de corridas (ride payments)
 
-| Peça | Status |
-|------|--------|
-| PaymentIntent | `FinanceService::createPaymentIntentStub` |
-| Webhook corridas | `StripeWebhookController` |
+Auto (igual planos): `STRIPE_SECRET` preenchido → Stripe real; senão → mock.
+
+| Peça | Comportamento |
+|------|----------------|
+| PaymentIntent | `FinanceService::createPaymentIntent` — Stripe SDK ou `pi_stub_*` |
+| Webhook `POST /webhooks/stripe` | Stripe: `Webhook::constructEvent` (fail closed). Mock: só `pi_stub_*` já gravado em `payments` |
 | Customers | `companies.stripe_customer_id` |
 
 ## Assinatura de planos (SaaS)

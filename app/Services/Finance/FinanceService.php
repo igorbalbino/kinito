@@ -8,10 +8,19 @@ use App\Enums\TransactionType;
 use App\Models\FinancialTransaction;
 use App\Models\Payment;
 use App\Models\Ride;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
+use Stripe\StripeClient;
+use Throwable;
 
 class FinanceService
 {
+    public function paymentDriver(): string
+    {
+        return filled(config('kinito.stripe.secret')) ? 'stripe' : 'mock';
+    }
+
     /**
      * @return array{gross: float, stripe_fee: float, platform_commission: float, company_cut: float, driver_net: float}
      */
@@ -20,7 +29,7 @@ class FinanceService
         $provider = config('kinito.payment_provider', 'manual');
         $stripeFee = 0.0;
 
-        if ($provider === PaymentProvider::Stripe->value) {
+        if ($provider === PaymentProvider::Stripe->value || $this->paymentDriver() === 'stripe') {
             $percent = (float) config('kinito.stripe.fee_percent', 3.9);
             $fixed = (float) config('kinito.stripe.fee_fixed', 0.50);
             $stripeFee = round(($gross * ($percent / 100)) + $fixed, 2);
@@ -88,7 +97,22 @@ class FinanceService
         ]);
     }
 
+    public function createPaymentIntent(Ride $ride): Payment
+    {
+        if ($this->paymentDriver() === 'stripe') {
+            return $this->createStripePaymentIntent($ride);
+        }
+
+        return $this->createMockPaymentIntent($ride);
+    }
+
+    /** @deprecated Use createPaymentIntent() */
     public function createPaymentIntentStub(Ride $ride): Payment
+    {
+        return $this->createPaymentIntent($ride);
+    }
+
+    private function createMockPaymentIntent(Ride $ride): Payment
     {
         $intentId = 'pi_stub_'.Str::lower(Str::random(24));
 
@@ -103,11 +127,59 @@ class FinanceService
             'status' => 'PENDENTE',
             'meta' => [
                 'client_secret' => $intentId.'_secret_stub',
-                'note' => 'Stripe PaymentIntent stub — replace with real Stripe SDK call when keys are configured.',
+                'driver' => 'mock',
+                'note' => 'Mock PaymentIntent (STRIPE_SECRET ausente).',
             ],
         ]);
     }
 
+    private function createStripePaymentIntent(Ride $ride): Payment
+    {
+        $amountCents = (int) round(((float) ($ride->gross_value ?? 0)) * 100);
+        if ($amountCents < 1) {
+            throw new InvalidArgumentException('Valor da corrida inválido para PaymentIntent.');
+        }
+
+        try {
+            $stripe = new StripeClient((string) config('kinito.stripe.secret'));
+            $intent = $stripe->paymentIntents->create([
+                'amount' => $amountCents,
+                'currency' => 'brl',
+                'automatic_payment_methods' => ['enabled' => true],
+                'metadata' => [
+                    'ride_id' => (string) $ride->id,
+                    'company_id' => (string) $ride->company_id,
+                    'ride_code' => (string) $ride->code,
+                ],
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Stripe PaymentIntent failed.', [
+                'ride_id' => $ride->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new InvalidArgumentException('Falha ao criar PaymentIntent no Stripe: '.$e->getMessage());
+        }
+
+        return Payment::query()->create([
+            'ride_id' => $ride->id,
+            'company_id' => $ride->company_id,
+            'provider' => PaymentProvider::Stripe,
+            'stripe_payment_intent_id' => $intent->id,
+            'stripe_customer_id' => $ride->company?->stripe_customer_id,
+            'amount' => $ride->gross_value ?? 0,
+            'currency' => 'brl',
+            'status' => 'PENDENTE',
+            'meta' => [
+                'client_secret' => $intent->client_secret,
+                'driver' => 'stripe',
+            ],
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
     public function handleStripeWebhook(array $payload): void
     {
         $type = $payload['type'] ?? null;
@@ -141,6 +213,24 @@ class FinanceService
             if ($payment->ride) {
                 $payment->ride->update(['financial_status' => FinancialStatus::Estornado]);
             }
+        }
+    }
+
+    /**
+     * Validate mock webhook: intent must exist and be a stub id.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function assertValidMockRideWebhook(array $payload): void
+    {
+        $intentId = data_get($payload, 'data.object.id');
+        if (! is_string($intentId) || ! str_starts_with($intentId, 'pi_stub_')) {
+            throw new InvalidArgumentException('Mock webhook exige payment_intent stub existente (pi_stub_*).');
+        }
+
+        $exists = Payment::query()->where('stripe_payment_intent_id', $intentId)->exists();
+        if (! $exists) {
+            throw new InvalidArgumentException('PaymentIntent mock não encontrado.');
         }
     }
 }
