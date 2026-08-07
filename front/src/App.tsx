@@ -29,6 +29,7 @@ import { LogsView } from './views/LogsView';
 import { MotoristasView } from './views/MotoristasView';
 import { NotificacoesView } from './views/NotificacoesView';
 import { PerfilView } from './views/PerfilView';
+import { FornecedoresView } from './views/FornecedoresView';
 import { RelatoriosView } from './views/RelatoriosView';
 
 const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -91,6 +92,7 @@ export default function App() {
         <Route path="/notificacoes" element={<Authed path="/notificacoes"><NotificacoesView /></Authed>} />
         <Route path="/perfil" element={<Authed path="/perfil"><PerfilView /></Authed>} />
         <Route path="/configuracoes" element={<Authed path="/configuracoes"><ConfiguracoesView /></Authed>} />
+        <Route path="/fornecedores" element={<Authed path="/fornecedores"><FornecedoresView /></Authed>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

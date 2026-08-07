@@ -12,6 +12,9 @@ class Driver extends Model
 {
     protected $fillable = [
         'user_id',
+        'primary_company_id',
+        'previous_primary_company_id',
+        'provider_switch_pending',
         'status',
         'vehicle_model',
         'vehicle_plate',
@@ -27,6 +30,7 @@ class Driver extends Model
     {
         return [
             'status' => DriverStatus::class,
+            'provider_switch_pending' => 'boolean',
             'rating' => 'decimal:2',
             'total_earnings' => 'decimal:2',
             'pending_balance' => 'decimal:2',
@@ -36,6 +40,22 @@ class Driver extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function primaryCompany(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'primary_company_id');
+    }
+
+    public function previousPrimaryCompany(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'previous_primary_company_id');
+    }
+
+    public function canAcceptRides(): bool
+    {
+        return ! $this->provider_switch_pending
+            && $this->status === DriverStatus::Ativo;
     }
 
     public function companies(): BelongsToMany

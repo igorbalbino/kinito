@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Car, MapPin, X } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { createRide, fetchProviders } from '../../lib/api';
+import { createRide, fetchProviders, getStoredApiUser } from '../../lib/api';
 import { normalizeRide } from '../../lib/normalize';
 import { unwrapResource } from '../../lib/sessionProfile';
 import { SafeSelect } from '../common/SafeSelect';
@@ -33,9 +33,9 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
     setNewRideModalOpen(false);
   };
 
-  const [providerOptions, setProviderOptions] = useState<{ id: string; name: string }[]>(
-    () => companies.map((c) => ({ id: c.id, name: c.name })),
-  );
+  const [providerOptions, setProviderOptions] = useState<
+    { id: string; name: string; modeloCorridas?: string }[]
+  >(() => companies.map((c) => ({ id: c.id, name: c.name })));
   const [clientId, setClientId] = useState(clients[0]?.id || '');
   const [companyId, setCompanyId] = useState(companies[0]?.id || '');
   const [driverId, setDriverId] = useState('');
@@ -45,21 +45,39 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
   const [city, setCity] = useState('');
   const [distanceKm, setDistanceKm] = useState(10);
   const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix' | 'faturado' | 'dinheiro'>('pix');
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
 
   const estimatedFare = useMemo(() => Math.max(12, Number((distanceKm * 3.2).toFixed(2))), [distanceKm]);
   const showPayDriverNotice = financialMode === 'manual';
+
+  const clientPrefs = getStoredApiUser()?.client?.preferences;
+  const clientProviderMode = clientPrefs?.defaultProviderMode || 'ALL';
+  const letApiResolveCompany =
+    clientMode && clientProviderMode === 'COMPANY' && scheduleEnabled;
 
   useEffect(() => {
     if (!isModalOpen) return;
     fetchProviders()
       .then((list) => {
         if (!list.length) return;
-        const opts = list.map((c) => ({ id: String(c.id), name: c.name }));
+        const opts = list.map((c) => ({
+          id: String(c.id),
+          name: c.name,
+          modeloCorridas: c.modeloCorridas,
+        }));
         setProviderOptions(opts);
-        setCompanyId((prev) => (opts.some((o) => o.id === prev) ? prev : opts[0].id));
+        const preferred = clientPrefs?.defaultCompanyId
+          ? opts.find((o) => o.id === String(clientPrefs.defaultCompanyId))
+          : null;
+        setCompanyId((prev) => {
+          if (preferred && clientProviderMode === 'COMPANY') return preferred.id;
+          return opts.some((o) => o.id === prev) ? prev : opts[0].id;
+        });
       })
       .catch(() => undefined);
-  }, [isModalOpen]);
+  }, [isModalOpen, clientPrefs?.defaultCompanyId, clientProviderMode]);
 
   if (!isModalOpen) return null;
 
@@ -68,15 +86,24 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
-        company_id: Number(companyId),
         origin: { address: originAddr, lat: 0, lng: 0, city, neighborhood: '' },
         destination: { address: destAddr, lat: 0, lng: 0, city, neighborhood: '' },
         distance_km: distanceKm,
         payment_method: paymentMethod,
       };
+
+      if (scheduleEnabled && scheduledDate) {
+        payload.scheduled_date = scheduledDate;
+        if (scheduledTime) payload.scheduled_time = scheduledTime;
+      }
+
       if (!clientMode) {
+        payload.company_id = Number(companyId);
         payload.client_id = Number(clientId || clients[0]?.id);
         if (driverId) payload.driver_id = Number(driverId);
+      } else if (!letApiResolveCompany && companyId) {
+        // Instant: still send company_id; RideService reroutes if primary is AGENDAMENTO.
+        payload.company_id = Number(companyId);
       }
 
       const res = await createRide(payload);
@@ -119,6 +146,7 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
             </div>
           </div>
           <button
+            type="button"
             onClick={handleClose}
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors active:scale-90"
             aria-label="Fechar"
@@ -127,7 +155,7 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs overflow-y-auto flex-1" autoComplete="off">
+        <form onSubmit={(e) => void handleSubmit(e)} className="p-6 space-y-4 text-xs overflow-y-auto flex-1" autoComplete="off">
           {showPayDriverNotice && (
             <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-100 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
@@ -175,7 +203,7 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
             </div>
           )}
 
-          {clientMode && providerOptions.length > 1 && (
+          {clientMode && (clientProviderMode === 'ALL' || providerOptions.length > 1) && (
             <div>
               <label className="text-[11px] font-medium text-slate-300">Empresa</label>
               <SafeSelect
@@ -190,6 +218,42 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
                   label: comp.name,
                 }))}
               />
+              {clientProviderMode === 'COMPANY' && (
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Se o principal for só agendamento, pedidos instantâneos podem ir ao marketplace.
+                </p>
+              )}
+            </div>
+          )}
+
+          {clientMode && (
+            <div className="space-y-2 p-3 rounded-xl border border-white/10 bg-white/5">
+              <label className="flex items-center gap-2 text-[11px] font-medium text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={scheduleEnabled}
+                  onChange={(e) => setScheduleEnabled(e.target.checked)}
+                  className="rounded border-white/20"
+                />
+                Agendar para depois
+              </label>
+              {scheduleEnabled && (
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    required
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-slate-100 min-h-[44px]"
+                  />
+                  <input
+                    type="time"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-slate-100 min-h-[44px]"
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -269,8 +333,8 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
                         { value: 'dinheiro', label: 'Dinheiro (ao motorista)' },
                       ]
                     : [
-                        { value: 'credit_card', label: 'Cartão' },
                         { value: 'pix', label: 'PIX' },
+                        { value: 'credit_card', label: 'Cartão' },
                         { value: 'faturado', label: 'Faturado' },
                         { value: 'dinheiro', label: 'Dinheiro' },
                       ]
@@ -290,32 +354,30 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
                 sanitizeLabels
                 buttonClassName={darkBtn}
                 options={[
-                  { value: '', label: 'Pendente' },
+                  { value: '', label: 'Atribuir depois' },
                   ...drivers
                     .filter((d) => d.status === 'ativo')
-                    .map((d) => ({
-                      value: String(d.id),
-                      label: `${d.name} • ${d.vehicleModel} (${d.vehiclePlate})`,
-                    })),
+                    .slice(0, 30)
+                    .map((d) => ({ value: String(d.id), label: d.name })),
                 ]}
               />
             </div>
           )}
 
-          <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3 sticky bottom-0 bg-[#121215]">
+          <div className="pt-2 flex gap-3">
             <button
               type="button"
               onClick={handleClose}
-              className="px-5 py-3 rounded-xl text-slate-400 font-medium hover:text-white hover:bg-white/5 active:scale-95 transition-all min-h-[48px]"
+              className="flex-1 py-3 rounded-xl bg-white/5 text-slate-300 font-bold min-h-[48px]"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-600/30 active:scale-95 transition-all min-h-[48px] flex items-center justify-center gap-2 disabled:opacity-60"
+              className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold min-h-[48px] disabled:opacity-60"
             >
-              {submitting ? 'Enviando...' : clientMode ? 'Solicitar corrida' : 'Criar corrida'}
+              {submitting ? 'Enviando…' : clientMode ? 'Solicitar' : 'Criar corrida'}
             </button>
           </div>
         </form>

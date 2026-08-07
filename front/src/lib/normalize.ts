@@ -100,8 +100,14 @@ export function normalizeDriver(raw: Record<string, unknown>): Driver {
     email: String(raw.email || ''),
     phone: String(raw.phone || ''),
     avatar: String(raw.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${name || raw.id}`),
-    companyId: String(raw.companyId || ''),
+    companyId: String(raw.companyId || raw.primaryCompanyId || ''),
     companyName: sanitizePersonName(raw.companyName, 'Empresa'),
+    primaryCompanyId: raw.primaryCompanyId ? String(raw.primaryCompanyId) : undefined,
+    previousPrimaryCompanyId: raw.previousPrimaryCompanyId ? String(raw.previousPrimaryCompanyId) : undefined,
+    previousPrimaryCompanyName: raw.previousPrimaryCompanyName
+      ? sanitizePersonName(raw.previousPrimaryCompanyName, '')
+      : undefined,
+    providerSwitchPending: Boolean(raw.providerSwitchPending),
     status: mapDriverStatus(String(raw.status || '')),
     vehicleModel: String(raw.vehicleModel || ''),
     vehiclePlate: String(raw.vehiclePlate || ''),

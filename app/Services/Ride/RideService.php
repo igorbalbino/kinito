@@ -3,6 +3,7 @@
 namespace App\Services\Ride;
 
 use App\Enums\DefaultProviderMode;
+use App\Enums\DriverStatus;
 use App\Enums\FinancialStatus;
 use App\Enums\ModeloCorridas;
 use App\Enums\RideStatus;
@@ -36,7 +37,8 @@ class RideService
     {
         return DB::transaction(function () use ($data, $client) {
             $client ??= Client::query()->findOrFail($data['client_id']);
-            $companyId = $data['company_id'] ?? $this->resolveCompanyId($client, $data);
+            $client->loadMissing('preferences');
+            $companyId = $this->resolveCompanyId($client, $data);
 
             if (! $companyId) {
                 throw new InvalidArgumentException('Não foi possível determinar a empresa responsável pela corrida.');
@@ -142,6 +144,19 @@ class RideService
 
     public function accept(Ride $ride, Driver $driver): Ride
     {
+        if (! $driver->canAcceptRides()) {
+            throw new InvalidArgumentException('Motorista com troca de fornecedor pendente não pode aceitar corridas.');
+        }
+
+        $linked = $driver->companies()
+            ->where('companies.id', $ride->company_id)
+            ->wherePivot('status', DriverStatus::Ativo->value)
+            ->exists();
+
+        if (! $linked) {
+            throw new InvalidArgumentException('Motorista não está ativo nesta empresa.');
+        }
+
         return $this->transition($ride, RideStatus::Aceita, ['driver_id' => $driver->id]);
     }
 
@@ -198,22 +213,72 @@ class RideService
      */
     private function resolveCompanyId(Client $client, array $data): ?int
     {
-        if (! empty($data['company_id'])) {
-            return (int) $data['company_id'];
-        }
-
         $prefs = $client->preferences;
+        $hasSchedule = ! empty($data['scheduled_date']);
+        $explicitId = ! empty($data['company_id']) ? (int) $data['company_id'] : null;
 
-        if ($prefs?->default_provider_mode === DefaultProviderMode::Company && $prefs->default_company_id) {
-            return (int) $prefs->default_company_id;
+        // Marketplace mode: client must pick (or we keep explicit).
+        if ($prefs?->default_provider_mode === DefaultProviderMode::All) {
+            return $explicitId;
         }
 
-        if ($prefs?->default_provider_mode === DefaultProviderMode::All) {
-            // Marketplace: cliente deve escolher o fornecedor explicitamente.
+        $primaryId = $prefs?->default_company_id
+            ? (int) $prefs->default_company_id
+            : ($client->companies()->wherePivot('is_active', true)->value('companies.id'));
+
+        if (! $primaryId && ! $explicitId) {
             return null;
         }
 
-        return $client->companies()->wherePivot('is_active', true)->value('companies.id');
+        // Scheduled rides prefer the client's primary supplier.
+        if ($hasSchedule && $primaryId) {
+            return $primaryId;
+        }
+
+        // Instant ride with primary in AGENDAMENTO → marketplace (other company).
+        if (! $hasSchedule && $primaryId) {
+            $primary = Company::query()->with('settings')->find($primaryId);
+            $modelo = $primary?->settings?->modelo_corridas ?? ModeloCorridas::Ambos;
+
+            if ($modelo === ModeloCorridas::Agendamento) {
+                return $this->pickMarketplaceInstantCompany($primaryId) ?? $explicitId;
+            }
+
+            // Instant-capable primary: honor explicit only if different and allowed; else primary.
+            if ($explicitId && $explicitId !== $primaryId) {
+                return $explicitId;
+            }
+
+            return $primaryId;
+        }
+
+        return $explicitId ?? $primaryId;
+    }
+
+    private function pickMarketplaceInstantCompany(int $excludeCompanyId): ?int
+    {
+        $candidates = Company::query()
+            ->with('settings')
+            ->withCount(['drivers as active_drivers_count' => function ($q) {
+                $q->where('drivers.status', DriverStatus::Ativo->value)
+                    ->where('driver_company.status', DriverStatus::Ativo->value);
+            }])
+            ->where('is_active', true)
+            ->where('is_provider', true)
+            ->where('id', '!=', $excludeCompanyId)
+            ->orderByDesc('active_drivers_count')
+            ->orderBy('name')
+            ->get()
+            ->filter(function (Company $c) {
+                if (! $this->subscriptions->companyHasAccess($c)) {
+                    return false;
+                }
+                $modelo = $c->settings?->modelo_corridas ?? ModeloCorridas::Ambos;
+
+                return in_array($modelo, [ModeloCorridas::Instantaneas, ModeloCorridas::Ambos], true);
+            });
+
+        return $candidates->first()?->id;
     }
 
     /**

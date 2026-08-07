@@ -8,6 +8,7 @@ export const ROUTES_BY_ROLE: Record<UserRole, readonly string[]> = {
     '/financeiro',
     '/notificacoes',
     '/configuracoes',
+    '/fornecedores',
     '/perfil',
   ],
   motorista: [
@@ -16,6 +17,7 @@ export const ROUTES_BY_ROLE: Record<UserRole, readonly string[]> = {
     '/financeiro',
     '/notificacoes',
     '/configuracoes',
+    '/fornecedores',
     '/perfil',
   ],
   empresa: [

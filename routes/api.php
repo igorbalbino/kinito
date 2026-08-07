@@ -69,11 +69,14 @@ Route::prefix('v1')->group(function () {
             Route::delete('/empresas/{company}/whatsapp', [CompanyWhatsAppController::class, 'disconnect']);
 
             Route::get('/motoristas', [DriverController::class, 'index']);
+            Route::post('/motoristas', [DriverController::class, 'store']);
             Route::get('/motoristas/{driver}', [DriverController::class, 'show']);
             Route::patch('/motoristas/{driver}', [DriverController::class, 'update']);
             Route::post('/motoristas/{driver}/approve', [DriverController::class, 'approve']);
             Route::post('/motoristas/{driver}/block', [DriverController::class, 'block']);
             Route::post('/motoristas/{driver}/link-company', [DriverController::class, 'linkCompany']);
+            Route::post('/motoristas/{driver}/switch-provider', [DriverController::class, 'switchProvider']);
+            Route::post('/motoristas/{driver}/revert-provider', [DriverController::class, 'revertProvider']);
             Route::post('/motoristas/{driver}/documents/{document}/review', [DriverController::class, 'reviewDocument']);
 
             Route::get('/clientes', [ClientController::class, 'index']);

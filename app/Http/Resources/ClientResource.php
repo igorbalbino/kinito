@@ -10,7 +10,17 @@ class ClientResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $primaryCompany = $this->relationLoaded('companies') ? $this->companies->first() : null;
+        $prefCompanyId = $this->relationLoaded('preferences')
+            ? $this->preferences?->default_company_id
+            : null;
+
+        $primaryCompany = null;
+        if ($prefCompanyId && $this->relationLoaded('companies')) {
+            $primaryCompany = $this->companies->firstWhere('id', $prefCompanyId);
+        }
+        if (! $primaryCompany && $this->relationLoaded('companies')) {
+            $primaryCompany = $this->companies->first();
+        }
 
         return [
             'id' => (string) $this->id,
@@ -23,7 +33,9 @@ class ClientResource extends JsonResource
             'rating' => (float) $this->rating,
             'totalRides' => $this->total_rides,
             'totalSpent' => (float) $this->total_spent,
-            'companyId' => $primaryCompany ? (string) $primaryCompany->id : null,
+            'companyId' => $prefCompanyId
+                ? (string) $prefCompanyId
+                : ($primaryCompany ? (string) $primaryCompany->id : null),
             'companyName' => $primaryCompany?->name,
             'preferences' => new ClientPreferenceResource($this->whenLoaded('preferences')),
             'favoriteAddresses' => $this->whenLoaded('preferences', fn () => $this->preferences?->favorite_addresses ?? []),

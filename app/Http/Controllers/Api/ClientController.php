@@ -7,13 +7,17 @@ use App\Http\Resources\ClientResource;
 use App\Models\Client;
 use App\Models\Company;
 use App\Services\Client\ClientOnboardingService;
+use App\Services\Provider\ProviderPreferenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ClientController extends Controller
 {
-    public function __construct(private readonly ClientOnboardingService $clients) {}
+    public function __construct(
+        private readonly ClientOnboardingService $clients,
+        private readonly ProviderPreferenceService $providers,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -113,14 +117,25 @@ class ClientController extends Controller
             ], fn ($v) => $v !== null));
         }
 
-        $prefs = array_filter([
-            'default_provider_mode' => $data['default_provider_mode'] ?? null,
-            'default_company_id' => $data['default_company_id'] ?? null,
-            'favorite_addresses' => $data['favorite_addresses'] ?? null,
-        ], fn ($v) => $v !== null);
+        $providerTouched = array_key_exists('default_provider_mode', $data)
+            || array_key_exists('default_company_id', $data);
 
-        if ($prefs) {
-            $client->preferences()->updateOrCreate(['client_id' => $client->id], $prefs);
+        if ($providerTouched) {
+            $this->providers->updateClientProvider($client, [
+                'default_provider_mode' => $data['default_provider_mode']
+                    ?? $client->preferences?->default_provider_mode?->value,
+                'default_company_id' => array_key_exists('default_company_id', $data)
+                    ? $data['default_company_id']
+                    : $client->preferences?->default_company_id,
+            ], $request->user());
+        } else {
+            $prefs = array_filter([
+                'favorite_addresses' => $data['favorite_addresses'] ?? null,
+            ], fn ($v) => $v !== null);
+
+            if ($prefs) {
+                $client->preferences()->updateOrCreate(['client_id' => $client->id], $prefs);
+            }
         }
 
         return new ClientResource($client->fresh()->load(['user', 'preferences', 'companies']));

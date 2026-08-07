@@ -78,7 +78,7 @@ class AuthController extends Controller
             'message' => 'Login realizado com sucesso.',
             'token' => $token,
             'token_type' => 'Bearer',
-            'user' => new UserResource($user->load(['roles', 'driver.documents', 'client.preferences', 'companies', 'ownedCompanies'])),
+            'user' => new UserResource($user->load(['roles', 'driver.documents', 'driver.primaryCompany', 'driver.previousPrimaryCompany', 'client.preferences', 'client.companies', 'companies', 'ownedCompanies'])),
         ]);
     }
 
@@ -119,7 +119,7 @@ class AuthController extends Controller
     public function me(Request $request): UserResource
     {
         return new UserResource(
-            $request->user()->load(['roles', 'driver.documents', 'client.preferences', 'companies', 'ownedCompanies'])
+            $request->user()->load(['roles', 'driver.documents', 'driver.primaryCompany', 'driver.previousPrimaryCompany', 'client.preferences', 'client.companies', 'companies', 'ownedCompanies'])
         );
     }
 
@@ -203,7 +203,8 @@ class AuthController extends Controller
                     'must_change_password' => true,
                 ])->save();
 
-                $companyName = $user->client?->companies()->orderByDesc('client_company.created_at')->value('companies.name');
+                $companyName = $user->client?->companies()->orderByDesc('client_company.created_at')->value('companies.name')
+                    ?? $user->driver?->companies()->orderByDesc('driver_company.created_at')->value('companies.name');
                 $this->notifications->sendInviteCredentialsEmail($user->fresh(), $tempPassword, $companyName);
                 $credentialsSent = true;
             }

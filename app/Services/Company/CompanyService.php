@@ -92,6 +92,15 @@ class CompanyService
      */
     public function updateSettings(Company $company, array $settings): CompanySetting
     {
+        if (isset($settings['modelo_corridas'])) {
+            $value = $settings['modelo_corridas'] instanceof ModeloCorridas
+                ? $settings['modelo_corridas']->value
+                : (string) $settings['modelo_corridas'];
+            $settings['modelo_corridas'] = $value;
+            $settings['accept_instant_rides'] = in_array($value, ['INSTANTANEAS', 'AMBOS'], true);
+            $settings['allow_scheduling'] = in_array($value, ['AGENDAMENTO', 'AMBOS'], true);
+        }
+
         $before = $company->settings?->toArray();
         $setting = $company->settings()->updateOrCreate(
             ['company_id' => $company->id],

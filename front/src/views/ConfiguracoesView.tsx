@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowLeft,
+  Building2,
+  CalendarClock,
   CreditCard,
   Hand,
   MessageCircle,
@@ -18,10 +20,12 @@ import { FeatureFlags } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { WhatsAppConnectPanel } from '../components/settings/WhatsAppConnectPanel';
 import { PlanBillingPanel } from '../components/settings/PlanBillingPanel';
+import { RideModelPanel } from '../components/settings/RideModelPanel';
+import { ProviderSummaryPanel } from '../components/settings/ProviderSummaryPanel';
 import { PageContainer } from '../components/layout/PageContainer';
-import { isFleetOperator } from '../lib/navByRole';
+import { isClientRole, isFleetOperator } from '../lib/navByRole';
 
-type ConfigSection = 'plano' | 'whatsapp' | 'mao' | 'financeiro' | 'flags';
+type ConfigSection = 'plano' | 'whatsapp' | 'mao' | 'financeiro' | 'flags' | 'modelo' | 'fornecedor';
 
 export const ConfiguracoesView: React.FC = () => {
   const { t } = useTranslation();
@@ -38,6 +42,7 @@ export const ConfiguracoesView: React.FC = () => {
 
   const showFleetSettings = isFleetOperator(activeRole);
   const showAdminFlags = activeRole === 'admin';
+  const showProviderSettings = isClientRole(activeRole) || activeRole === 'motorista';
   const section = (params.get('sec') as ConfigSection | null) || null;
 
   const openSection = (sec: ConfigSection) => {
@@ -72,10 +77,24 @@ export const ConfiguracoesView: React.FC = () => {
         icon: <CreditCard className="w-5 h-5" />,
       });
       items.push({
+        id: 'modelo',
+        title: 'Modelo de negócio',
+        desc: 'Instantâneo, agendamento ou ambos',
+        icon: <CalendarClock className="w-5 h-5" />,
+      });
+      items.push({
         id: 'whatsapp',
         title: 'WhatsApp',
         desc: 'Conectar o número da sua empresa',
         icon: <MessageCircle className="w-5 h-5" />,
+      });
+    }
+    if (showProviderSettings) {
+      items.push({
+        id: 'fornecedor',
+        title: 'Fornecedor principal',
+        desc: 'Empresa padrão para corridas',
+        icon: <Building2 className="w-5 h-5" />,
       });
     }
     items.push({
@@ -101,7 +120,7 @@ export const ConfiguracoesView: React.FC = () => {
       });
     }
     return items;
-  }, [showFleetSettings, showAdminFlags]);
+  }, [showFleetSettings, showAdminFlags, showProviderSettings]);
 
   return (
     <PageContainer narrow className="pb-24">
@@ -147,7 +166,9 @@ export const ConfiguracoesView: React.FC = () => {
       )}
 
       {section === 'plano' && showFleetSettings && <PlanBillingPanel />}
+      {section === 'modelo' && showFleetSettings && <RideModelPanel />}
       {section === 'whatsapp' && showFleetSettings && <WhatsAppConnectPanel />}
+      {section === 'fornecedor' && showProviderSettings && <ProviderSummaryPanel />}
 
       {section === 'mao' && (
         <div className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">

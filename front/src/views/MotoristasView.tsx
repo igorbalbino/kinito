@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Clock, Search } from 'lucide-react';
+import { Clock, Plus, Search } from 'lucide-react';
 import { formatBRL } from '../lib/utils';
 import { useAppStore } from '../store/useAppStore';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { DriverApprovalModal } from '../components/modals/DriverApprovalModal';
+import { DriverCreateModal } from '../components/modals/DriverCreateModal';
 import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
 import { PageContainer } from '../components/layout/PageContainer';
@@ -22,6 +23,7 @@ export const MotoristasView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [selectedDriverForApproval, setSelectedDriverForApproval] = useState<Driver | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const pendingDrivers = drivers.filter((d) => d.status === 'em_aprovacao');
@@ -81,6 +83,14 @@ export const MotoristasView: React.FC = () => {
             Aprovação de documentação, liberação de acesso e extrato de ganhos.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-sm min-h-[44px]"
+        >
+          <Plus className="w-4 h-4" />
+          Novo motorista
+        </button>
       </div>
 
       {pendingDrivers.length > 0 && (
@@ -246,6 +256,7 @@ export const MotoristasView: React.FC = () => {
       </div>
 
       <DriverApprovalModal driver={selectedDriverForApproval} onClose={() => setSelectedDriverForApproval(null)} />
+      <DriverCreateModal isOpen={createOpen} onClose={() => setCreateOpen(false)} />
       <Footer />
     </PageContainer>
   );

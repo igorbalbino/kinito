@@ -11,15 +11,141 @@ use App\Models\DriverDocument;
 use App\Models\User;
 use App\Services\Audit\AuditService;
 use App\Services\Notification\NotificationService;
+use App\Services\Provider\ProviderPreferenceService;
 use App\Support\EnsureUserRoles;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class DriverApprovalService
 {
     public function __construct(
         private readonly AuditService $audit,
         private readonly NotificationService $notifications,
+        private readonly ProviderPreferenceService $providers,
     ) {}
+
+    /**
+     * Company creates a driver linked to the fleet (can receive rides).
+     * New users get invite e-mail first; password is sent only after verification.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function createByCompany(array $data, User $actor, Company $company): array
+    {
+        $placeholderPassword = Str::password(32);
+        $wasNewUser = ! User::query()->where('email', $data['email'])->exists();
+
+        $result = DB::transaction(function () use ($data, $actor, $company, $placeholderPassword, $wasNewUser) {
+            $user = User::query()->firstOrCreate(
+                ['email' => $data['email']],
+                [
+                    'name' => $data['name'],
+                    'phone' => $data['phone'] ?? null,
+                    'password' => $placeholderPassword,
+                    'must_change_password' => true,
+                ]
+            );
+
+            if ($wasNewUser) {
+                $user->forceFill([
+                    'must_change_password' => true,
+                    'password' => $placeholderPassword,
+                    'email_verified_at' => null,
+                ])->save();
+            } elseif (! empty($data['phone']) && ! $user->phone) {
+                $user->update(['phone' => $data['phone']]);
+            }
+
+            if (! empty($data['name']) && $user->name !== $data['name'] && $wasNewUser) {
+                $user->update(['name' => $data['name']]);
+            }
+
+            if (! $user->hasRole(UserRole::Motorista->value)) {
+                EnsureUserRoles::assign($user, UserRole::Motorista);
+            }
+
+            $driver = Driver::query()->firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'status' => DriverStatus::Ativo,
+                    'vehicle_model' => $data['vehicle_model'] ?? null,
+                    'vehicle_plate' => $data['vehicle_plate'] ?? null,
+                    'vehicle_color' => $data['vehicle_color'] ?? null,
+                    'city' => $data['city'] ?? null,
+                ]
+            );
+
+            if (! $wasNewUser) {
+                $driver->fill(array_filter([
+                    'vehicle_model' => $data['vehicle_model'] ?? null,
+                    'vehicle_plate' => $data['vehicle_plate'] ?? null,
+                    'vehicle_color' => $data['vehicle_color'] ?? null,
+                    'city' => $data['city'] ?? null,
+                ], fn ($v) => $v !== null && $v !== ''))->save();
+            }
+
+            if ($driver->status !== DriverStatus::Ativo && $driver->status !== DriverStatus::Bloqueado) {
+                $driver->update(['status' => DriverStatus::Ativo]);
+            }
+
+            $driver->companies()->syncWithoutDetaching([
+                $company->id => [
+                    'status' => DriverStatus::Ativo->value,
+                    'approved_at' => now(),
+                    'approved_by' => $actor->id,
+                ],
+            ]);
+
+            if (! $driver->primary_company_id) {
+                $driver->forceFill([
+                    'primary_company_id' => $company->id,
+                    'provider_switch_pending' => false,
+                ])->save();
+            }
+
+            if ($driver->documents()->doesntExist()) {
+                foreach (['CNH', 'CRLV'] as $docName) {
+                    DriverDocument::query()->create([
+                        'driver_id' => $driver->id,
+                        'name' => $docName,
+                        'status' => DocumentStatus::Pendente,
+                        'uploaded_at' => now(),
+                    ]);
+                }
+            }
+
+            if ($wasNewUser) {
+                $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
+                $this->notifications->notify(
+                    $user,
+                    'Convite Kinito — motorista',
+                    "A empresa {$company->name} cadastrou você como motorista. "
+                    .'Confirme o e-mail enviado para ativar o acesso e receber a senha temporária.',
+                    'motorista',
+                    'info',
+                    'in_app',
+                    $link,
+                );
+            }
+
+            $this->audit->log('DRIVER_CREATED_BY_COMPANY', $actor, $driver, null, [
+                'company_id' => $company->id,
+                'invite_pending' => $wasNewUser,
+            ]);
+
+            return [
+                'user' => $user->fresh(),
+                'driver' => $driver->fresh(),
+                'invite_pending' => $wasNewUser && ! $user->fresh()->hasVerifiedEmail(),
+            ];
+        });
+
+        if ($wasNewUser && ($result['invite_pending'] ?? false)) {
+            $this->notifications->sendDriverInviteEmail($result['user'], $company->name);
+        }
+
+        return $result;
+    }
 
     /**
      * @param  array<string, mixed>  $data
@@ -80,7 +206,12 @@ class DriverApprovalService
             ],
         ]);
 
-        $driver->update(['status' => DriverStatus::Ativo]);
+        $driver->update([
+            'status' => DriverStatus::Ativo,
+            'primary_company_id' => $driver->primary_company_id ?: $company->id,
+        ]);
+
+        $this->providers->completeDriverSwitchOnApprove($driver->fresh(), $company);
 
         $this->notifications->notify(
             $driver->user,
@@ -94,7 +225,7 @@ class DriverApprovalService
             'company_id' => $company->id,
         ]);
 
-        return $driver->refresh();
+        return $driver->fresh(['user', 'documents', 'companies', 'primaryCompany']);
     }
 
     public function block(Driver $driver, User $actor, ?Company $company = null): Driver

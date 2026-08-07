@@ -102,6 +102,16 @@ class NotificationService
         return $this->mail->sendClientInvite($user, $companyName, $this->verificationUrl($user));
     }
 
+    /** Company invited a driver: confirm email first (no password yet). */
+    public function sendDriverInviteEmail(User $user, string $companyName): bool
+    {
+        if (! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        return $this->mail->sendDriverInvite($user, $companyName, $this->verificationUrl($user));
+    }
+
     /** Credentials after invite email was confirmed. */
     public function sendInviteCredentialsEmail(User $user, string $temporaryPassword, ?string $companyName = null): bool
     {

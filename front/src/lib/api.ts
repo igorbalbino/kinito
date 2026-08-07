@@ -11,6 +11,24 @@ export type ApiUser = {
   roles?: string[];
   companies?: { id: number | string; name: string }[];
   ownedCompanies?: { id: number | string; name: string }[];
+  client?: {
+    id?: number | string;
+    companyId?: string | null;
+    companyName?: string | null;
+    preferences?: {
+      defaultProviderMode?: string;
+      defaultCompanyId?: string | null;
+    };
+  };
+  driver?: {
+    id?: number | string;
+    companyId?: string | null;
+    companyName?: string | null;
+    primaryCompanyId?: string | null;
+    previousPrimaryCompanyId?: string | null;
+    previousPrimaryCompanyName?: string | null;
+    providerSwitchPending?: boolean;
+  };
 };
 
 export type ApiPlan = {
@@ -290,12 +308,85 @@ export async function subscribeCompany(
   });
 }
 
-export async function fetchProviders(): Promise<{ id: number; name: string }[]> {
-  const data = await apiFetch<{ data?: { id: number | string; name: string }[] } | { id: number | string; name: string }[]>(
-    '/api/v1/fornecedores',
-  );
+export async function fetchProviders(): Promise<
+  { id: number; name: string; modeloCorridas?: string }[]
+> {
+  const data = await apiFetch<
+    | { data?: { id: number | string; name: string; settings?: { modeloCorridas?: string } }[] }
+    | { id: number | string; name: string; settings?: { modeloCorridas?: string } }[]
+  >('/api/v1/fornecedores');
   const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-  return rows.map((c) => ({ id: Number(c.id), name: c.name })).filter((c) => c.id > 0);
+  return rows
+    .map((c) => ({
+      id: Number(c.id),
+      name: c.name,
+      modeloCorridas: c.settings?.modeloCorridas,
+    }))
+    .filter((c) => c.id > 0);
+}
+
+export async function fetchCompanyDetails(companyId: number): Promise<{
+  id: number | string;
+  name: string;
+  settings?: {
+    modeloCorridas?: string;
+    acceptInstantRides?: boolean;
+    allowScheduling?: boolean;
+  };
+}> {
+  const data = await apiFetch<{ data?: Record<string, unknown> } | Record<string, unknown>>(
+    `/api/v1/empresas/${companyId}`,
+  );
+  const row = (data && typeof data === 'object' && 'data' in data && data.data
+    ? data.data
+    : data) as Record<string, unknown>;
+  return {
+    id: row.id as number | string,
+    name: String(row.name || ''),
+    settings: row.settings as {
+      modeloCorridas?: string;
+      acceptInstantRides?: boolean;
+      allowScheduling?: boolean;
+    },
+  };
+}
+
+export async function updateCompanySettings(
+  companyId: number,
+  payload: Record<string, unknown>,
+): Promise<unknown> {
+  return apiFetch(`/api/v1/empresas/${companyId}/settings`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateClientPreferencesApi(
+  clientId: number | string,
+  payload: { default_provider_mode?: string; default_company_id?: number | null },
+): Promise<Record<string, unknown>> {
+  return apiFetch(`/api/v1/clientes/${clientId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function switchDriverProviderApi(
+  driverId: number | string,
+  companyId: number,
+): Promise<{ driver: Record<string, unknown>; message?: string }> {
+  return apiFetch(`/api/v1/motoristas/${driverId}/switch-provider`, {
+    method: 'POST',
+    body: JSON.stringify({ company_id: companyId }),
+  });
+}
+
+export async function revertDriverProviderApi(
+  driverId: number | string,
+): Promise<{ driver: Record<string, unknown>; message?: string }> {
+  return apiFetch(`/api/v1/motoristas/${driverId}/revert-provider`, {
+    method: 'POST',
+  });
 }
 
 export type WhatsAppStatus = {
@@ -464,6 +555,14 @@ export async function createClientApi(payload: Record<string, unknown>): Promise
   message?: string;
 }> {
   return apiFetch('/api/v1/clientes', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function createDriverApi(payload: Record<string, unknown>): Promise<{
+  driver: Record<string, unknown>;
+  invite_pending?: boolean;
+  message?: string;
+}> {
+  return apiFetch('/api/v1/motoristas', { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export async function fetchDriversList(): Promise<Record<string, unknown>[]> {

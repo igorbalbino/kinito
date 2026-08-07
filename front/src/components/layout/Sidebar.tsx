@@ -70,6 +70,7 @@ export const Sidebar: React.FC = () => {
       flag: 'notificacoesPush' as const,
     },
     { path: '/configuracoes', label: t.nav.settings, icon: Settings, flag: null },
+    { path: '/fornecedores', label: 'Fornecedores', icon: Building2, flag: null },
     { path: '/perfil', label: t.nav.profile, icon: Zap, flag: null },
   ].filter((item) => {
     if (!canAccessRoute(activeRole, item.path)) return false;

@@ -37,6 +37,14 @@ class DriverPolicy
         return false;
     }
 
+    public function create(User $user): bool
+    {
+        return $user->hasAnyRole([
+            UserRole::Admin->value,
+            UserRole::Empresa->value,
+        ]);
+    }
+
     public function update(User $user, Driver $driver): bool
     {
         return $user->hasRole(UserRole::Admin->value)

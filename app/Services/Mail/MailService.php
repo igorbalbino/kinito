@@ -102,6 +102,17 @@ class MailService
         );
     }
 
+    public function sendDriverInvite(User $user, string $companyName, string $verificationUrl): bool
+    {
+        return $this->send(
+            $user->email,
+            'Confirme seu e-mail — motorista - Kinito',
+            EmailTemplates::driverInvite((string) $user->name, $companyName, $verificationUrl),
+            'driver_invite',
+            ['user_id' => $user->id, 'subject' => 'Confirme seu e-mail — motorista - Kinito'],
+        );
+    }
+
     public function sendInviteCredentials(
         User $user,
         string $temporaryPassword,
@@ -144,6 +155,28 @@ class MailService
             EmailTemplates::notification($title, $message, $link),
             'notification',
             ['user_id' => $user->id, 'subject' => '[Kinito] '.$title],
+        );
+    }
+
+    public function sendProviderSelectedByClient(User $recipient, string $clientName, string $companyName): bool
+    {
+        return $this->send(
+            $recipient->email,
+            'Cliente selecionou seu fornecedor - Kinito',
+            EmailTemplates::providerSelectedByClient($clientName, $companyName),
+            'provider_selected_client',
+            ['user_id' => $recipient->id, 'subject' => 'Cliente selecionou seu fornecedor - Kinito'],
+        );
+    }
+
+    public function sendProviderSelectedByDriver(User $recipient, string $driverName, string $companyName): bool
+    {
+        return $this->send(
+            $recipient->email,
+            'Motorista selecionou sua empresa - Kinito',
+            EmailTemplates::providerSelectedByDriver($driverName, $companyName),
+            'provider_selected_driver',
+            ['user_id' => $recipient->id, 'subject' => 'Motorista selecionou sua empresa - Kinito'],
         );
     }
 }

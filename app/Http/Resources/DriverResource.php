@@ -10,7 +10,11 @@ class DriverResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $primaryCompany = $this->relationLoaded('companies') ? $this->companies->first() : null;
+        $primary = $this->relationLoaded('primaryCompany')
+            ? $this->primaryCompany
+            : ($this->relationLoaded('companies') ? $this->companies->first() : null);
+
+        $previous = $this->relationLoaded('previousPrimaryCompany') ? $this->previousPrimaryCompany : null;
 
         return [
             'id' => (string) $this->id,
@@ -28,8 +32,12 @@ class DriverResource extends JsonResource
             'totalRides' => $this->total_rides,
             'totalEarnings' => (float) $this->total_earnings,
             'pendingBalance' => (float) $this->pending_balance,
-            'companyId' => $primaryCompany ? (string) $primaryCompany->id : null,
-            'companyName' => $primaryCompany?->name,
+            'companyId' => $primary ? (string) $primary->id : null,
+            'companyName' => $primary?->name,
+            'primaryCompanyId' => $this->primary_company_id ? (string) $this->primary_company_id : null,
+            'previousPrimaryCompanyId' => $this->previous_primary_company_id ? (string) $this->previous_primary_company_id : null,
+            'previousPrimaryCompanyName' => $previous?->name,
+            'providerSwitchPending' => (bool) $this->provider_switch_pending,
             'documents' => DriverDocumentResource::collection($this->whenLoaded('documents')),
             'joinedAt' => $this->created_at?->toIso8601String(),
         ];

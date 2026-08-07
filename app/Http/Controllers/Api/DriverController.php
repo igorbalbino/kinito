@@ -10,19 +10,23 @@ use App\Models\Company;
 use App\Models\Driver;
 use App\Models\DriverDocument;
 use App\Services\Driver\DriverApprovalService;
+use App\Services\Provider\ProviderPreferenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class DriverController extends Controller
 {
-    public function __construct(private readonly DriverApprovalService $drivers) {}
+    public function __construct(
+        private readonly DriverApprovalService $drivers,
+        private readonly ProviderPreferenceService $providers,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Driver::class);
 
-        $query = Driver::query()->with(['user', 'documents', 'companies']);
+        $query = Driver::query()->with(['user', 'documents', 'companies', 'primaryCompany', 'previousPrimaryCompany']);
 
         if ($request->user()->hasRole('EMPRESA') && ! $request->user()->hasRole('ADMIN')) {
             $companyIds = $request->user()->ownedCompanies()->pluck('id')
@@ -48,11 +52,44 @@ class DriverController extends Controller
         return DriverResource::collection($query->latest()->paginate($request->integer('per_page', 20)));
     }
 
+    public function store(Request $request): JsonResponse
+    {
+        $this->authorize('create', Driver::class);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'company_id' => ['nullable', 'exists:companies,id'],
+            'vehicle_model' => ['nullable', 'string', 'max:100'],
+            'vehicle_plate' => ['nullable', 'string', 'max:20'],
+            'vehicle_color' => ['nullable', 'string', 'max:50'],
+            'city' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $company = ! empty($data['company_id'])
+            ? Company::query()->findOrFail($data['company_id'])
+            : $request->user()->primaryCompany();
+
+        abort_unless($company, 422, 'Informe a empresa para vincular o motorista.');
+
+        $result = $this->drivers->createByCompany($data, $request->user(), $company);
+        $invitePending = (bool) ($result['invite_pending'] ?? false);
+
+        return response()->json([
+            'message' => $invitePending
+                ? 'Motorista criado. Enviamos um e-mail para ele confirmar a conta e receber a senha.'
+                : 'Motorista vinculado à empresa.',
+            'invite_pending' => $invitePending,
+            'driver' => new DriverResource($result['driver']->load(['user', 'documents', 'companies', 'primaryCompany'])),
+        ], 201);
+    }
+
     public function show(Driver $driver): DriverResource
     {
         $this->authorize('view', $driver);
 
-        return new DriverResource($driver->load(['user', 'documents', 'companies']));
+        return new DriverResource($driver->load(['user', 'documents', 'companies', 'primaryCompany', 'previousPrimaryCompany']));
     }
 
     public function update(Request $request, Driver $driver): DriverResource
@@ -69,7 +106,7 @@ class DriverController extends Controller
 
         $driver->update($data);
 
-        return new DriverResource($driver->fresh()->load(['user', 'documents', 'companies']));
+        return new DriverResource($driver->fresh()->load(['user', 'documents', 'companies', 'primaryCompany', 'previousPrimaryCompany']));
     }
 
     public function approve(Request $request, Driver $driver): DriverResource
@@ -78,8 +115,37 @@ class DriverController extends Controller
         $this->authorize('update', $driver);
 
         return new DriverResource(
-            $this->drivers->approveForCompany($driver, $company, $request->user())->load(['user', 'documents', 'companies'])
+            $this->drivers->approveForCompany($driver, $company, $request->user())->load(['user', 'documents', 'companies', 'primaryCompany', 'previousPrimaryCompany'])
         );
+    }
+
+    public function switchProvider(Request $request, Driver $driver): JsonResponse
+    {
+        $this->authorize('update', $driver);
+
+        $data = $request->validate([
+            'company_id' => ['required', 'exists:companies,id'],
+        ]);
+
+        $company = Company::query()->findOrFail($data['company_id']);
+        $updated = $this->providers->switchDriverProvider($driver, $company, $request->user());
+
+        return response()->json([
+            'message' => 'Solicitação enviada. Aguarde o aceite da empresa ou reverta para o fornecedor anterior.',
+            'driver' => new DriverResource($updated),
+        ]);
+    }
+
+    public function revertProvider(Request $request, Driver $driver): JsonResponse
+    {
+        $this->authorize('update', $driver);
+
+        $updated = $this->providers->revertDriverProvider($driver, $request->user());
+
+        return response()->json([
+            'message' => 'Fornecedor anterior restaurado. Você volta a receber corridas dele.',
+            'driver' => new DriverResource($updated),
+        ]);
     }
 
     public function block(Request $request, Driver $driver): DriverResource
@@ -93,7 +159,7 @@ class DriverController extends Controller
         }
 
         return new DriverResource(
-            $this->drivers->block($driver, $request->user(), $company)->load(['user', 'documents', 'companies'])
+            $this->drivers->block($driver, $request->user(), $company)->load(['user', 'documents', 'companies', 'primaryCompany'])
         );
     }
 

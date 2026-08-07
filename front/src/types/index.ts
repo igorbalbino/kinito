@@ -76,6 +76,10 @@ export interface Driver {
   avatar: string;
   companyId: string;
   companyName: string;
+  primaryCompanyId?: string;
+  previousPrimaryCompanyId?: string;
+  previousPrimaryCompanyName?: string;
+  providerSwitchPending?: boolean;
   status: DriverStatus;
   vehicleModel: string;
   vehiclePlate: string;

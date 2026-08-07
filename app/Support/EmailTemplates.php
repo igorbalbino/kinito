@@ -44,6 +44,25 @@ class EmailTemplates
         );
     }
 
+    public static function driverInvite(string $name, string $companyName, string $verificationUrl): string
+    {
+        return self::layout(
+            'Confirme seu e-mail — motorista',
+            'Olá, '.e($name).'!'
+            .'<p style="margin:16px 0;line-height:1.55;color:#334155;">'
+            .'A empresa <strong>'.e($companyName).'</strong> cadastrou você como <strong>motorista</strong> no Kinito.'
+            .'</p>'
+            .'<p style="margin:0 0 16px;line-height:1.55;color:#334155;">'
+            .'Após confirmar o e-mail, você receberá a senha temporária e poderá receber corridas dessa empresa.'
+            .'</p>'
+            .self::button($verificationUrl, 'Confirmar e-mail')
+            .'<p style="margin:20px 0 0;font-size:13px;line-height:1.5;color:#64748b;">'
+            .'O link é válido por 60 minutos. Se você não esperava este convite, ignore esta mensagem.'
+            .'</p>'
+            .self::fallbackLink($verificationUrl)
+        );
+    }
+
     public static function inviteCredentials(
         string $name,
         string $login,
@@ -99,6 +118,32 @@ class EmailTemplates
         }
 
         return self::layout($title, $body);
+    }
+
+    public static function providerSelectedByClient(string $clientName, string $companyName): string
+    {
+        return self::layout(
+            'Novo cliente no fornecedor',
+            '<p style="margin:0 0 16px;line-height:1.55;color:#334155;">'
+            .'O cliente <strong>'.e($clientName).'</strong> selecionou <strong>'.e($companyName).'</strong> como fornecedor principal de corridas.'
+            .'</p>'
+            .'<p style="margin:0;font-size:13px;line-height:1.5;color:#64748b;">'
+            .'Você pode vê-lo na sua base de clientes no painel Kinito.'
+            .'</p>'
+        );
+    }
+
+    public static function providerSelectedByDriver(string $driverName, string $companyName): string
+    {
+        return self::layout(
+            'Motorista solicitou vínculo',
+            '<p style="margin:0 0 16px;line-height:1.55;color:#334155;">'
+            .'O motorista <strong>'.e($driverName).'</strong> selecionou <strong>'.e($companyName).'</strong> como fornecedor de corridas.'
+            .'</p>'
+            .'<p style="margin:0;font-size:13px;line-height:1.5;color:#64748b;">'
+            .'Ele fica aguardando sua aprovação em Motoristas. Até lá, não recebe corridas.'
+            .'</p>'
+        );
     }
 
     public static function layout(string $preheader, string $innerHtml): string
