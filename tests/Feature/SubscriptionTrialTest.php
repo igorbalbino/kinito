@@ -111,8 +111,13 @@ class SubscriptionTrialTest extends TestCase
 
     public function test_company_created_client_must_verify_email_before_login(): void
     {
-        [$owner, $company] = $this->makeCompany();
+        [$owner, $company, $plan] = $this->makeCompany();
         Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/empresas/{$company->id}/subscribe", [
+            'plan_id' => $plan->id,
+            'mode' => 'trial',
+        ])->assertCreated();
 
         $response = $this->postJson('/api/v1/clientes', [
             'name' => 'Cliente Convite',

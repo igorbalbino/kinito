@@ -138,6 +138,30 @@ class KinitoApiTest extends TestCase
             'cnpj' => '11.000.000/0001-11',
             'email' => 'frota@test.com',
             'commission_rate' => 10,
+            'is_active' => true,
+            'is_provider' => true,
+            'trial_used_at' => now(),
+        ]);
+
+        CompanySetting::query()->create([
+            'company_id' => $company->id,
+            'modelo_corridas' => 'AMBOS',
+        ]);
+
+        $plan = Plan::query()->create([
+            'slug' => 'approve-plan',
+            'name' => 'Approve',
+            'price' => 99,
+            'billing_period' => 'monthly',
+            'is_active' => true,
+        ]);
+
+        Subscription::query()->create([
+            'company_id' => $company->id,
+            'plan_id' => $plan->id,
+            'status' => SubscriptionStatus::Active,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
         ]);
 
         $driverUser = User::factory()->create();
@@ -146,7 +170,7 @@ class KinitoApiTest extends TestCase
             'user_id' => $driverUser->id,
             'status' => 'PENDENTE',
         ]);
-        $driver->companies()->attach($company->id, ['status' => 'PENDENTE']);
+        $driver->companies()->attach($company->id, ['status' => 'PENDENTE', 'origin' => 'empresa']);
 
         Sanctum::actingAs($owner);
 

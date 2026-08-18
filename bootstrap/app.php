@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'password.changed' => \App\Http\Middleware\EnsurePasswordChanged::class,
             'verified.api' => \App\Http\Middleware\EnsureEmailIsVerified::class,
+            'company.subscription' => \App\Http\Middleware\EnsureCompanySubscription::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

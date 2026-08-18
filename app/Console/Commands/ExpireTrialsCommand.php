@@ -9,12 +9,13 @@ class ExpireTrialsCommand extends Command
 {
     protected $signature = 'subscriptions:expire-trials';
 
-    protected $description = 'Expira trials vencidos, suspende empresas e libera clientes para o marketplace';
+    protected $description = 'Expira trials e assinaturas pagas vencidas; suspende empresas e libera afiliados';
 
     public function handle(SubscriptionLifecycleService $lifecycle): int
     {
-        $count = $lifecycle->expireDueTrials();
-        $this->info("Trials expirados: {$count}");
+        $trials = $lifecycle->expireDueTrials();
+        $paid = $lifecycle->expireDuePaidSubscriptions();
+        $this->info("Trials expirados: {$trials}; assinaturas pagas expiradas: {$paid}");
 
         return self::SUCCESS;
     }

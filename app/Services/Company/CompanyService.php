@@ -7,12 +7,10 @@ use App\Enums\ModeloCorridas;
 use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\CompanySetting;
-use App\Models\Plan;
 use App\Models\User;
 use App\Services\Audit\AuditService;
 use App\Services\Notification\NotificationService;
 use App\Services\Referral\ReferralService;
-use App\Services\Subscription\SubscriptionLifecycleService;
 use App\Support\EnsureUserRoles;
 use App\Support\EnsureUserProfiles;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +20,6 @@ class CompanyService
 {
     public function __construct(
         private readonly AuditService $audit,
-        private readonly SubscriptionLifecycleService $lifecycle,
         private readonly NotificationService $notifications,
         private readonly ReferralService $referrals,
     ) {}
@@ -51,8 +48,8 @@ class CompanyService
                 'email' => $data['company_email'] ?? $data['email'],
                 'phone' => $data['company_phone'] ?? ($data['phone'] ?? null),
                 'commission_rate' => config('kinito.commissions.company_percent', 10),
-                'is_provider' => true,
-                'is_active' => true,
+                'is_provider' => false,
+                'is_active' => false,
             ]);
 
             $company->users()->attach($user->id, [
@@ -70,19 +67,13 @@ class CompanyService
                 'allow_partners' => true,
             ]);
 
-            $subscription = null;
-            if (! empty($data['plan_id'])) {
-                $plan = Plan::query()->where('is_active', true)->findOrFail($data['plan_id']);
-                $subscription = $this->lifecycle->startTrial($company, $plan);
-            }
-
             $this->referrals->attachOnRegister($company, $data['referral_code'] ?? null);
 
             EnsureUserProfiles::grantEmpresaSwitchProfiles($user, $company);
 
             $this->audit->log('COMPANY_REGISTERED', $user, $company, null, $company->toArray());
 
-            return compact('user', 'company', 'subscription');
+            return compact('user', 'company');
         });
 
         $this->notifications->sendRegistrationEmail($result['user']);

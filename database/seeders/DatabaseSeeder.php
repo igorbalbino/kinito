@@ -133,9 +133,12 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($plans as $plan) {
+            $stripePriceId = config('kinito.stripe.prices.'.$plan['slug']);
+
             Plan::query()->updateOrCreate(['slug' => $plan['slug']], $plan + [
                 'billing_period' => 'monthly',
                 'is_active' => true,
+                'stripe_price_id' => filled($stripePriceId) ? $stripePriceId : null,
             ]);
         }
     }

@@ -149,13 +149,19 @@ class RideService
             throw new InvalidArgumentException('Motorista com troca de fornecedor pendente não pode aceitar corridas.');
         }
 
-        $linked = $driver->companies()
-            ->where('companies.id', $ride->company_id)
-            ->wherePivot('status', DriverStatus::Ativo->value)
-            ->exists();
+        if (! $this->subscriptions->companyHasAccess($ride->company)) {
+            throw new InvalidArgumentException('Esta empresa está suspensa ou sem assinatura ativa.');
+        }
 
-        if (! $linked) {
-            throw new InvalidArgumentException('Motorista não está ativo nesta empresa.');
+        if (! $driver->isMarketplaceProvider()) {
+            $linked = $driver->companies()
+                ->where('companies.id', $ride->company_id)
+                ->wherePivot('status', DriverStatus::Ativo->value)
+                ->exists();
+
+            if (! $linked) {
+                throw new InvalidArgumentException('Motorista não está ativo nesta empresa.');
+            }
         }
 
         return $this->transition($ride, RideStatus::Aceita, ['driver_id' => $driver->id]);
@@ -184,13 +190,19 @@ class RideService
             throw new InvalidArgumentException('Motorista com troca de fornecedor pendente não pode aceitar corridas.');
         }
 
-        $linked = $driver->companies()
-            ->where('companies.id', $ride->company_id)
-            ->wherePivot('status', DriverStatus::Ativo->value)
-            ->exists();
+        if (! $this->subscriptions->companyHasAccess($ride->company)) {
+            throw new InvalidArgumentException('Esta empresa está suspensa ou sem assinatura ativa.');
+        }
 
-        if (! $linked) {
-            throw new InvalidArgumentException('Motorista não está ativo nesta empresa.');
+        if (! $driver->isMarketplaceProvider()) {
+            $linked = $driver->companies()
+                ->where('companies.id', $ride->company_id)
+                ->wherePivot('status', DriverStatus::Ativo->value)
+                ->exists();
+
+            if (! $linked) {
+                throw new InvalidArgumentException('Motorista não está ativo nesta empresa.');
+            }
         }
 
         $before = ['driver_id' => $ride->driver_id];

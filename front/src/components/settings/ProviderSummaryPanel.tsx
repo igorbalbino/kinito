@@ -28,9 +28,17 @@ export const ProviderSummaryPanel: React.FC = () => {
     const driver = (apiUser?.driver as {
       primaryCompanyId?: string;
       companyName?: string;
+      providerMode?: string;
       providerSwitchPending?: boolean;
       previousPrimaryCompanyName?: string;
     } | undefined) || drivers[0];
+
+    if (driver?.providerMode === 'ALL' && !driver?.providerSwitchPending) {
+      return {
+        label: 'Todos / marketplace',
+        detail: 'Você pode aceitar corridas de fornecedores disponíveis.',
+      };
+    }
 
     if (driver?.providerSwitchPending) {
       return {

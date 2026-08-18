@@ -115,7 +115,27 @@ class DriverController extends Controller
             $rules['status'] = ['sometimes', 'in:PENDENTE,ATIVO,BLOQUEADO,INDISPONIVEL'];
         }
 
+        if ($isSelfDriver) {
+            $rules['provider_mode'] = ['sometimes', 'in:COMPANY,ALL'];
+            $rules['primary_company_id'] = ['nullable', 'exists:companies,id'];
+        }
+
         $data = $request->validate($rules);
+
+        if ($isSelfDriver && isset($data['provider_mode'])) {
+            $updated = $this->providers->updateDriverProvider($driver, [
+                'provider_mode' => $data['provider_mode'],
+                'primary_company_id' => $data['primary_company_id'] ?? null,
+            ], $request->user());
+
+            unset($data['provider_mode'], $data['primary_company_id']);
+
+            if ($data !== []) {
+                $updated->update($data);
+            }
+
+            return new DriverResource($updated->fresh()->load(['user', 'documents', 'companies', 'primaryCompany', 'previousPrimaryCompany']));
+        }
 
         $driver->update($data);
 

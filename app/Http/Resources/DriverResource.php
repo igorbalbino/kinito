@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\DefaultProviderMode;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -38,6 +39,7 @@ class DriverResource extends JsonResource
             'previousPrimaryCompanyId' => $this->previous_primary_company_id ? (string) $this->previous_primary_company_id : null,
             'previousPrimaryCompanyName' => $previous?->name,
             'providerSwitchPending' => (bool) $this->provider_switch_pending,
+            'providerMode' => ($this->provider_mode ?? DefaultProviderMode::Company)->value,
             'documents' => DriverDocumentResource::collection($this->whenLoaded('documents')),
             'joinedAt' => $this->created_at?->toIso8601String(),
         ];

@@ -2,8 +2,10 @@
 
 namespace App\Support;
 
+use App\Enums\DefaultProviderMode;
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Services\Subscription\SubscriptionLifecycleService;
 use Illuminate\Database\Eloquent\Builder;
 
 final class RideQueryScope
@@ -28,9 +30,25 @@ final class RideQueryScope
 
     private static function driverWork(Builder $query, User $user): void
     {
-        $driverId = $user->driver?->id;
-        if (! $driverId) {
+        $driver = $user->driver;
+        if (! $driver) {
             $query->whereRaw('0 = 1');
+
+            return;
+        }
+
+        $driverId = $driver->id;
+
+        if ($driver->isMarketplaceProvider()) {
+            $marketplaceIds = app(SubscriptionLifecycleService::class)->activeProviderCompanyIds();
+            $query->where(function (Builder $q) use ($driverId, $marketplaceIds) {
+                $q->where('driver_id', $driverId)
+                    ->orWhere(function (Builder $inner) use ($marketplaceIds) {
+                        $inner->whereNull('driver_id')
+                            ->whereIn('status', ['DISPONIVEL', 'AGENDADA'])
+                            ->whereIn('company_id', $marketplaceIds ?: [0]);
+                    });
+            });
 
             return;
         }

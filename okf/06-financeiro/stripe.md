@@ -21,10 +21,22 @@ Drivers: `MockBillingGateway` | `StripeBillingGateway` via `BillingManager`
 |-----|--------|
 | `BILLING_DRIVER=auto` | Stripe se `STRIPE_SECRET`, senão mock |
 | `STRIPE_SECRET` + `plans.stripe_price_id` | Checkout real |
+| `STRIPE_PRICE_STARTER` / `PRO` / `ENTERPRISE` | Sincronizados no seeder para os 3 planos |
+| `KINITO_TRIAL_DAYS` | Dias de trial (padrão 14) |
 | Sem secret | Mock: URL assinada `/api/v1/billing/mock/complete` |
 
 Webhook SaaS: `POST /api/v1/webhooks/billing`  
-Lifecycle: `SubscriptionLifecycleService` (trial 14d → expire → checkout → ACTIVE)
+Lifecycle: `SubscriptionLifecycleService` (trial → expire → checkout → ACTIVE)
+
+## Fluxo empresa
+
+1. Cadastro **sem** plano (`is_active=false`, `is_provider=false`)
+2. Após login → `/escolher-plano` → `POST /empresas/{id}/subscribe` mode `trial`
+3. Trial 14 dias → cron `subscriptions:expire-trials` (trials + `ACTIVE` com `ends_at` vencido)
+4. Sem pagamento: middleware `company.subscription` bloqueia API empresa; clientes e motoristas afiliados vão para modo `ALL`
+5. Mock checkout ou Stripe → `ACTIVE` → restaura fornecedor `COMPANY`
+
+`GET /config` expõe `billingDriver` (`mock`|`stripe`) e `trialDays` para o front.
 
 ## Relaciona
 

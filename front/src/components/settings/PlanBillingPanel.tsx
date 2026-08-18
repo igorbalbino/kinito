@@ -11,6 +11,7 @@ import {
   setApiCompanyId,
   subscribeCompany,
   SubscriptionStatusPayload,
+  apiFetch,
 } from '../../lib/api';
 import { SafeSelect } from '../common/SafeSelect';
 
@@ -22,6 +23,7 @@ export const PlanBillingPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [billingDriver, setBillingDriver] = useState<'mock' | 'stripe'>('mock');
 
   const apiReady = isApiConfigured() && Boolean(getApiToken());
 
@@ -29,12 +31,16 @@ export const PlanBillingPanel: React.FC = () => {
     if (!apiReady || !companyId) return;
     setError(null);
     try {
-      const [planList, sub] = await Promise.all([
+      const [planList, sub, configRes] = await Promise.all([
         fetchPlans(),
         fetchSubscriptionStatus(companyId),
+        apiFetch<{ billingDriver?: string }>('/api/v1/config').catch(() => ({ billingDriver: 'mock' })),
       ]);
       setPlans(planList);
       setStatus(sub);
+      if (configRes.billingDriver === 'stripe' || configRes.billingDriver === 'mock') {
+        setBillingDriver(configRes.billingDriver);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao carregar planos');
     }
@@ -137,6 +143,12 @@ export const PlanBillingPanel: React.FC = () => {
         {!hasAccess && (
           <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
             Empresa suspensa ou sem plano: ela não aparece para clientes até assinar.
+          </p>
+        )}
+
+        {billingDriver === 'mock' && (
+          <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
+            Modo de pagamento simulado — ao assinar, confirme na página de checkout mock (sem Stripe).
           </p>
         )}
 

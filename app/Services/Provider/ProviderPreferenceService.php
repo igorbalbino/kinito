@@ -81,6 +81,59 @@ class ProviderPreferenceService
         return $client;
     }
 
+    /**
+     * @param  array{provider_mode?: string, primary_company_id?: int|null}  $data
+     */
+    public function updateDriverProvider(Driver $driver, array $data, User $actor): Driver
+    {
+        if (! isset($data['provider_mode'])) {
+            throw new InvalidArgumentException('Informe o modo de fornecedor.');
+        }
+
+        $mode = DefaultProviderMode::from($data['provider_mode']);
+        $companyId = $data['primary_company_id'] ?? null;
+
+        if ($mode === DefaultProviderMode::All) {
+            $before = $driver->only(['provider_mode', 'primary_company_id']);
+
+            DB::transaction(function () use ($driver) {
+                $driver->forceFill([
+                    'provider_mode' => DefaultProviderMode::All,
+                    'primary_company_id' => null,
+                    'provider_switch_pending' => false,
+                    'previous_primary_company_id' => null,
+                ])->save();
+            });
+
+            $driver = $driver->fresh(['user', 'companies', 'primaryCompany', 'previousPrimaryCompany']);
+
+            $this->audit->log('DRIVER_PROVIDER_UPDATED', $actor, $driver, $before, [
+                'provider_mode' => DefaultProviderMode::All->value,
+            ]);
+
+            return $driver;
+        }
+
+        if (! $companyId) {
+            throw new InvalidArgumentException('Selecione uma empresa como fornecedor principal.');
+        }
+
+        $company = Company::query()->findOrFail($companyId);
+
+        if (
+            (int) $driver->primary_company_id === (int) $companyId
+            && ($driver->provider_mode ?? DefaultProviderMode::Company) === DefaultProviderMode::Company
+            && ! $driver->provider_switch_pending
+        ) {
+            return $driver->fresh(['user', 'companies', 'primaryCompany', 'previousPrimaryCompany']);
+        }
+
+        $updated = $this->switchDriverProvider($driver, $company, $actor);
+        $updated->forceFill(['provider_mode' => DefaultProviderMode::Company])->save();
+
+        return $updated->fresh(['user', 'companies', 'primaryCompany', 'previousPrimaryCompany']);
+    }
+
     public function switchDriverProvider(Driver $driver, Company $company, User $actor): Driver
     {
         $currentPrimary = $driver->primary_company_id;
@@ -105,6 +158,7 @@ class ProviderPreferenceService
             $driver->forceFill([
                 'primary_company_id' => $company->id,
                 'provider_switch_pending' => true,
+                'provider_mode' => DefaultProviderMode::Company,
             ])->save();
         });
 
@@ -147,6 +201,7 @@ class ProviderPreferenceService
                 'primary_company_id' => $previousId,
                 'previous_primary_company_id' => null,
                 'provider_switch_pending' => false,
+                'provider_mode' => DefaultProviderMode::Company,
             ])->save();
         });
 

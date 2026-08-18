@@ -29,6 +29,7 @@ export type ApiUser = {
     previousPrimaryCompanyId?: string | null;
     previousPrimaryCompanyName?: string | null;
     providerSwitchPending?: boolean;
+    providerMode?: string;
   };
 };
 
@@ -372,6 +373,16 @@ export async function updateClientPreferencesApi(
   payload: { default_provider_mode?: string; default_company_id?: number | null },
 ): Promise<Record<string, unknown>> {
   return apiFetch(`/api/v1/clientes/${clientId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateDriverPreferencesApi(
+  driverId: number | string,
+  payload: { provider_mode?: string; primary_company_id?: number | null },
+): Promise<Record<string, unknown>> {
+  return apiFetch(`/api/v1/motoristas/${driverId}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });

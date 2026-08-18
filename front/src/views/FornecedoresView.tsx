@@ -12,6 +12,7 @@ import {
   getApiToken,
   switchDriverProviderApi,
   updateClientPreferencesApi,
+  updateDriverPreferencesApi,
 } from '../lib/api';
 import { isClientRole } from '../lib/navByRole';
 import { normalizeDriver } from '../lib/normalize';
@@ -20,7 +21,7 @@ import { unwrapResource } from '../lib/sessionProfile';
 export const FornecedoresView: React.FC = () => {
   const { activeRole, upsertDriver } = useAppStore();
   const clientMode = isClientRole(activeRole);
-  const driverMode = activeRole === 'motorista';
+  const isDriverProfile = activeRole === 'motorista';
   const [providers, setProviders] = useState<{ id: number; name: string; modeloCorridas?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -44,6 +45,7 @@ export const FornecedoresView: React.FC = () => {
 
   const driver = apiUser?.driver;
   const driverPrimaryId = driver?.primaryCompanyId ? Number(driver.primaryCompanyId) : null;
+  const driverProviderMode = driver?.providerMode || 'COMPANY';
   const switchPending = Boolean(driver?.providerSwitchPending);
 
   const persistUserPatch = (patch: Partial<NonNullable<typeof apiUser>>) => {
@@ -85,6 +87,38 @@ export const FornecedoresView: React.FC = () => {
         },
       });
       setMessage(nextMode === 'ALL' ? 'Marketplace ativado.' : 'Fornecedor principal atualizado.');
+      refreshUser();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao atualizar');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const selectDriverAll = async () => {
+    if (!driver?.id) {
+      setError('Perfil de motorista não encontrado.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await updateDriverPreferencesApi(driver.id, { provider_mode: 'ALL' });
+      const raw = unwrapResource((res as { data?: Record<string, unknown> }).data || res);
+      upsertDriver(normalizeDriver(raw as Record<string, unknown>));
+      persistUserPatch({
+        driver: {
+          ...apiUser?.driver,
+          id: driver.id,
+          companyId: null,
+          companyName: null,
+          primaryCompanyId: null,
+          providerMode: 'ALL',
+          providerSwitchPending: false,
+        },
+      });
+      setMessage('Marketplace ativado — você pode aceitar corridas de qualquer fornecedor disponível.');
       refreshUser();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao atualizar');
@@ -165,14 +199,14 @@ export const FornecedoresView: React.FC = () => {
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
           {clientMode
             ? 'Escolha uma empresa específica ou use o marketplace (todos).'
-            : 'Escolha a empresa da qual você recebe corridas. Trocas ficam pendentes até o aceite.'}
+            : 'Escolha uma empresa específica ou receba corridas de todos os fornecedores disponíveis.'}
         </p>
       </div>
 
       {error && <p className="text-sm text-rose-500 font-medium">{error}</p>}
       {message && <p className="text-sm text-emerald-600 font-medium">{message}</p>}
 
-      {driverMode && switchPending && (
+      {isDriverProfile && switchPending && (
         <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100 text-xs space-y-3">
           <p>
             Aguardando aceite de <strong>{driver?.companyName}</strong>. Você está suspenso de corridas até a
@@ -190,6 +224,24 @@ export const FornecedoresView: React.FC = () => {
             <RotateCcw className="w-3.5 h-3.5" /> Voltar ao fornecedor anterior
           </button>
         </div>
+      )}
+
+      {isDriverProfile && !switchPending && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void selectDriverAll()}
+          className={`w-full text-left p-4 rounded-xl border transition-all ${
+            driverProviderMode === 'ALL'
+              ? 'border-indigo-500 bg-indigo-500/10'
+              : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900'
+          }`}
+        >
+          <div className="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+            {driverProviderMode === 'ALL' && <Check className="w-4 h-4 text-indigo-500" />} Todos / marketplace
+          </div>
+          <p className="text-xs text-zinc-500 mt-1">Aceitar corridas abertas de qualquer fornecedor ativo.</p>
+        </button>
       )}
 
       {clientMode && (
@@ -219,15 +271,15 @@ export const FornecedoresView: React.FC = () => {
           {providers.map((p) => {
             const selected = clientMode
               ? mode === 'COMPANY' && selectedCompanyId === p.id
-              : driverPrimaryId === p.id;
+              : driverProviderMode === 'COMPANY' && driverPrimaryId === p.id;
             return (
               <button
                 key={p.id}
                 type="button"
-                disabled={busy || (driverMode && selected && !switchPending)}
+                disabled={busy || (isDriverProfile && selected && !switchPending)}
                 onClick={() => {
                   if (clientMode) void selectClientCompany(p.id, 'COMPANY');
-                  else if (driverMode) void selectDriverCompany(p.id);
+                  else if (isDriverProfile) void selectDriverCompany(p.id);
                 }}
                 className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-3 disabled:opacity-60 ${
                   selected
@@ -249,7 +301,7 @@ export const FornecedoresView: React.FC = () => {
                       : p.modeloCorridas === 'INSTANTANEAS'
                         ? 'Modelo: instantâneo'
                         : 'Modelo: instantâneo e agendamento'}
-                    {driverMode && selected && switchPending ? ' · aguardando aceite' : ''}
+                    {driverProviderMode === 'COMPANY' && selected && switchPending ? ' · aguardando aceite' : ''}
                   </p>
                 </div>
               </button>

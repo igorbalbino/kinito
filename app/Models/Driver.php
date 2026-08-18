@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DefaultProviderMode;
 use App\Enums\DriverStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,8 @@ class Driver extends Model
         'primary_company_id',
         'previous_primary_company_id',
         'provider_switch_pending',
+        'provider_mode',
+        'provider_restore',
         'status',
         'vehicle_model',
         'vehicle_plate',
@@ -30,7 +33,9 @@ class Driver extends Model
     {
         return [
             'status' => DriverStatus::class,
+            'provider_mode' => DefaultProviderMode::class,
             'provider_switch_pending' => 'boolean',
+            'provider_restore' => 'array',
             'rating' => 'decimal:2',
             'total_earnings' => 'decimal:2',
             'pending_balance' => 'decimal:2',
@@ -56,6 +61,11 @@ class Driver extends Model
     {
         return ! $this->provider_switch_pending
             && $this->status === DriverStatus::Ativo;
+    }
+
+    public function isMarketplaceProvider(): bool
+    {
+        return ($this->provider_mode ?? DefaultProviderMode::Company) === DefaultProviderMode::All;
     }
 
     public function companies(): BelongsToMany

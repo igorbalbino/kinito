@@ -11,6 +11,7 @@ import { ForcePasswordModal } from './components/auth/ForcePasswordModal';
 import { RequireAuth } from './components/auth/RequireAuth';
 import { RequireRole } from './components/auth/RequireRole';
 import { useAppStore } from './store/useAppStore';
+import { RequireCompanySubscription } from './components/auth/RequireCompanySubscription';
 import { useBootstrapApiData } from './hooks/useBootstrapApiData';
 
 import { LandingView } from './views/LandingView';
@@ -30,6 +31,7 @@ import { MotoristasView } from './views/MotoristasView';
 import { NotificacoesView } from './views/NotificacoesView';
 import { PerfilView } from './views/PerfilView';
 import { FornecedoresView } from './views/FornecedoresView';
+import { PlanSelectionView } from './views/PlanSelectionView';
 import { RelatoriosView } from './views/RelatoriosView';
 
 const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -58,10 +60,16 @@ function Authed({ children, path }: { children: React.ReactNode; path?: string }
   return (
     <RequireAuth>
       <RequireRole path={path}>
-        <AppShell>{children}</AppShell>
+        <RequireCompanySubscription>
+          <AppShell>{children}</AppShell>
+        </RequireCompanySubscription>
       </RequireRole>
     </RequireAuth>
   );
+}
+
+function AuthedBare({ children }: { children: React.ReactNode }) {
+  return <RequireAuth>{children}</RequireAuth>;
 }
 
 export default function App() {
@@ -81,6 +89,7 @@ export default function App() {
         <Route path="/register/empresa" element={<RegisterEmpresaView />} />
         <Route path="/verificar-email" element={<VerifyEmailView />} />
         <Route path="/verificar-email-pendente" element={<PendingVerificationView />} />
+        <Route path="/escolher-plano" element={<AuthedBare><PlanSelectionView /></AuthedBare>} />
         <Route path="/dashboard" element={<Authed path="/dashboard"><DashboardView /></Authed>} />
         <Route path="/corridas" element={<Authed path="/corridas"><CorridasView /></Authed>} />
         <Route path="/clientes" element={<Authed path="/clientes"><ClientesView /></Authed>} />

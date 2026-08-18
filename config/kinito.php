@@ -18,7 +18,14 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
         'fee_percent' => (float) env('STRIPE_FEE_PERCENT', 3.9),
         'fee_fixed' => (float) env('STRIPE_FEE_FIXED', 0.50),
+        'prices' => [
+            'starter' => env('STRIPE_PRICE_STARTER'),
+            'pro' => env('STRIPE_PRICE_PRO'),
+            'enterprise' => env('STRIPE_PRICE_ENTERPRISE'),
+        ],
     ],
+
+    'trial_days' => (int) env('KINITO_TRIAL_DAYS', 14),
 
     'commissions' => [
         'platform_percent' => (float) env('PLATFORM_COMMISSION_PERCENT', 15),

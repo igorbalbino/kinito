@@ -2,6 +2,7 @@
 
 namespace App\Services\Driver;
 
+use App\Enums\DefaultProviderMode;
 use App\Enums\DocumentStatus;
 use App\Enums\DriverStatus;
 use App\Enums\UserRole;
@@ -94,6 +95,7 @@ class DriverApprovalService
                     'status' => DriverStatus::Ativo->value,
                     'approved_at' => now(),
                     'approved_by' => $actor->id,
+                    'origin' => 'empresa',
                 ],
             ]);
 
@@ -101,6 +103,7 @@ class DriverApprovalService
                 $driver->forceFill([
                     'primary_company_id' => $company->id,
                     'provider_switch_pending' => false,
+                    'provider_mode' => DefaultProviderMode::Company,
                 ])->save();
             }
 

@@ -4,14 +4,17 @@ namespace Tests\Feature;
 
 use App\Enums\FinancialStatus;
 use App\Enums\RideStatus;
+use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
 use App\Models\AuditLog;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\Driver;
+use App\Models\Plan;
 use App\Models\Ride;
 use App\Models\RideDetailLog;
 use App\Models\RideLog;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -156,6 +159,24 @@ class LogTenantScopeTest extends TestCase
             'email' => "owner-{$suffix}@test.com",
             'commission_rate' => 10,
             'is_active' => true,
+            'is_provider' => true,
+            'trial_used_at' => now(),
+        ]);
+
+        $plan = Plan::query()->create([
+            'slug' => 'plan-'.strtolower($suffix).'-'.uniqid(),
+            'name' => 'Plan',
+            'price' => 99,
+            'billing_period' => 'monthly',
+            'is_active' => true,
+        ]);
+
+        Subscription::query()->create([
+            'company_id' => $company->id,
+            'plan_id' => $plan->id,
+            'status' => SubscriptionStatus::Active,
+            'starts_at' => now(),
+            'ends_at' => now()->addMonth(),
         ]);
 
         return [$owner, $company];

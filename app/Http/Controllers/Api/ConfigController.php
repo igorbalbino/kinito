@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FeatureFlag;
 use App\Models\PlatformSetting;
+use App\Services\Billing\BillingManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -12,8 +13,13 @@ class ConfigController extends Controller
 {
     public function platform(Request $request): JsonResponse
     {
+        $billingManager = app(BillingManager::class);
+
         $payload = [
             'paymentProvider' => config('kinito.payment_provider'),
+            'billingDriver' => $billingManager->resolveDefaultDriver(),
+            'stripeConfigured' => filled(config('kinito.stripe.secret')),
+            'trialDays' => (int) config('kinito.trial_days', 14),
             'featureFlags' => FeatureFlag::query()->pluck('enabled', 'key'),
         ];
 

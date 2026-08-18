@@ -5,8 +5,7 @@ import { BrandLogo } from '../components/common/BrandLogo';
 import { SEOHead } from '../components/common/SEOHead';
 import { LanguageSelector } from '../components/common/LanguageSelector';
 import { useTranslation } from '../hooks/useTranslation';
-import { apiRegisterCompany, fetchPlans, isApiConfigured, ApiPlan } from '../lib/api';
-import { SafeSelect } from '../components/common/SafeSelect';
+import { apiRegisterCompany, isApiConfigured } from '../lib/api';
 
 export const RegisterEmpresaView: React.FC = () => {
   const navigate = useNavigate();
@@ -20,9 +19,7 @@ export const RegisterEmpresaView: React.FC = () => {
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [cnpj, setCnpj] = useState('');
-  const [planId, setPlanId] = useState<string>('');
   const [referralCode, setReferralCode] = useState(() => (searchParams.get('ref') || '').toUpperCase());
-  const [plans, setPlans] = useState<ApiPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,16 +27,6 @@ export const RegisterEmpresaView: React.FC = () => {
     const ref = searchParams.get('ref');
     if (ref) setReferralCode(ref.toUpperCase());
   }, [searchParams]);
-
-  useEffect(() => {
-    if (!isApiConfigured()) return;
-    fetchPlans()
-      .then((list) => {
-        setPlans(list);
-        if (list[0]) setPlanId(String(list[0].id));
-      })
-      .catch(() => undefined);
-  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +45,6 @@ export const RegisterEmpresaView: React.FC = () => {
         password_confirmation: password,
         company_name: companyName,
         cnpj,
-        plan_id: planId ? Number(planId) : undefined,
         referral_code: referralCode.trim() || undefined,
       });
       navigate(`/verificar-email-pendente?email=${encodeURIComponent(email)}`);
@@ -101,7 +87,9 @@ export const RegisterEmpresaView: React.FC = () => {
           <div className="text-center space-y-1">
             <Building2 className="w-8 h-8 text-indigo-500 mx-auto" />
             <h1 className="text-2xl font-black">Cadastro empresarial</h1>
-            <p className="text-xs text-slate-500">Registre sua frota e escolha um plano para o trial de 14 dias.</p>
+            <p className="text-xs text-slate-500">
+              Crie sua conta. Após confirmar o e-mail, você escolhe o plano e inicia 14 dias grátis.
+            </p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
@@ -138,20 +126,6 @@ export const RegisterEmpresaView: React.FC = () => {
               CNPJ
               <input required value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0001-00" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5" />
             </label>
-            {plans.length > 0 && (
-              <label className="block space-y-1 text-xs font-bold sm:col-span-2">
-                Plano (trial 14 dias)
-                <SafeSelect
-                  value={planId}
-                  onChange={setPlanId}
-                  label="Plano"
-                  options={plans.map((p) => ({
-                    value: String(p.id),
-                    label: `${p.name} — R$ ${Number(p.price).toFixed(2)}`,
-                  }))}
-                />
-              </label>
-            )}
             <label className="block space-y-1 text-xs font-bold sm:col-span-2">
               Código de indicação (opcional)
               <input

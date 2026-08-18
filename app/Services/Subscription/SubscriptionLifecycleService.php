@@ -6,6 +6,7 @@ use App\Enums\DefaultProviderMode;
 use App\Enums\SubscriptionStatus;
 use App\Models\ClientPreference;
 use App\Models\Company;
+use App\Models\Driver;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Services\Audit\AuditService;
@@ -67,7 +68,7 @@ class SubscriptionLifecycleService
                 'plan_id' => $plan->id,
                 'status' => SubscriptionStatus::Trialing,
                 'starts_at' => now(),
-                'trial_ends_at' => now()->addDays(14),
+                'trial_ends_at' => now()->addDays((int) config('kinito.trial_days', 14)),
             ]);
 
             $company->update([
@@ -107,6 +108,7 @@ class SubscriptionLifecycleService
             ]);
 
             $this->restoreClientProviders($company);
+            $this->restoreDriverProviders($company);
 
             $this->audit->log('SUBSCRIPTION_ACTIVATED', auth()->user(), $subscription, null, [
                 'plan_id' => $plan->id,
@@ -126,14 +128,15 @@ class SubscriptionLifecycleService
         $sub = $this->currentSubscription($company);
 
         if (! $sub) {
-            $company->update(['is_active' => false]);
+            $company->update(['is_active' => false, 'is_provider' => false]);
 
             return null;
         }
 
         if ($sub->status === SubscriptionStatus::Expired) {
-            $company->update(['is_active' => false]);
+            $company->update(['is_active' => false, 'is_provider' => false]);
             $this->liberateClientProviders($company);
+            $this->liberateDriverProviders($company);
 
             return $sub;
         }
@@ -141,8 +144,9 @@ class SubscriptionLifecycleService
         return DB::transaction(function () use ($company, $sub) {
             $before = $sub->only(['status']);
             $sub->update(['status' => SubscriptionStatus::Expired]);
-            $company->update(['is_active' => false]);
+            $company->update(['is_active' => false, 'is_provider' => false]);
             $this->liberateClientProviders($company);
+            $this->liberateDriverProviders($company);
 
             $this->audit->log('SUBSCRIPTION_EXPIRED', null, $sub->fresh(), $before, [
                 'status' => SubscriptionStatus::Expired->value,
@@ -196,6 +200,43 @@ class SubscriptionLifecycleService
         }
 
         return $count;
+    }
+
+    public function expireDuePaidSubscriptions(): int
+    {
+        $count = 0;
+
+        $subs = Subscription::query()
+            ->with('company')
+            ->where('status', SubscriptionStatus::Active)
+            ->whereNotNull('ends_at')
+            ->where('ends_at', '<=', now())
+            ->get();
+
+        foreach ($subs as $sub) {
+            if ($sub->company) {
+                $this->suspendExpired($sub->company);
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function activeProviderCompanyIds(): array
+    {
+        return Company::query()
+            ->where('is_provider', true)
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (Company $company) => $this->companyHasAccess($company))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
     }
 
     private function defaultMode(Company $company): string
@@ -271,6 +312,53 @@ class SubscriptionLifecycleService
                 'default_provider_mode' => DefaultProviderMode::Company,
                 'default_company_id' => $company->id,
                 'extra' => $extra ?: null,
+            ]);
+        }
+    }
+
+    private function liberateDriverProviders(Company $company): void
+    {
+        $drivers = Driver::query()
+            ->where('provider_mode', DefaultProviderMode::Company)
+            ->whereHas('companies', function ($q) use ($company) {
+                $q->where('companies.id', $company->id)
+                    ->where('driver_company.origin', 'empresa');
+            })
+            ->get();
+
+        foreach ($drivers as $driver) {
+            $driver->update([
+                'provider_mode' => DefaultProviderMode::All,
+                'primary_company_id' => null,
+                'provider_switch_pending' => false,
+                'previous_primary_company_id' => null,
+                'provider_restore' => [
+                    'mode' => DefaultProviderMode::Company->value,
+                    'company_id' => $company->id,
+                    'primary_company_id' => $driver->primary_company_id,
+                ],
+            ]);
+        }
+    }
+
+    private function restoreDriverProviders(Company $company): void
+    {
+        $drivers = Driver::query()
+            ->where('provider_mode', DefaultProviderMode::All)
+            ->whereNotNull('provider_restore')
+            ->get();
+
+        foreach ($drivers as $driver) {
+            $restore = $driver->provider_restore;
+            if (! is_array($restore) || (int) ($restore['company_id'] ?? 0) !== $company->id) {
+                continue;
+            }
+
+            $driver->update([
+                'provider_mode' => DefaultProviderMode::Company,
+                'primary_company_id' => $restore['primary_company_id'] ?? $company->id,
+                'provider_restore' => null,
+                'provider_switch_pending' => false,
             ]);
         }
     }

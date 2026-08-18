@@ -49,7 +49,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
         Route::post('/auth/email/verification-notification', [AuthController::class, 'sendVerification']);
 
-        Route::middleware(['verified.api', 'password.changed'])->group(function () {
+        Route::middleware(['verified.api', 'password.changed', 'company.subscription'])->group(function () {
             Route::get('/dashboard', DashboardController::class);
 
             Route::get('/fornecedores', [ProviderController::class, 'index']);
