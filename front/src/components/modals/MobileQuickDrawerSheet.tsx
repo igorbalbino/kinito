@@ -39,7 +39,7 @@ export const MobileQuickDrawerSheet: React.FC = () => {
   const navigate = useNavigate();
   const {
     activeRole,
-    setActiveRole,
+    switchActiveRole,
     theme,
     toggleTheme,
     financialMode,
@@ -126,7 +126,7 @@ export const MobileQuickDrawerSheet: React.FC = () => {
                 <button
                   key={r}
                   type="button"
-                  onClick={() => setActiveRole(r)}
+                  onClick={() => switchActiveRole(r)}
                   className={`p-3 rounded-xl border text-xs font-semibold min-h-[48px] ${
                     activeRole === r
                       ? 'bg-indigo-600/20 border-indigo-500 text-white'

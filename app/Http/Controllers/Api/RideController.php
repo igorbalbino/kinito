@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ride\StoreRideRequest;
 use App\Http\Resources\RideResource;
+use App\Models\Client;
 use App\Models\Company;
 use App\Models\Driver;
 use App\Models\Ride;
 use App\Services\Finance\FinanceService;
 use App\Services\Ride\RideService;
+use App\Support\RideQueryScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -26,30 +29,7 @@ class RideController extends Controller
         $this->authorize('viewAny', Ride::class);
 
         $query = Ride::query()->with(['client.user', 'driver.user', 'company', 'partnerCompany']);
-
-        $user = $request->user();
-
-        if ($user->hasRole('ADMIN')) {
-            // all
-        } elseif ($user->hasRole('EMPRESA')) {
-            $ids = $user->accessibleCompanyIds();
-            $query->where(function ($q) use ($ids) {
-                $q->whereIn('company_id', $ids)->orWhereIn('partner_company_id', $ids);
-            });
-        } elseif ($user->hasRole('MOTORISTA')) {
-            $driverId = $user->driver?->id;
-            $companyIds = $user->accessibleCompanyIds();
-            $query->where(function ($q) use ($driverId, $companyIds) {
-                $q->where('driver_id', $driverId)
-                    ->orWhere(function ($q) use ($companyIds) {
-                        $q->whereNull('driver_id')
-                            ->whereIn('status', ['DISPONIVEL', 'AGENDADA'])
-                            ->whereIn('company_id', $companyIds);
-                    });
-            });
-        } elseif ($user->hasRole('CLIENTE')) {
-            $query->where('client_id', $user->client?->id);
-        }
+        RideQueryScope::apply($query, $request->user());
 
         if ($status = $request->string('status')->toString()) {
             $query->where('status', strtoupper($status));
@@ -87,7 +67,9 @@ class RideController extends Controller
             });
         }
 
-        return RideResource::collection($query->latest()->paginate($request->integer('per_page', 20)));
+        $perPage = min(100, max(1, $request->integer('per_page', 50)));
+
+        return RideResource::collection($query->latest()->paginate($perPage));
     }
 
     public function store(StoreRideRequest $request): JsonResponse
@@ -96,20 +78,20 @@ class RideController extends Controller
 
         $data = $request->validated();
         $user = $request->user();
+        $acting = $user->actingRole();
 
-        if (! $user->hasAnyRole(['ADMIN', 'EMPRESA'])) {
+        if (! in_array($acting, [UserRole::Admin, UserRole::Empresa], true)) {
             unset($data['driver_id'], $data['partner_company_id']);
         }
 
-        if ($user->hasAnyRole(['EMPRESA', 'MOTORISTA']) && ! empty($data['company_id'])) {
+        if (in_array($acting, [UserRole::Empresa, UserRole::Motorista], true) && ! empty($data['company_id'])) {
             abort_unless($user->canAccessCompany((int) $data['company_id']), 403, 'Sem permissão nesta empresa.');
         }
 
-        if ($user->hasRole('CLIENTE') && empty($data['client_id'])) {
-            $data['client_id'] = $user->client?->id;
-        }
+        $client = $this->resolveRideClient($user, $acting, $data);
+        $data['client_id'] = $client->id;
 
-        $ride = $this->rides->create($data, $user->client);
+        $ride = $this->rides->create($data, $client);
 
         return response()->json([
             'message' => 'Corrida criada.',
@@ -129,7 +111,7 @@ class RideController extends Controller
         $this->authorize('accept', $ride);
 
         $user = $request->user();
-        if ($user->hasRole('MOTORISTA')) {
+        if ($user->isActingAs(UserRole::Motorista)) {
             $driver = $user->driver;
             abort_unless($driver, 403, 'Perfil de motorista não encontrado.');
         } else {
@@ -211,5 +193,33 @@ class RideController extends Controller
         }
 
         return new RideResource($ride->fresh()->load(['client.user', 'driver.user', 'company']));
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveRideClient($user, UserRole $acting, array $data): Client
+    {
+        if (in_array($acting, [UserRole::Cliente, UserRole::Motorista], true)) {
+            abort_unless($user->client, 422, 'Perfil de cliente não encontrado.');
+
+            return $user->client;
+        }
+
+        abort_unless(! empty($data['client_id']), 422, 'Informe o cliente da corrida.');
+
+        $client = Client::query()->findOrFail((int) $data['client_id']);
+
+        if ($acting === UserRole::Admin) {
+            return $client;
+        }
+
+        $companyIds = $user->accessibleCompanyIds();
+        $linked = $companyIds->isNotEmpty()
+            && $client->companies()->whereIn('companies.id', $companyIds)->exists();
+
+        abort_unless($linked, 403, 'Cliente não pertence à empresa.');
+
+        return $client;
     }
 }

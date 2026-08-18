@@ -27,4 +27,4 @@ WhatsApp → [whatsapp.md](whatsapp.md)
 | Credenciais pós-verify (convite) | e-mail |
 | Cliente/motorista escolhe fornecedor | e-mail para empresa |
 | Aprovação motorista | in-app (+ e-mail genérico se notify email) |
-| Troca fornecedor pendente (motorista) | in-app |
+| Finish corrida (`FINALIZADA`) | e-mail recibo cliente + motorista (sem e-mail para empresa) |

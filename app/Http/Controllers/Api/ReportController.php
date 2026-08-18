@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Ride;
 use Illuminate\Http\JsonResponse;
@@ -11,21 +12,28 @@ class ReportController extends Controller
 {
     public function own(Request $request): JsonResponse
     {
+        $this->assertCanViewReports($request);
+
         return response()->json(['data' => $this->build($request, 'own')]);
     }
 
     public function received(Request $request): JsonResponse
     {
+        $this->assertCanViewReports($request);
+
         return response()->json(['data' => $this->build($request, 'received')]);
     }
 
     public function forwarded(Request $request): JsonResponse
     {
+        $this->assertCanViewReports($request);
+
         return response()->json(['data' => $this->build($request, 'forwarded')]);
     }
 
     public function consolidated(Request $request): JsonResponse
     {
+        $this->assertCanViewReports($request);
         $own = $this->build($request, 'own');
         $received = $this->build($request, 'received');
         $forwarded = $this->build($request, 'forwarded');
@@ -83,18 +91,32 @@ class ReportController extends Controller
         return ['summary' => $summary, 'items' => $items->values()->all()];
     }
 
+    private function assertCanViewReports(Request $request): void
+    {
+        $user = $request->user();
+        abort_unless(
+            $user->isActingAs(UserRole::Admin) || $user->isActingAs(UserRole::Empresa),
+            403
+        );
+        abort_unless(
+            $user->hasRole('ADMIN') || $user->hasRole('EMPRESA'),
+            403
+        );
+    }
+
     private function companyScope(Request $request): \Illuminate\Support\Collection
     {
-        if ($request->user()->hasRole('ADMIN') && $request->filled('company_id')) {
+        if ($request->user()->isActingAs(UserRole::Admin) && $request->filled('company_id')) {
             return collect([(int) $request->integer('company_id')]);
         }
 
-        if ($request->user()->hasRole('ADMIN') && ! $request->filled('company_id')) {
+        if ($request->user()->isActingAs(UserRole::Admin) && ! $request->filled('company_id')) {
             return Ride::query()->distinct()->pluck('company_id');
         }
 
-        return $request->user()->ownedCompanies()->pluck('id')
-            ->merge($request->user()->companies()->pluck('companies.id'));
+        $ids = $request->user()->accessibleCompanyIds();
+
+        return $ids->isEmpty() ? collect([0]) : $ids;
     }
 
     private function applyFilters($query, Request $request): void

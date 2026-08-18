@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\DocumentStatus;
 use App\Enums\DriverStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\DriverResource;
 use App\Models\Company;
@@ -28,13 +29,14 @@ class DriverController extends Controller
 
         $query = Driver::query()->with(['user', 'documents', 'companies', 'primaryCompany', 'previousPrimaryCompany']);
 
-        if ($request->user()->hasRole('EMPRESA') && ! $request->user()->hasRole('ADMIN')) {
-            $companyIds = $request->user()->accessibleCompanyIds();
-            $query->whereHas('companies', fn ($q) => $q->whereIn('companies.id', $companyIds));
-        }
+        $user = $request->user();
+        $acting = $user->actingRole();
 
-        if ($request->user()->hasRole('MOTORISTA') && ! $request->user()->hasRole('ADMIN')) {
-            $query->where('user_id', $request->user()->id);
+        if ($acting === UserRole::Empresa) {
+            $companyIds = $user->accessibleCompanyIds();
+            $query->whereHas('companies', fn ($q) => $q->whereIn('companies.id', $companyIds));
+        } elseif ($acting !== UserRole::Admin) {
+            $query->where('user_id', $user->id);
         }
 
         if ($status = $request->string('status')->toString()) {
@@ -48,7 +50,9 @@ class DriverController extends Controller
             });
         }
 
-        return DriverResource::collection($query->latest()->paginate($request->integer('per_page', 20)));
+        $perPage = min(100, max(1, $request->integer('per_page', 50)));
+
+        return DriverResource::collection($query->latest()->paginate($perPage));
     }
 
     public function store(Request $request): JsonResponse
@@ -121,7 +125,7 @@ class DriverController extends Controller
     public function approve(Request $request, Driver $driver): DriverResource
     {
         $company = $this->resolveCompany($request);
-        $this->authorize('update', $driver);
+        $this->authorize('manageFleet', $driver);
 
         return new DriverResource(
             $this->drivers->approveForCompany($driver, $company, $request->user())->load(['user', 'documents', 'companies', 'primaryCompany', 'previousPrimaryCompany'])
@@ -159,7 +163,7 @@ class DriverController extends Controller
 
     public function block(Request $request, Driver $driver): DriverResource
     {
-        $this->authorize('update', $driver);
+        $this->authorize('manageFleet', $driver);
         $company = null;
         try {
             $company = $this->resolveCompany($request);
@@ -175,7 +179,7 @@ class DriverController extends Controller
     public function reviewDocument(Request $request, Driver $driver, DriverDocument $document): JsonResponse
     {
         abort_unless($document->driver_id === $driver->id, 404);
-        $this->authorize('update', $driver);
+        $this->authorize('manageFleet', $driver);
 
         $data = $request->validate([
             'status' => ['required', 'in:APROVADO,REJEITADO,PENDENTE,VENCIDO'],

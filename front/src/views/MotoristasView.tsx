@@ -143,7 +143,7 @@ export const MotoristasView: React.FC = () => {
 
       <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden min-w-0">
         <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
-          {filteredDrivers.slice(0, 15).map((driver) => (
+          {filteredDrivers.map((driver) => (
             <div key={driver.id} className="p-4 space-y-3">
               <div className="flex items-center gap-3">
                 <img src={driver.avatar} alt="" className="w-9 h-9 rounded-full bg-zinc-200 shrink-0" />
@@ -202,7 +202,7 @@ export const MotoristasView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-              {filteredDrivers.slice(0, 15).map((driver) => (
+              {filteredDrivers.map((driver) => (
                 <tr key={driver.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">

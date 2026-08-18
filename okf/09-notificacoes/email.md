@@ -21,7 +21,7 @@ Auth fail comum: user/from divergentes ou senha errada.
 
 ## Tipos (`MailService`)
 
-`verification` · `registration` · `client_invite` · `driver_invite` · `invite_credentials` · `password_reset` · `notification` · `provider_selected_client` · `provider_selected_driver`
+`verification` · `registration` · `client_invite` · `driver_invite` · `invite_credentials` · `password_reset` · `notification` · `provider_selected_client` · `provider_selected_driver` · `ride_receipt_client` · `ride_receipt_driver`
 
 ## Links no e-mail
 

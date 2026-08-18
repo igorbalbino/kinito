@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\UserRole;
 use App\Services\Notification\NotificationService;
+use App\Support\ActingRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -114,6 +115,18 @@ class User extends Authenticatable implements MustVerifyEmail
         $value = $role instanceof UserRole ? $role->value : $role;
 
         return $this->hasRole($value);
+    }
+
+    public function actingRole(): UserRole
+    {
+        return ActingRole::of($this);
+    }
+
+    public function isActingAs(UserRole|string $role): bool
+    {
+        $value = $role instanceof UserRole ? $role->value : $role;
+
+        return $this->actingRole()->value === $value;
     }
 
     public function primaryCompany(): ?Company

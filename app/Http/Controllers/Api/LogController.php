@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Client;
@@ -13,6 +14,7 @@ use App\Models\RideDetailLog;
 use App\Models\RideLog;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Support\RideQueryScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -91,29 +93,12 @@ class LogController extends Controller
      */
     private function scopeByRideVisibility(Builder $query, User $user): void
     {
-        if ($user->hasRole('ADMIN')) {
+        if ($user->isActingAs(UserRole::Admin)) {
             return;
         }
 
         $query->whereHas('ride', function (Builder $q) use ($user) {
-            if ($user->hasRole('EMPRESA')) {
-                $ids = $user->accessibleCompanyIds();
-                $q->where(function (Builder $inner) use ($ids) {
-                    $inner->whereIn('company_id', $ids)->orWhereIn('partner_company_id', $ids);
-                });
-
-                return;
-            }
-
-            if ($user->hasRole('MOTORISTA')) {
-                $q->where('driver_id', $user->driver?->id);
-
-                return;
-            }
-
-            if ($user->hasRole('CLIENTE')) {
-                $q->where('client_id', $user->client?->id);
-            }
+            RideQueryScope::apply($q, $user);
         });
     }
 

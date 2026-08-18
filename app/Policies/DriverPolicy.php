@@ -19,22 +19,11 @@ class DriverPolicy
 
     public function view(User $user, Driver $driver): bool
     {
-        if ($user->hasRole(UserRole::Admin->value)) {
-            return true;
-        }
-
-        if ($user->hasRole(UserRole::Motorista->value)) {
-            return $user->driver?->id === $driver->id;
-        }
-
-        if ($user->hasRole(UserRole::Empresa->value)) {
-            $companyIds = $user->accessibleCompanyIds();
-
-            return $companyIds->isNotEmpty()
-                && $driver->companies()->whereIn('companies.id', $companyIds)->exists();
-        }
-
-        return false;
+        return match ($user->actingRole()) {
+            UserRole::Admin => true,
+            UserRole::Motorista, UserRole::Cliente => $user->driver?->id === $driver->id,
+            UserRole::Empresa => $this->inCompanyFleet($user, $driver),
+        };
     }
 
     public function create(User $user): bool
@@ -47,6 +36,28 @@ class DriverPolicy
 
     public function update(User $user, Driver $driver): bool
     {
-        return $this->view($user, $driver);
+        if ($user->driver?->id === $driver->id && $user->hasRole(UserRole::Motorista->value)) {
+            return true;
+        }
+
+        return $this->manageFleet($user, $driver);
+    }
+
+    public function manageFleet(User $user, Driver $driver): bool
+    {
+        if ($user->hasRole(UserRole::Admin->value)) {
+            return true;
+        }
+
+        return $user->hasRole(UserRole::Empresa->value)
+            && $this->inCompanyFleet($user, $driver);
+    }
+
+    private function inCompanyFleet(User $user, Driver $driver): bool
+    {
+        $companyIds = $user->accessibleCompanyIds();
+
+        return $companyIds->isNotEmpty()
+            && $driver->companies()->whereIn('companies.id', $companyIds)->exists();
     }
 }

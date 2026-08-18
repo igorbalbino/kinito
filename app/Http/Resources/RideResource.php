@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\RideStatus;
+use App\Enums\UserRole;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,12 +12,26 @@ class RideResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $user = $request->user();
+        $acting = $user?->actingRole();
+        $isFleet = in_array($acting, [UserRole::Admin, UserRole::Empresa], true);
+        $isAssignedDriver = $acting === UserRole::Motorista
+            && $user?->driver?->id
+            && $user->driver->id === $this->driver_id;
+        $showClientPhone = $isFleet || $isAssignedDriver;
+        $showSplit = $isFleet || $acting === UserRole::Motorista;
+
+        $status = $this->status instanceof RideStatus ? $this->status : RideStatus::tryFrom((string) $this->status);
+        if ($status && in_array($status, [RideStatus::Disponivel, RideStatus::Agendada, RideStatus::Criada], true) && ! $isFleet) {
+            $showClientPhone = false;
+        }
+
         return [
             'id' => (string) $this->id,
             'code' => $this->code,
             'clientId' => (string) $this->client_id,
             'clientName' => $this->whenLoaded('client', fn () => $this->client?->user?->name),
-            'clientPhone' => $this->whenLoaded('client', fn () => $this->client?->user?->phone),
+            'clientPhone' => $this->when($showClientPhone && $this->relationLoaded('client'), $this->client?->user?->phone),
             'clientAvatar' => $this->whenLoaded('client', fn () => $this->client?->user?->avatar),
             'driverId' => $this->driver_id ? (string) $this->driver_id : null,
             'driverName' => $this->whenLoaded('driver', fn () => $this->driver?->user?->name),
@@ -37,14 +53,14 @@ class RideResource extends JsonResource
             'paymentMethod' => $this->payment_method?->value,
             'paymentProvider' => $this->payment_provider?->value,
             'grossValue' => (float) $this->gross_value,
-            'stripeFee' => (float) $this->stripe_fee,
-            'platformCommission' => (float) $this->platform_commission,
-            'companyCut' => (float) $this->company_cut,
-            'driverNet' => (float) $this->driver_net,
-            'stripeWebhookReceived' => $this->stripe_webhook_received,
+            'stripeFee' => $this->when($showSplit, (float) $this->stripe_fee),
+            'platformCommission' => $this->when($isFleet, (float) $this->platform_commission),
+            'companyCut' => $this->when($isFleet, (float) $this->company_cut),
+            'driverNet' => $this->when($showSplit, (float) $this->driver_net),
+            'stripeWebhookReceived' => $this->when($isFleet, $this->stripe_webhook_received),
             'notes' => $this->notes,
             'cancellationReason' => $this->cancellation_reason,
-            'manualOverrideNotes' => $this->manual_override_notes,
+            'manualOverrideNotes' => $this->when($isFleet, $this->manual_override_notes),
             'rating' => $this->rating !== null ? (float) $this->rating : null,
             'requestedAt' => $this->requested_at?->toIso8601String(),
             'startedAt' => $this->started_at?->toIso8601String(),

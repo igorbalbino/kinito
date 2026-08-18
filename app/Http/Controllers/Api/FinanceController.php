@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\RideStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\FinancialTransactionResource;
 use App\Models\FinancialTransaction;
@@ -18,12 +19,19 @@ class FinanceController extends Controller
 
     public function transactions(Request $request): AnonymousResourceCollection
     {
+        $user = $request->user();
+        $acting = $user->actingRole();
+        abort_unless(in_array($acting, [UserRole::Admin, UserRole::Empresa, UserRole::Motorista], true), 403);
+
         $query = FinancialTransaction::query()->with(['ride', 'company'])->latest();
 
-        if (! $request->user()->hasRole('ADMIN')) {
-            $ids = $request->user()->ownedCompanies()->pluck('id')
-                ->merge($request->user()->companies()->pluck('companies.id'));
+        if ($acting === UserRole::Empresa) {
+            $ids = $user->accessibleCompanyIds();
             $query->whereIn('company_id', $ids);
+        } elseif ($acting === UserRole::Motorista) {
+            $driverId = $user->driver?->id;
+            abort_unless($driverId, 404, 'Perfil de motorista não encontrado.');
+            $query->whereHas('ride', fn ($q) => $q->where('driver_id', $driverId));
         }
 
         if ($type = $request->string('type')->toString()) {
@@ -34,17 +42,28 @@ class FinanceController extends Controller
             $query->where('status', strtoupper($status));
         }
 
-        return FinancialTransactionResource::collection($query->paginate($request->integer('per_page', 20)));
+        $perPage = min(100, max(1, $request->integer('per_page', 50)));
+
+        return FinancialTransactionResource::collection($query->paginate($perPage));
     }
 
     public function summary(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $acting = $user->actingRole();
+        abort_unless(in_array($acting, [UserRole::Admin, UserRole::Empresa, UserRole::Motorista], true), 403);
+
         $rides = Ride::query()->where('status', RideStatus::Finalizada);
 
-        if (! $request->user()->hasRole('ADMIN')) {
-            $ids = $request->user()->ownedCompanies()->pluck('id')
-                ->merge($request->user()->companies()->pluck('companies.id'));
-            $rides->whereIn('company_id', $ids);
+        if ($acting === UserRole::Empresa) {
+            $ids = $user->accessibleCompanyIds();
+            $rides->where(function ($q) use ($ids) {
+                $q->whereIn('company_id', $ids)->orWhereIn('partner_company_id', $ids);
+            });
+        } elseif ($acting === UserRole::Motorista) {
+            $driverId = $user->driver?->id;
+            abort_unless($driverId, 404, 'Perfil de motorista não encontrado.');
+            $rides->where('driver_id', $driverId);
         }
 
         if ($request->filled('from')) {
@@ -90,9 +109,10 @@ class FinanceController extends Controller
         ], 201);
     }
 
-    /** Spending summary for the authenticated client (CLIENTE role). */
+    /** Spending summary for the authenticated client (CLIENTE acting role). */
     public function mySpendings(Request $request): JsonResponse
     {
+        abort_unless($request->user()->isActingAs(UserRole::Cliente), 403);
         abort_unless($request->user()->hasRole('CLIENTE'), 403);
 
         $clientId = $request->user()->client?->id;

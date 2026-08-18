@@ -33,7 +33,7 @@ export const Sidebar: React.FC = () => {
     isSidebarCollapsed,
     toggleSidebar,
     activeRole,
-    setActiveRole,
+    switchActiveRole,
     financialMode,
     featureFlags,
     notifications,
@@ -126,7 +126,7 @@ export const Sidebar: React.FC = () => {
                   type="button"
                   role="option"
                   aria-selected={activeRole === role}
-                  onClick={() => setActiveRole(role)}
+                  onClick={() => switchActiveRole(role)}
                   className={cn(
                     'w-full text-left text-xs font-medium py-1.5 px-2.5 rounded-md border transition-colors',
                     activeRole === role

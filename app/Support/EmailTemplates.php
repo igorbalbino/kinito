@@ -146,6 +146,74 @@ class EmailTemplates
         );
     }
 
+    /**
+     * @param  array{code:string,origin:string,destination:string,requestedAt:string,completedAt:string,gross:string,company:string,driver:?string}  $ride
+     */
+    public static function rideReceiptClient(string $name, array $ride, string $panelUrl): string
+    {
+        return self::layout(
+            'Recibo da sua corrida '.$ride['code'],
+            'Olá, '.e($name).'!'
+            .'<p style="margin:16px 0;line-height:1.55;color:#334155;">'
+            .'Sua corrida <strong>'.e($ride['code']).'</strong> foi finalizada. Segue o comprovante.'
+            .'</p>'
+            .self::rideReceiptTable([
+                'Código' => $ride['code'],
+                'Data' => $ride['requestedAt'],
+                'Conclusão' => $ride['completedAt'],
+                'Origem' => $ride['origin'],
+                'Destino' => $ride['destination'],
+                'Empresa' => $ride['company'],
+                'Motorista' => $ride['driver'] ?? '—',
+                'Valor' => $ride['gross'],
+            ])
+            .self::button($panelUrl, 'Ver no Kinito')
+            .self::fallbackLink($panelUrl)
+        );
+    }
+
+    /**
+     * @param  array{code:string,origin:string,destination:string,requestedAt:string,completedAt:string,gross:string,net:string,client:string,company:string}  $ride
+     */
+    public static function rideReceiptDriver(string $name, array $ride, string $panelUrl): string
+    {
+        return self::layout(
+            'Recibo da corrida '.$ride['code'],
+            'Olá, '.e($name).'!'
+            .'<p style="margin:16px 0;line-height:1.55;color:#334155;">'
+            .'A corrida <strong>'.e($ride['code']).'</strong> foi finalizada. Segue o comprovante da sua viagem.'
+            .'</p>'
+            .self::rideReceiptTable([
+                'Código' => $ride['code'],
+                'Data' => $ride['requestedAt'],
+                'Conclusão' => $ride['completedAt'],
+                'Origem' => $ride['origin'],
+                'Destino' => $ride['destination'],
+                'Passageiro' => $ride['client'],
+                'Empresa' => $ride['company'],
+                'Valor bruto' => $ride['gross'],
+                'Seu líquido' => $ride['net'],
+            ])
+            .self::button($panelUrl, 'Ver no Kinito')
+            .self::fallbackLink($panelUrl)
+        );
+    }
+
+    /**
+     * @param  array<string, string>  $rows
+     */
+    private static function rideReceiptTable(array $rows): string
+    {
+        $html = '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:8px 0 20px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;">';
+        foreach ($rows as $label => $value) {
+            $html .= '<tr><td style="padding:10px 16px;font-size:13px;color:#64748b;width:38%;border-bottom:1px solid #e2e8f0;">'
+                .e($label).'</td><td style="padding:10px 16px;font-size:14px;color:#0f172a;border-bottom:1px solid #e2e8f0;">'
+                .e($value).'</td></tr>';
+        }
+
+        return $html.'</table>';
+    }
+
     public static function layout(string $preheader, string $innerHtml): string
     {
         $year = date('Y');

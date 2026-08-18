@@ -22,30 +22,13 @@ class RidePolicy
 
     public function view(User $user, Ride $ride): bool
     {
-        if ($user->hasRole(UserRole::Admin->value)) {
-            return true;
-        }
-
-        if ($user->hasRole(UserRole::Empresa->value)) {
-            $companyIds = $user->accessibleCompanyIds();
-
-            return $companyIds->contains($ride->company_id)
-                || $companyIds->contains($ride->partner_company_id);
-        }
-
-        if ($user->hasRole(UserRole::Motorista->value)) {
-            if ($user->driver?->id === $ride->driver_id) {
-                return true;
-            }
-
-            return $this->driverCanSeeOpenRide($user, $ride);
-        }
-
-        if ($user->hasRole(UserRole::Cliente->value)) {
-            return $user->client?->id === $ride->client_id;
-        }
-
-        return false;
+        return match ($user->actingRole()) {
+            UserRole::Admin => true,
+            UserRole::Empresa => $this->inCompanyFleet($user, $ride),
+            UserRole::Motorista => $user->driver?->id === $ride->driver_id
+                || $this->driverCanSeeOpenRide($user, $ride),
+            UserRole::Cliente => $user->client?->id === $ride->client_id,
+        };
     }
 
     public function create(User $user): bool
@@ -60,30 +43,35 @@ class RidePolicy
 
     public function update(User $user, Ride $ride): bool
     {
-        if ($user->hasRole(UserRole::Cliente->value) && $user->client?->id === $ride->client_id) {
+        if ($user->isActingAs(UserRole::Cliente) && $user->client?->id === $ride->client_id) {
             return true;
         }
 
-        return $this->view($user, $ride) && ! $user->hasRole(UserRole::Cliente->value);
+        return $this->view($user, $ride) && ! $user->isActingAs(UserRole::Cliente);
     }
 
     public function manage(User $user, Ride $ride): bool
     {
-        return $user->hasRole(UserRole::Admin->value)
-            || ($user->hasRole(UserRole::Empresa->value) && $this->view($user, $ride));
+        if ($user->hasRole(UserRole::Admin->value) && $user->isActingAs(UserRole::Admin)) {
+            return true;
+        }
+
+        return $user->hasRole(UserRole::Empresa->value)
+            && $user->isActingAs(UserRole::Empresa)
+            && $this->inCompanyFleet($user, $ride);
     }
 
     public function accept(User $user, Ride $ride): bool
     {
-        if ($user->hasRole(UserRole::Admin->value)) {
+        if ($user->isActingAs(UserRole::Admin) && $user->hasRole(UserRole::Admin->value)) {
             return true;
         }
 
-        if ($user->hasRole(UserRole::Empresa->value)) {
+        if ($user->isActingAs(UserRole::Empresa)) {
             return $this->manage($user, $ride);
         }
 
-        if ($user->hasRole(UserRole::Motorista->value)) {
+        if ($user->isActingAs(UserRole::Motorista) && $user->hasRole(UserRole::Motorista->value)) {
             return $this->driverCanSeeOpenRide($user, $ride);
         }
 
@@ -92,15 +80,15 @@ class RidePolicy
 
     public function operate(User $user, Ride $ride): bool
     {
-        if ($user->hasRole(UserRole::Admin->value)) {
+        if ($user->isActingAs(UserRole::Admin) && $user->hasRole(UserRole::Admin->value)) {
             return true;
         }
 
-        if ($user->hasRole(UserRole::Empresa->value)) {
+        if ($user->isActingAs(UserRole::Empresa)) {
             return $this->manage($user, $ride);
         }
 
-        if ($user->hasRole(UserRole::Motorista->value)) {
+        if ($user->isActingAs(UserRole::Motorista) && $user->hasRole(UserRole::Motorista->value)) {
             return $user->driver?->id === $ride->driver_id;
         }
 
@@ -114,7 +102,20 @@ class RidePolicy
         }
 
         return $user->hasRole(UserRole::Cliente->value)
+            && $user->isActingAs(UserRole::Cliente)
             && $user->client?->id === $ride->client_id;
+    }
+
+    private function inCompanyFleet(User $user, Ride $ride): bool
+    {
+        if (! $user->hasRole(UserRole::Empresa->value) && ! $user->hasRole(UserRole::Admin->value)) {
+            return false;
+        }
+
+        $companyIds = $user->accessibleCompanyIds();
+
+        return $companyIds->contains($ride->company_id)
+            || $companyIds->contains($ride->partner_company_id);
     }
 
     private function driverCanSeeOpenRide(User $user, Ride $ride): bool

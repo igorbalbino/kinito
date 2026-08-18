@@ -29,7 +29,7 @@ class KinitoApiTest extends TestCase
         }
     }
 
-    public function test_client_can_register_and_login(): void
+    public function test_client_can_register_and_must_verify_email_before_login(): void
     {
         $response = $this->postJson('/api/v1/auth/register', [
             'name' => 'Cliente Teste',
@@ -40,15 +40,23 @@ class KinitoApiTest extends TestCase
         ]);
 
         $response->assertCreated()
-            ->assertJsonPath('user.email', 'cliente@test.com')
-            ->assertJsonStructure(['token', 'user']);
+            ->assertJsonPath('email_verification_required', true)
+            ->assertJsonPath('email', 'cliente@test.com')
+            ->assertJsonMissingPath('token');
 
-        $login = $this->postJson('/api/v1/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'cliente@test.com',
             'password' => 'password',
-        ]);
+        ])->assertUnprocessable()
+            ->assertJsonPath('email_unverified', true);
 
-        $login->assertOk()->assertJsonStructure(['token']);
+        $user = User::query()->where('email', 'cliente@test.com')->firstOrFail();
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'cliente@test.com',
+            'password' => 'password',
+        ])->assertOk()->assertJsonStructure(['token']);
     }
 
     public function test_public_register_rejects_empresa_role(): void

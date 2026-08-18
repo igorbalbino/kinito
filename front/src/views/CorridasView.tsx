@@ -179,7 +179,7 @@ export const CorridasView: React.FC = () => {
       {viewMode === 'table' && (
         <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden min-w-0">
           <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
-            {filteredRides.slice(0, 15).map((ride) => (
+            {filteredRides.map((ride) => (
               <button
                 key={ride.id}
                 type="button"
@@ -233,7 +233,7 @@ export const CorridasView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                {filteredRides.slice(0, 15).map((ride) => (
+                {filteredRides.map((ride) => (
                   <tr key={ride.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                     <td className="py-3 px-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">{ride.code}</td>
                     {clientMode ? (

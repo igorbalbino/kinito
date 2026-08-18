@@ -26,7 +26,7 @@ export const Topbar: React.FC = () => {
     theme,
     toggleTheme,
     activeRole,
-    setActiveRole,
+    switchActiveRole,
     financialMode,
     setFinancialMode,
     notifications,
@@ -216,7 +216,7 @@ export const Topbar: React.FC = () => {
                         key={r}
                         type="button"
                         onClick={() => {
-                          setActiveRole(r);
+                          switchActiveRole(r);
                           setIsProfileMenuOpen(false);
                         }}
                         className={`w-full text-left px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between border ${

@@ -26,7 +26,7 @@ import {
   normalizeRide,
   normalizeTransaction,
 } from '../lib/normalize';
-import { roleFromApi } from '../lib/mappers';
+import { rolesFromApi } from '../lib/mappers';
 import { useAppStore } from '../store/useAppStore';
 import type { FinancialMode } from '../types';
 
@@ -60,7 +60,11 @@ export function useBootstrapApiData(enabled = true) {
         setApiSession(token, sanitizeApiUser(user), getApiCompanyId());
       }
       if (user?.roles) {
-        setActiveRole(roleFromApi(user.roles));
+        const allowed = rolesFromApi(user.roles);
+        const current = useAppStore.getState().activeRole;
+        if (!allowed.includes(current)) {
+          setActiveRole(allowed[0] ?? 'cliente');
+        }
       }
       const companyId = getApiCompanyId();
       if (companyId) setSelectedCompanyId(String(companyId));

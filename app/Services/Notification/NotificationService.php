@@ -3,6 +3,7 @@
 namespace App\Services\Notification;
 
 use App\Models\AppNotification;
+use App\Models\Ride;
 use App\Models\User;
 use App\Services\Mail\MailService;
 use App\Services\WhatsApp\WhatsAppManager;
@@ -131,6 +132,47 @@ class NotificationService
         }
 
         return $this->mail->sendVerification($user, $this->verificationUrl($user));
+    }
+
+    public function sendRideReceipts(Ride $ride): void
+    {
+        $ride->loadMissing(['client.user', 'driver.user', 'company']);
+        $panelUrl = rtrim((string) config('kinito.frontend_url'), '/').'/corridas';
+        $origin = is_array($ride->origin) ? (string) ($ride->origin['address'] ?? '') : '';
+        $destination = is_array($ride->destination) ? (string) ($ride->destination['address'] ?? '') : '';
+        $requestedAt = $ride->requested_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '';
+        $completedAt = $ride->completed_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '';
+        $gross = 'R$ '.number_format((float) $ride->gross_value, 2, ',', '.');
+        $company = (string) ($ride->company?->name ?? '');
+
+        $clientUser = $ride->client?->user;
+        if ($clientUser) {
+            $this->mail->sendRideReceiptClient($clientUser, [
+                'code' => (string) $ride->code,
+                'origin' => $origin,
+                'destination' => $destination,
+                'requestedAt' => $requestedAt,
+                'completedAt' => $completedAt,
+                'gross' => $gross,
+                'company' => $company,
+                'driver' => $ride->driver?->user?->name,
+            ], $panelUrl);
+        }
+
+        $driverUser = $ride->driver?->user;
+        if ($driverUser) {
+            $this->mail->sendRideReceiptDriver($driverUser, [
+                'code' => (string) $ride->code,
+                'origin' => $origin,
+                'destination' => $destination,
+                'requestedAt' => $requestedAt,
+                'completedAt' => $completedAt,
+                'gross' => $gross,
+                'net' => 'R$ '.number_format((float) $ride->driver_net, 2, ',', '.'),
+                'client' => (string) ($ride->client?->user?->name ?? ''),
+                'company' => $company,
+            ], $panelUrl);
+        }
     }
 
     public function sendPasswordResetEmail(User $user, string $token): bool

@@ -20,29 +20,11 @@ class ClientPolicy
 
     public function view(User $user, Client $client): bool
     {
-        if ($user->hasRole(UserRole::Admin->value)) {
-            return true;
-        }
-
-        if ($user->hasRole(UserRole::Cliente->value)) {
-            return $user->client?->id === $client->id;
-        }
-
-        if ($user->hasRole(UserRole::Empresa->value)) {
-            $companyIds = $user->accessibleCompanyIds();
-
-            return $companyIds->isNotEmpty()
-                && $client->companies()->whereIn('companies.id', $companyIds)->exists();
-        }
-
-        if ($user->hasRole(UserRole::Motorista->value)) {
-            $companyIds = $user->accessibleCompanyIds();
-
-            return $companyIds->isNotEmpty()
-                && $client->companies()->whereIn('companies.id', $companyIds)->exists();
-        }
-
-        return false;
+        return match ($user->actingRole()) {
+            UserRole::Admin => true,
+            UserRole::Cliente, UserRole::Motorista => $user->client?->id === $client->id,
+            UserRole::Empresa => $this->inCompanyRoster($user, $client),
+        };
     }
 
     public function create(User $user): bool
@@ -56,6 +38,24 @@ class ClientPolicy
 
     public function update(User $user, Client $client): bool
     {
-        return $this->view($user, $client);
+        if ($user->isActingAs(UserRole::Cliente) || $user->isActingAs(UserRole::Motorista)) {
+            return $user->client?->id === $client->id;
+        }
+
+        if ($user->hasRole(UserRole::Admin->value) && $user->isActingAs(UserRole::Admin)) {
+            return true;
+        }
+
+        return $user->hasRole(UserRole::Empresa->value)
+            && $user->isActingAs(UserRole::Empresa)
+            && $this->inCompanyRoster($user, $client);
+    }
+
+    private function inCompanyRoster(User $user, Client $client): bool
+    {
+        $companyIds = $user->accessibleCompanyIds();
+
+        return $companyIds->isNotEmpty()
+            && $client->companies()->whereIn('companies.id', $companyIds)->exists();
     }
 }

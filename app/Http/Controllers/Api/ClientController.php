@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ClientResource;
 use App\Models\Client;
@@ -24,19 +25,16 @@ class ClientController extends Controller
         $this->authorize('viewAny', Client::class);
 
         $query = Client::query()->with(['user', 'preferences', 'companies']);
+        $user = $request->user();
+        $acting = $user->actingRole();
 
-        if ($request->user()->hasRole('CLIENTE') && ! $request->user()->hasRole('ADMIN')) {
-            $query->where('user_id', $request->user()->id);
-        }
-
-        if ($request->user()->hasRole('EMPRESA') && ! $request->user()->hasRole('ADMIN')) {
-            $companyIds = $request->user()->accessibleCompanyIds();
+        if ($acting === UserRole::Admin) {
+            // all
+        } elseif ($acting === UserRole::Empresa) {
+            $companyIds = $user->accessibleCompanyIds();
             $query->whereHas('companies', fn ($q) => $q->whereIn('companies.id', $companyIds));
-        }
-
-        if ($request->user()->hasRole('MOTORISTA') && ! $request->user()->hasRole('ADMIN')) {
-            $companyIds = $request->user()->accessibleCompanyIds();
-            $query->whereHas('companies', fn ($q) => $q->whereIn('companies.id', $companyIds));
+        } else {
+            $query->where('user_id', $user->id);
         }
 
         if ($status = $request->string('status')->toString()) {
@@ -51,7 +49,9 @@ class ClientController extends Controller
             });
         }
 
-        return ClientResource::collection($query->latest()->paginate($request->integer('per_page', 20)));
+        $perPage = min(100, max(1, $request->integer('per_page', 50)));
+
+        return ClientResource::collection($query->latest()->paginate($perPage));
     }
 
     public function store(Request $request): JsonResponse
@@ -77,7 +77,9 @@ class ClientController extends Controller
         abort_unless($company, 422, 'Informe a empresa para vincular o cliente.');
         abort_unless($request->user()->canAccessCompany($company), 403, 'Sem permissão nesta empresa.');
 
-        $origin = $request->user()->hasRole('MOTORISTA') ? 'motorista' : 'empresa';
+        $origin = $request->user()->hasRole('MOTORISTA') && ! $request->user()->hasRole('EMPRESA')
+            ? 'motorista'
+            : 'empresa';
         $result = $this->clients->createByActor($data, $request->user(), $company, $origin);
 
         $invitePending = (bool) ($result['invite_pending'] ?? false);

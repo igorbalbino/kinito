@@ -24,6 +24,7 @@ interface AppState {
 
   activeRole: UserRole;
   setActiveRole: (role: UserRole) => void;
+  switchActiveRole: (role: UserRole) => void;
   selectedCompanyId: string;
   setSelectedCompanyId: (id: string) => void;
 
@@ -81,6 +82,7 @@ interface AppState {
   setQuickActionSheetOpen: (open: boolean) => void;
 }
 
+const ACTIVE_ROLE_KEY = 'kinito_active_role';
 const emptyDomain = {
   rides: [] as Ride[],
   drivers: [] as Driver[],
@@ -103,8 +105,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ theme: nextTheme });
   },
 
-  activeRole: 'cliente',
-  setActiveRole: (activeRole) => set({ activeRole }),
+  activeRole: (typeof window !== 'undefined' && (localStorage.getItem(ACTIVE_ROLE_KEY) as UserRole)) || 'cliente',
+  setActiveRole: (activeRole) => {
+    localStorage.setItem(ACTIVE_ROLE_KEY, activeRole);
+    set({ activeRole });
+  },
+  switchActiveRole: (activeRole) => {
+    localStorage.setItem(ACTIVE_ROLE_KEY, activeRole);
+    set({ activeRole, ...emptyDomain, dataLoaded: false, dataError: null });
+  },
   selectedCompanyId: '',
   setSelectedCompanyId: (id) => set({ selectedCompanyId: id }),
 

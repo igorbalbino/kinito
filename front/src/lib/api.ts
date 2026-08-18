@@ -1,6 +1,7 @@
 const TOKEN_KEY = 'kinito_api_token';
 const USER_KEY = 'kinito_api_user';
 const COMPANY_KEY = 'kinito_api_company_id';
+export const ACTIVE_ROLE_KEY = 'kinito_active_role';
 
 export type ApiUser = {
   id: number | string;
@@ -196,6 +197,7 @@ export function clearApiSession(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(COMPANY_KEY);
+  localStorage.removeItem(ACTIVE_ROLE_KEY);
 }
 
 export function listSessionCompanies(user: ApiUser | null = getStoredApiUser()): { id: number; name: string }[] {
@@ -226,6 +228,10 @@ export async function apiFetch<T = unknown>(
     headers.set('Authorization', `Bearer ${token}`);
   }
   headers.set('Accept', 'application/json');
+  const acting = localStorage.getItem(ACTIVE_ROLE_KEY);
+  if (token && acting) {
+    headers.set('X-Kinito-Role', acting.toUpperCase());
+  }
 
   const res = await fetch(`${base}${path.startsWith('/') ? path : `/${path}`}`, {
     ...options,
@@ -512,7 +518,7 @@ export async function apiLogout(): Promise<void> {
 }
 
 export async function fetchRides(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/corridas'));
+  return paginated(await apiFetch('/api/v1/corridas?per_page=100'));
 }
 
 export async function fetchPlatformConfig(): Promise<{
@@ -546,7 +552,7 @@ export async function rideAction(
 }
 
 export async function fetchClientsList(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/clientes'));
+  return paginated(await apiFetch('/api/v1/clientes?per_page=100'));
 }
 
 export async function createClientApi(payload: Record<string, unknown>): Promise<{
@@ -566,7 +572,7 @@ export async function createDriverApi(payload: Record<string, unknown>): Promise
 }
 
 export async function fetchDriversList(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/motoristas'));
+  return paginated(await apiFetch('/api/v1/motoristas?per_page=100'));
 }
 
 export async function approveDriverApi(id: string, companyId: number): Promise<Record<string, unknown>> {
@@ -581,11 +587,11 @@ export async function blockDriverApi(id: string): Promise<Record<string, unknown
 }
 
 export async function fetchCompaniesFull(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/empresas'));
+  return paginated(await apiFetch('/api/v1/empresas?per_page=100'));
 }
 
 export async function fetchTransactions(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/financeiro/transactions'));
+  return paginated(await apiFetch('/api/v1/financeiro/transactions?per_page=100'));
 }
 
 export async function fetchNotifications(): Promise<Record<string, unknown>[]> {
@@ -605,5 +611,38 @@ export async function fetchRideLogs(): Promise<Record<string, unknown>[]> {
 }
 
 export async function fetchAudits(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/logs/audits'));
+  return paginated(await apiFetch('/api/v1/logs/audits?per_page=100'));
+}
+
+export async function fetchDashboard(): Promise<{
+  role: string;
+  metrics: Record<string, number>;
+  recentRides: unknown;
+}> {
+  return apiFetch('/api/v1/dashboard');
+}
+
+export async function fetchConsolidatedReport(): Promise<{
+  own: { summary: Record<string, number>; items: Record<string, unknown>[] };
+  received: { summary: Record<string, number>; items: Record<string, unknown>[] };
+  forwarded: { summary: Record<string, number>; items: Record<string, unknown>[] };
+  totals: { rides: number; gross: number; companyCut: number };
+}> {
+  return apiFetch('/api/v1/relatorios/consolidated');
+}
+
+export async function patchRideFinance(
+  rideId: string,
+  payload: {
+    gross_value: number;
+    platform_commission?: number;
+    driver_net?: number;
+    company_cut?: number;
+    manual_override_notes?: string;
+  },
+): Promise<Record<string, unknown>> {
+  return apiFetch(`/api/v1/corridas/${rideId}/finance`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
 }

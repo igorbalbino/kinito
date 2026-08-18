@@ -35,6 +35,7 @@ use App\Models\RideLog;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Finance\FinanceService;
+use App\Support\EnsureUserProfiles;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -210,7 +211,7 @@ class DatabaseSeeder extends Seeder
                     'is_active' => true,
                 ]
             );
-            $user->syncRoles([UserRole::Empresa->value]);
+            $user->syncRoles([UserRole::Empresa->value, UserRole::Motorista->value, UserRole::Cliente->value]);
 
             $company = Company::query()->updateOrCreate(
                 ['cnpj' => $def['cnpj']],
@@ -238,6 +239,8 @@ class DatabaseSeeder extends Seeder
             $company->users()->syncWithoutDetaching([
                 $user->id => ['role' => CompanyCollaboratorRole::Dono->value, 'is_active' => true],
             ]);
+
+            EnsureUserProfiles::grantEmpresaSwitchProfiles($user, $company);
 
             CompanySetting::query()->updateOrCreate(
                 ['company_id' => $company->id],
@@ -304,7 +307,7 @@ class DatabaseSeeder extends Seeder
                     'is_active' => true,
                 ]
             );
-            $user->syncRoles([UserRole::Motorista->value]);
+            $user->syncRoles([UserRole::Motorista->value, UserRole::Cliente->value]);
 
             $status = $i <= 6 ? DriverStatus::Ativo : DriverStatus::Pendente;
 
@@ -341,6 +344,12 @@ class DatabaseSeeder extends Seeder
                     'approved_at' => $status === DriverStatus::Ativo ? now() : null,
                 ],
             ]);
+
+            if ($status === DriverStatus::Ativo && ! $driver->primary_company_id) {
+                $driver->forceFill(['primary_company_id' => $company->id])->save();
+            }
+
+            EnsureUserProfiles::grantDriverClientProfile($user, $company);
 
             $drivers[] = $driver;
         }

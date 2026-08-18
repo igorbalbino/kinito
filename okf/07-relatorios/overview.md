@@ -11,7 +11,7 @@ Filtros: `from` `to` `driver_id` `client_id` `company_id` `status`
 
 ## Tela
 
-`/relatorios` — mock exporta CSV (receita/motoristas/clientes); API acima é a fonte real.
+`/relatorios` — GET `/relatorios/consolidated` (e CSV a partir desses itens). Empresa só vê na tela; recibo por e-mail vai ao cliente e ao motorista.
 
 ## Relaciona
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -33,7 +33,7 @@ import { PageContainer } from '../components/layout/PageContainer';
 import { RideDetailsModal } from '../components/modals/RideDetailsModal';
 import { Ride } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
-import { rideAction } from '../lib/api';
+import { rideAction, fetchDashboard } from '../lib/api';
 import { normalizeRide } from '../lib/normalize';
 import { unwrapResource } from '../lib/sessionProfile';
 import { isClientRole } from '../lib/navByRole';
@@ -51,20 +51,28 @@ export const DashboardView: React.FC = () => {
     setNewRideModalOpen,
     dataLoading,
     dataError,
+    dataLoaded,
   } = useAppStore();
 
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
+  const [apiMetrics, setApiMetrics] = useState<Record<string, number> | null>(null);
   const clientMode = isClientRole(activeRole);
+
+  useEffect(() => {
+    void fetchDashboard()
+      .then((res) => setApiMetrics(res.metrics || null))
+      .catch(() => setApiMetrics(null));
+  }, [activeRole, dataLoaded]);
 
   const completedRides = rides.filter((r) => r.status === 'concluida');
   const inProgressRides = rides.filter((r) => r.status === 'em_andamento' || r.status === 'atribuida');
   const pendingRides = rides.filter((r) => r.status === 'pendente');
   const cancelledRides = rides.filter((r) => r.status === 'cancelada');
 
-  const totalGrossRevenue = completedRides.reduce((acc, r) => acc + r.grossValue, 0);
-  const totalPlatformFees = completedRides.reduce((acc, r) => acc + r.platformCommission, 0);
+  const totalGrossRevenue = apiMetrics?.grossRevenue ?? apiMetrics?.monthlyRevenue ?? completedRides.reduce((acc, r) => acc + r.grossValue, 0);
+  const totalPlatformFees = apiMetrics?.platformCommission ?? completedRides.reduce((acc, r) => acc + r.platformCommission, 0);
   const totalStripeFees = completedRides.reduce((acc, r) => acc + r.stripeFee, 0);
-  const totalDriverPayouts = completedRides.reduce((acc, r) => acc + r.driverNet, 0);
+  const totalDriverPayouts = apiMetrics?.totalEarnings ?? completedRides.reduce((acc, r) => acc + r.driverNet, 0);
 
   const activeDriverRide =
     rides.find((r) => r.status === 'em_andamento') ||

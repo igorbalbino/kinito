@@ -158,6 +158,34 @@ class MailService
         );
     }
 
+    /**
+     * @param  array{code:string,origin:string,destination:string,requestedAt:string,completedAt:string,gross:string,company:string,driver:?string}  $ride
+     */
+    public function sendRideReceiptClient(User $user, array $ride, string $panelUrl): bool
+    {
+        return $this->send(
+            $user->email,
+            'Recibo da corrida '.$ride['code'].' - Kinito',
+            EmailTemplates::rideReceiptClient((string) $user->name, $ride, $panelUrl),
+            'ride_receipt_client',
+            ['user_id' => $user->id, 'subject' => 'Recibo da corrida '.$ride['code'].' - Kinito'],
+        );
+    }
+
+    /**
+     * @param  array{code:string,origin:string,destination:string,requestedAt:string,completedAt:string,gross:string,net:string,client:string,company:string}  $ride
+     */
+    public function sendRideReceiptDriver(User $user, array $ride, string $panelUrl): bool
+    {
+        return $this->send(
+            $user->email,
+            'Recibo da corrida '.$ride['code'].' - Kinito',
+            EmailTemplates::rideReceiptDriver((string) $user->name, $ride, $panelUrl),
+            'ride_receipt_driver',
+            ['user_id' => $user->id, 'subject' => 'Recibo da corrida '.$ride['code'].' - Kinito'],
+        );
+    }
+
     public function sendProviderSelectedByClient(User $recipient, string $clientName, string $companyName): bool
     {
         return $this->send(

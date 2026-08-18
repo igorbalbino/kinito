@@ -13,6 +13,7 @@ use App\Services\Audit\AuditService;
 use App\Services\Notification\NotificationService;
 use App\Services\Provider\ProviderPreferenceService;
 use App\Support\EnsureUserRoles;
+use App\Support\EnsureUserProfiles;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -114,6 +115,8 @@ class DriverApprovalService
                 }
             }
 
+            EnsureUserProfiles::grantDriverClientProfile($user, $company);
+
             if ($wasNewUser) {
                 $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
                 $this->notifications->notify(
@@ -187,6 +190,8 @@ class DriverApprovalService
             }
 
             $this->audit->log('DRIVER_SELF_REGISTERED', $user, $driver);
+
+            EnsureUserProfiles::grantDriverClientProfile($user);
 
             return compact('user', 'driver');
         });

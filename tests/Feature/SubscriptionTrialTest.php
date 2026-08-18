@@ -109,7 +109,7 @@ class SubscriptionTrialTest extends TestCase
         $this->assertSame($company->id, $prefs->default_company_id);
     }
 
-    public function test_company_created_client_must_change_password_and_login_by_phone(): void
+    public function test_company_created_client_must_verify_email_before_login(): void
     {
         [$owner, $company] = $this->makeCompany();
         Sanctum::actingAs($owner);
@@ -119,17 +119,41 @@ class SubscriptionTrialTest extends TestCase
             'email' => 'convite@test.com',
             'phone' => '11999998888',
             'company_id' => $company->id,
-        ])->assertCreated();
+        ])->assertCreated()
+            ->assertJsonPath('invite_pending', true)
+            ->assertJsonMissingPath('temporary_password');
 
-        $temp = $response->json('temporary_password');
-        $this->assertNotEmpty($temp);
-
-        $user = User::query()->where('email', 'convite@test.com')->first();
+        $user = User::query()->where('email', 'convite@test.com')->firstOrFail();
         $this->assertTrue($user->must_change_password);
+        $this->assertNull($user->email_verified_at);
+
+        $user->forceFill(['password' => 'temp-known-123'])->save();
 
         $this->postJson('/api/v1/auth/login', [
-            'login' => '11999998888',
-            'password' => $temp,
+            'login' => 'convite@test.com',
+            'password' => 'temp-known-123',
+        ])->assertUnprocessable()
+            ->assertJsonPath('email_unverified', true);
+
+        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1($user->email)]
+        );
+
+        $this->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('credentials_sent', true);
+
+        $user->refresh();
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertTrue($user->must_change_password);
+
+        $user->forceFill(['password' => 'temp-known-123'])->save();
+
+        $this->postJson('/api/v1/auth/login', [
+            'login' => 'convite@test.com',
+            'password' => 'temp-known-123',
         ])->assertOk();
 
         Sanctum::actingAs($user->fresh());
@@ -139,7 +163,7 @@ class SubscriptionTrialTest extends TestCase
             ->assertJsonPath('code', 'password_change_required');
 
         $this->postJson('/api/v1/auth/change-password', [
-            'current_password' => $temp,
+            'current_password' => 'temp-known-123',
             'password' => 'new-password-123',
             'password_confirmation' => 'new-password-123',
         ])->assertOk();

@@ -18,7 +18,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { Ride } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { SafeSelect } from '../common/SafeSelect';
-import { rideAction } from '../../lib/api';
+import { rideAction, patchRideFinance } from '../../lib/api';
 import { normalizeRide } from '../../lib/normalize';
 import { unwrapResource } from '../../lib/sessionProfile';
 import { isClientRole, isFleetOperator } from '../../lib/navByRole';
@@ -30,7 +30,7 @@ interface RideDetailsModalProps {
 }
 
 export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClose }) => {
-  const { financialMode, updateRideFinancials, upsertRide, drivers, activeRole } = useAppStore();
+  const { financialMode, upsertRide, drivers, activeRole } = useAppStore();
   const clientMode = isClientRole(activeRole);
   const canDispatch = isFleetOperator(activeRole);
 
@@ -66,12 +66,20 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
   };
 
   const handleSaveFinancials = () => {
-    updateRideFinancials(ride.id, {
-      grossValue: Number(grossInput),
-      driverNet: Number(driverNetInput),
-      platformCommission: Number(platformFeeInput),
-    });
-    setIsEditingFinancials(false);
+    void (async () => {
+      setActionError(null);
+      try {
+        const res = await patchRideFinance(ride.id, {
+          gross_value: Number(grossInput),
+          driver_net: Number(driverNetInput),
+          platform_commission: Number(platformFeeInput),
+        });
+        upsertRide(normalizeRide(unwrapResource(res)));
+        setIsEditingFinancials(false);
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : 'Falha ao salvar financeiro');
+      }
+    })();
   };
 
   const handleReassign = () => {

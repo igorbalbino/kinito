@@ -12,17 +12,22 @@ class ConfigController extends Controller
 {
     public function platform(Request $request): JsonResponse
     {
-        return response()->json([
+        $payload = [
             'paymentProvider' => config('kinito.payment_provider'),
-            'commissions' => config('kinito.commissions'),
-            'stripe' => [
+            'featureFlags' => FeatureFlag::query()->pluck('enabled', 'key'),
+        ];
+
+        if ($request->user()?->hasRole('ADMIN')) {
+            $payload['commissions'] = config('kinito.commissions');
+            $payload['stripe'] = [
                 'feePercent' => config('kinito.stripe.fee_percent'),
                 'feeFixed' => config('kinito.stripe.fee_fixed'),
                 'configured' => filled(config('kinito.stripe.secret')),
-            ],
-            'settings' => PlatformSetting::query()->pluck('value', 'key'),
-            'featureFlags' => FeatureFlag::query()->pluck('enabled', 'key'),
-        ]);
+            ];
+            $payload['settings'] = PlatformSetting::query()->pluck('value', 'key');
+        }
+
+        return response()->json($payload);
     }
 
     public function updatePlatform(Request $request): JsonResponse
@@ -37,7 +42,6 @@ class ConfigController extends Controller
 
         if (isset($data['payment_provider'])) {
             PlatformSetting::setValue('PAYMENT_PROVIDER', $data['payment_provider']);
-            // Runtime note: prefer .env; this stores override visibility for admin UI.
         }
 
         foreach ($data['settings'] ?? [] as $key => $value) {

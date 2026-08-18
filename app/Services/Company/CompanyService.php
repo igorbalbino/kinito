@@ -14,6 +14,7 @@ use App\Services\Notification\NotificationService;
 use App\Services\Referral\ReferralService;
 use App\Services\Subscription\SubscriptionLifecycleService;
 use App\Support\EnsureUserRoles;
+use App\Support\EnsureUserProfiles;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -76,6 +77,8 @@ class CompanyService
             }
 
             $this->referrals->attachOnRegister($company, $data['referral_code'] ?? null);
+
+            EnsureUserProfiles::grantEmpresaSwitchProfiles($user, $company);
 
             $this->audit->log('COMPANY_REGISTERED', $user, $company, null, $company->toArray());
 

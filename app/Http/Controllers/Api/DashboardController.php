@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\RideStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\RideResource;
 use App\Models\Client;
 use App\Models\Driver;
 use App\Models\Ride;
@@ -15,8 +17,11 @@ class DashboardController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         $user = $request->user();
+        $acting = $user->actingRole();
 
-        if ($user->hasRole('ADMIN')) {
+        if ($acting === UserRole::Admin) {
+            $recent = Ride::query()->with(['client.user', 'driver.user', 'company'])->latest()->limit(10)->get();
+
             return response()->json([
                 'role' => 'ADMIN',
                 'metrics' => [
@@ -26,13 +31,16 @@ class DashboardController extends Controller
                     'activeDrivers' => Driver::query()->where('status', 'ATIVO')->count(),
                     'clientsCount' => Client::query()->count(),
                 ],
-                'recentRides' => Ride::query()->with(['client.user', 'driver.user', 'company'])->latest()->limit(10)->get(),
+                'recentRides' => RideResource::collection($recent),
             ]);
         }
 
-        if ($user->hasRole('EMPRESA')) {
-            $ids = $user->ownedCompanies()->pluck('id')->merge($user->companies()->pluck('companies.id'));
-            $rides = Ride::query()->whereIn('company_id', $ids);
+        if ($acting === UserRole::Empresa) {
+            $ids = $user->accessibleCompanyIds();
+            $rides = Ride::query()->where(function ($q) use ($ids) {
+                $q->whereIn('company_id', $ids)->orWhereIn('partner_company_id', $ids);
+            });
+            $recent = (clone $rides)->with(['client.user', 'driver.user', 'company'])->latest()->limit(10)->get();
 
             return response()->json([
                 'role' => 'EMPRESA',
@@ -41,26 +49,31 @@ class DashboardController extends Controller
                     'ridesCount' => (clone $rides)->count(),
                     'activeDrivers' => Driver::query()->whereHas('companies', fn ($q) => $q->whereIn('companies.id', $ids))->where('status', 'ATIVO')->count(),
                 ],
-                'recentRides' => (clone $rides)->with(['client.user', 'driver.user', 'company'])->latest()->limit(10)->get(),
+                'recentRides' => RideResource::collection($recent),
             ]);
         }
 
-        if ($user->hasRole('MOTORISTA')) {
+        if ($acting === UserRole::Motorista) {
             $driver = $user->driver;
+            abort_unless($driver, 404, 'Perfil de motorista não encontrado.');
+
+            $recent = Ride::query()->where('driver_id', $driver->id)->with(['client.user', 'company'])->latest()->limit(10)->get();
 
             return response()->json([
                 'role' => 'MOTORISTA',
                 'metrics' => [
-                    'totalEarnings' => (float) ($driver?->total_earnings ?? 0),
-                    'pendingBalance' => (float) ($driver?->pending_balance ?? 0),
-                    'totalRides' => $driver?->total_rides ?? 0,
-                    'rating' => (float) ($driver?->rating ?? 0),
+                    'totalEarnings' => (float) ($driver->total_earnings ?? 0),
+                    'pendingBalance' => (float) ($driver->pending_balance ?? 0),
+                    'totalRides' => $driver->total_rides ?? 0,
+                    'rating' => (float) ($driver->rating ?? 0),
                 ],
-                'recentRides' => Ride::query()->where('driver_id', $driver?->id)->with(['client.user', 'company'])->latest()->limit(10)->get(),
+                'recentRides' => RideResource::collection($recent),
             ]);
         }
 
         $client = $user->client;
+        $query = Ride::query()->where('client_id', $client?->id ?? 0);
+        $recent = $query->with(['driver.user', 'company'])->latest()->limit(10)->get();
 
         return response()->json([
             'role' => 'CLIENTE',
@@ -69,7 +82,7 @@ class DashboardController extends Controller
                 'totalSpent' => (float) ($client?->total_spent ?? 0),
                 'rating' => (float) ($client?->rating ?? 0),
             ],
-            'recentRides' => Ride::query()->where('client_id', $client?->id)->with(['driver.user', 'company'])->latest()->limit(10)->get(),
+            'recentRides' => RideResource::collection($recent),
         ]);
     }
 }

@@ -129,6 +129,7 @@ class RideService
             }
             $ride->client?->increment('total_rides');
             $ride->client?->increment('total_spent', (float) $ride->gross_value);
+            $this->notifications->sendRideReceipts($ride);
         }
 
         $this->writeLogs($ride, 'status_changed', [
@@ -179,6 +180,19 @@ class RideService
 
     public function reassign(Ride $ride, Driver $driver): Ride
     {
+        if (! $driver->canAcceptRides()) {
+            throw new InvalidArgumentException('Motorista com troca de fornecedor pendente não pode aceitar corridas.');
+        }
+
+        $linked = $driver->companies()
+            ->where('companies.id', $ride->company_id)
+            ->wherePivot('status', DriverStatus::Ativo->value)
+            ->exists();
+
+        if (! $linked) {
+            throw new InvalidArgumentException('Motorista não está ativo nesta empresa.');
+        }
+
         $before = ['driver_id' => $ride->driver_id];
         $ride->update([
             'driver_id' => $driver->id,
