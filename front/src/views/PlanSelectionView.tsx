@@ -18,6 +18,7 @@ import {
   SubscriptionStatusPayload,
 } from '../lib/api';
 import { useAppStore } from '../store/useAppStore';
+import { isMockPlanId, resolvePlansForDisplay } from '../lib/mockPlans';
 
 function planFeatureItems(features: ApiPlan['features']): string[] {
   if (Array.isArray(features)) {
@@ -36,6 +37,7 @@ export const PlanSelectionView: React.FC = () => {
   const { activeRole } = useAppStore();
   const [companyId, setCompanyId] = useState<number | null>(() => getApiCompanyId());
   const [plans, setPlans] = useState<ApiPlan[]>([]);
+  const [usingMockPlans, setUsingMockPlans] = useState(false);
   const [status, setStatus] = useState<SubscriptionStatusPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyPlanId, setBusyPlanId] = useState<number | string | null>(null);
@@ -52,11 +54,18 @@ export const PlanSelectionView: React.FC = () => {
 
     try {
       const planList = await fetchPlans();
-      setPlans(planList);
+      const resolved = resolvePlansForDisplay(planList);
+      setPlans(resolved.plans);
+      setUsingMockPlans(resolved.usingMockPlans);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Falha ao carregar planos');
-      setLoading(false);
-      return;
+      const resolved = resolvePlansForDisplay([]);
+      setPlans(resolved.plans);
+      setUsingMockPlans(true);
+      if (resolved.plans.length === 0) {
+        setError(e instanceof Error ? e.message : 'Falha ao carregar planos');
+        setLoading(false);
+        return;
+      }
     }
 
     let cid = companyId ?? getApiCompanyId() ?? listSessionCompanies()[0]?.id ?? null;
@@ -110,6 +119,23 @@ export const PlanSelectionView: React.FC = () => {
     void refresh();
   }, [activeRole, navigate, refresh]);
 
+  const resolvePlanForSubscribe = async (plan: ApiPlan): Promise<ApiPlan | null> => {
+    if (!isMockPlanId(plan.id)) return plan;
+    try {
+      const fresh = await fetchPlans();
+      const real = fresh.find((p) => p.slug === plan.slug);
+      if (real) {
+        setPlans(fresh);
+        setUsingMockPlans(false);
+        return real;
+      }
+    } catch {
+      // keep mock fallback
+    }
+    setError('Planos ainda não disponíveis no servidor. Tente novamente em instantes.');
+    return null;
+  };
+
   const startTrial = async (plan: ApiPlan) => {
     const cid = companyId ?? getApiCompanyId() ?? listSessionCompanies()[0]?.id;
     if (!cid) {
@@ -119,7 +145,9 @@ export const PlanSelectionView: React.FC = () => {
     setBusyPlanId(plan.id);
     setError(null);
     try {
-      await subscribeCompany(cid, plan.id, 'trial');
+      const target = await resolvePlanForSubscribe(plan);
+      if (!target) return;
+      await subscribeCompany(cid, target.id, 'trial');
       navigate('/dashboard', { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao iniciar trial');
@@ -137,7 +165,9 @@ export const PlanSelectionView: React.FC = () => {
     setBusyPlanId(plan.id);
     setError(null);
     try {
-      const result = await subscribeCompany(cid, plan.id, 'checkout');
+      const target = await resolvePlanForSubscribe(plan);
+      if (!target) return;
+      const result = await subscribeCompany(cid, target.id, 'checkout');
       if (result.checkout?.checkout_url) {
         window.location.href = result.checkout.checkout_url;
         return;
@@ -181,6 +211,13 @@ export const PlanSelectionView: React.FC = () => {
       </header>
 
       <main className="flex-1 max-w-5xl mx-auto w-full p-4 pb-12 space-y-6">
+        {usingMockPlans && (
+          <p className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-500/10 border border-slate-500/30 rounded-xl px-4 py-3">
+            Catálogo de demonstração (R$ 0,00) — limites e liberações por plano. Ao confirmar, o sistema
+            sincroniza com o servidor.
+          </p>
+        )}
+
         {billingDriver === 'mock' && (
           <p className="text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
             Modo de pagamento simulado — checkout abrirá uma confirmação local (sem Stripe).
@@ -200,7 +237,7 @@ export const PlanSelectionView: React.FC = () => {
           </div>
         ) : visiblePlans.length === 0 ? (
           <p className="text-sm text-slate-500 text-center py-16">
-            Nenhum plano disponível no momento. Tente novamente em instantes.
+            Nenhum plano disponível no momento.
           </p>
         ) : (
           <div className="grid md:grid-cols-3 gap-4">

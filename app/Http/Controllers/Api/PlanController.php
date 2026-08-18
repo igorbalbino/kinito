@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PlanResource;
 use App\Models\Company;
 use App\Models\Plan;
+use App\Support\DefaultPlans;
 use App\Services\Referral\ReferralService;
 use App\Services\Subscription\SubscriptionLifecycleService;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +23,11 @@ class PlanController extends Controller
 
     public function index(): AnonymousResourceCollection
     {
-        return PlanResource::collection(Plan::query()->where('is_active', true)->orderBy('price')->get());
+        DefaultPlans::ensureSeeded();
+
+        return PlanResource::collection(
+            Plan::query()->where('is_active', true)->orderBy('price')->orderBy('id')->get()
+        );
     }
 
     public function store(Request $request): PlanResource
