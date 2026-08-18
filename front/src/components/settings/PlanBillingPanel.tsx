@@ -209,7 +209,14 @@ export const PlanBillingPanel: React.FC = () => {
             <div>
               <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">Indique empresas</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Quando a empresa indicada pagar o primeiro plano, você ganha +1 mês de vigência (acumulável).
+                Quando a empresa indicada pagar o primeiro plano, você ganha +1 vigência grátis (acumulável).
+                {referral.allowed_plan_slugs?.length ? (
+                  <>
+                    {' '}
+                    Com seu plano atual, pode indicar:{' '}
+                    <strong>{referral.allowed_plan_slugs.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}</strong>.
+                  </>
+                ) : null}
               </p>
             </div>
           </div>
@@ -234,9 +241,9 @@ export const PlanBillingPanel: React.FC = () => {
           <div className="grid grid-cols-2 gap-3 text-center">
             <div className="p-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20">
               <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {referral.months_earned ?? referral.rewarded ?? 0}
+                {referral.periods_earned ?? referral.months_earned ?? referral.rewarded ?? 0}
               </div>
-              <div className="text-[11px] text-slate-500 font-semibold">Meses ganhos</div>
+              <div className="text-[11px] text-slate-500 font-semibold">Vigências ganhas</div>
             </div>
             <div className="p-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/20">
               <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
@@ -262,7 +269,7 @@ export const PlanBillingPanel: React.FC = () => {
                           : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
                       }`}
                     >
-                      {row.status === 'rewarded' ? '+1 mês' : 'Pendente'}
+                      {row.status === 'rewarded' ? '+1 vigência' : 'Pendente'}
                     </span>
                   </li>
                 ))}

@@ -1,10 +1,23 @@
 import React, { useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 
+function keywordList(keywords: string[] | string | undefined): string[] {
+  if (Array.isArray(keywords)) {
+    return keywords.map((k) => String(k).trim()).filter(Boolean);
+  }
+  if (typeof keywords === 'string') {
+    return keywords
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean);
+  }
+  return ['kinito', 'corridas', 'mobilidade'];
+}
+
 export interface SEOHeadProps {
   title: string;
   description: string;
-  keywords?: string[];
+  keywords?: string[] | string;
   canonicalUrl?: string;
   category?: string;
   jsonLdSchema?: Record<string, unknown>;
@@ -14,7 +27,7 @@ export interface SEOHeadProps {
 export const SEOHead: React.FC<SEOHeadProps> = ({
   title,
   description,
-  keywords = ['kinito', 'corridas', 'mobilidade'],
+  keywords,
   canonicalUrl,
   category = 'Kinito',
   jsonLdSchema,
@@ -27,6 +40,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
 
     const fullTitle = `${title} | Kinito`;
     document.title = fullTitle;
+    const keywordsText = keywordList(keywords).join(', ');
 
     const updateMeta = (nameAttr: string, attrValue: string, contentValue: string) => {
       let element = document.querySelector(`meta[${nameAttr}="${attrValue}"]`);
@@ -39,7 +53,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     };
 
     updateMeta('name', 'description', description);
-    updateMeta('name', 'keywords', keywords.join(', '));
+    updateMeta('name', 'keywords', keywordsText);
     updateMeta('name', 'author', 'Kinito');
     updateMeta('name', 'robots', 'index, follow');
     updateMeta('name', 'category', category);

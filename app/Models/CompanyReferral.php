@@ -15,6 +15,8 @@ class CompanyReferral extends Model
         'status',
         'rewarded_at',
         'reward_days',
+        'referred_plan_id',
+        'referrer_plan_id',
     ];
 
     protected function casts(): array
@@ -34,5 +36,15 @@ class CompanyReferral extends Model
     public function referred(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'referred_company_id');
+    }
+
+    public function referredPlan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class, 'referred_plan_id');
+    }
+
+    public function referrerPlan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class, 'referrer_plan_id');
     }
 }

@@ -38,6 +38,14 @@ return [
 
     'default_plan' => env('KINITO_DEFAULT_PLAN', 'starter'),
 
+    'referral' => [
+        'plan_tiers' => [
+            'starter' => 1,
+            'pro' => 2,
+            'enterprise' => 3,
+        ],
+    ],
+
     /*
     | WhatsApp — troque o provider sem mudar o código de negócio.
     | WHATSAPP_PROVIDER=log|baileys|meta

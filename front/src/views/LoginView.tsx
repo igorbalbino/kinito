@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, ShieldCheck, UserCheck, Building2, Users } from 'lucide-react';
+import { Lock, Mail, ArrowRight } from 'lucide-react';
 import { BrandLogo } from '../components/common/BrandLogo';
 import { SEOHead } from '../components/common/SEOHead';
 import { useAppStore } from '../store/useAppStore';
-import { UserRole } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { LanguageSelector } from '../components/common/LanguageSelector';
 import { apiLogin, clearApiSession, isApiConfigured } from '../lib/api';
@@ -19,13 +18,6 @@ export const LoginView: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const quickEmails = [
-    { role: 'admin' as UserRole, label: 'Admin', email: 'admin@kinito.test', icon: ShieldCheck },
-    { role: 'empresa' as UserRole, label: 'Empresa', email: 'empresa1@kinito.test', icon: Building2 },
-    { role: 'motorista' as UserRole, label: 'Motorista', email: 'motorista1@kinito.test', icon: UserCheck },
-    { role: 'cliente' as UserRole, label: 'Cliente', email: 'cliente1@kinito.test', icon: Users },
-  ];
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,39 +92,7 @@ export const LoginView: React.FC = () => {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-              Atalhos de e-mail (opcional)
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {quickEmails.map((preset) => {
-                const Icon = preset.icon;
-                const isActive = login === preset.email;
-                return (
-                  <button
-                    key={preset.email}
-                    type="button"
-                    onClick={() => {
-                      setLogin(preset.email);
-                    }}
-                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2 ${
-                      isActive
-                        ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-600 text-indigo-700 dark:text-indigo-300 font-bold shadow-sm'
-                        : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 text-indigo-500 shrink-0" />
-                    <div className="truncate text-xs">
-                      <div className="truncate font-semibold">{preset.label}</div>
-                      <div className="truncate text-[10px] opacity-70 font-normal">{preset.email}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4 pt-2">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
                 E-mail ou telefone

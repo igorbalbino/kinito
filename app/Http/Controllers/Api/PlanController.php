@@ -84,7 +84,11 @@ class PlanController extends Controller
         $mode = $data['mode'] ?? 'auto';
 
         try {
+            $this->referrals->assertReferredPlanAllowed($company, $plan);
             $result = $this->lifecycle->subscribe($company, $plan, $mode, $successUrl, $cancelUrl);
+            if ($result['mode'] === 'trial') {
+                $this->referrals->recordReferredPlan($company, $plan);
+            }
         } catch (InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

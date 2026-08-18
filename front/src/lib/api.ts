@@ -60,7 +60,13 @@ export type SubscriptionStatusPayload = {
     share_url?: string | null;
     pending?: number;
     rewarded?: number;
+    periods_earned?: number;
     months_earned?: number;
+    allowed_plan_slugs?: string[];
+    referral_constraints?: {
+      allowed_plan_slugs?: string[];
+      referrer_company?: string | null;
+    } | null;
     recent?: Array<{
       id: number;
       status: string;
@@ -133,10 +139,11 @@ export function sanitizePersonName(value: unknown, fallback = 'Usuário'): strin
 }
 
 function sanitizeCompanyList(
-  list: { id: number | string; name: string }[] | undefined,
+  list: { id: number | string; name: string }[] | { data?: { id: number | string; name: string }[] } | undefined,
 ): { id: number | string; name: string }[] | undefined {
-  if (!list) return undefined;
-  return list.map((c) => ({
+  const rows = Array.isArray(list) ? list : list?.data;
+  if (!rows) return undefined;
+  return rows.map((c) => ({
     id: c.id,
     name: sanitizePersonName(c.name, 'Empresa'),
   }));
@@ -293,6 +300,15 @@ export async function fetchPlans(): Promise<ApiPlan[]> {
   const data = await apiFetch<ApiPlan[] | { data: ApiPlan[] }>('/api/v1/plans');
   if (Array.isArray(data)) return data;
   return Array.isArray(data.data) ? data.data : [];
+}
+
+export async function fetchCurrentUser(): Promise<ApiUser> {
+  const payload = await apiFetch<{ data?: ApiUser; user?: ApiUser } & ApiUser>('/api/v1/auth/me');
+  const raw = payload.data ?? payload.user ?? payload;
+  const user = sanitizeApiUser(raw);
+  const token = getApiToken();
+  if (token) setApiSession(token, user);
+  return user;
 }
 
 export async function fetchSubscriptionStatus(companyId: number): Promise<SubscriptionStatusPayload> {
@@ -534,6 +550,7 @@ export async function fetchRides(): Promise<Record<string, unknown>[]> {
 
 export async function fetchPlatformConfig(): Promise<{
   paymentProvider?: string;
+  billingDriver?: 'mock' | 'stripe' | string;
   featureFlags?: Record<string, boolean>;
 }> {
   return apiFetch('/api/v1/config');

@@ -5,7 +5,9 @@ import { BrandLogo } from '../components/common/BrandLogo';
 import { SEOHead } from '../components/common/SEOHead';
 import {
   ApiPlan,
+  fetchCurrentUser,
   fetchPlans,
+  fetchPlatformConfig,
   fetchSubscriptionStatus,
   getApiCompanyId,
   getApiToken,
@@ -17,11 +19,22 @@ import {
 } from '../lib/api';
 import { useAppStore } from '../store/useAppStore';
 
+function planFeatureItems(features: ApiPlan['features']): string[] {
+  if (Array.isArray(features)) {
+    return features.map((f) => String(f)).filter(Boolean);
+  }
+  if (features && typeof features === 'object') {
+    return Object.values(features)
+      .map((v) => String(v))
+      .filter(Boolean);
+  }
+  return [];
+}
+
 export const PlanSelectionView: React.FC = () => {
   const navigate = useNavigate();
   const { activeRole } = useAppStore();
   const [companyId, setCompanyId] = useState<number | null>(() => getApiCompanyId());
-  const [companies] = useState(() => listSessionCompanies());
   const [plans, setPlans] = useState<ApiPlan[]>([]);
   const [status, setStatus] = useState<SubscriptionStatusPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,41 +43,64 @@ export const PlanSelectionView: React.FC = () => {
   const [billingDriver, setBillingDriver] = useState<'mock' | 'stripe'>('mock');
 
   const refresh = useCallback(async () => {
-    if (!isApiConfigured() || !getApiToken()) return;
-    let cid = companyId ?? companies[0]?.id ?? null;
-    if (cid && !companyId) {
-      setCompanyId(cid);
-      setApiCompanyId(cid);
-    }
-    if (!cid) {
+    if (!isApiConfigured() || !getApiToken()) {
       setLoading(false);
       return;
     }
+
+    setError(null);
+
     try {
-      const [planList, sub, config] = await Promise.all([
-        fetchPlans(),
-        fetchSubscriptionStatus(cid),
-        fetch(`${(import.meta.env.VITE_API_URL as string).replace(/\/$/, '')}/api/v1/config`, {
-          headers: {
-            Authorization: `Bearer ${getApiToken()}`,
-            Accept: 'application/json',
-          },
-        }).then((r) => r.json() as Promise<{ billingDriver?: string }>),
-      ]);
+      const planList = await fetchPlans();
       setPlans(planList);
-      setStatus(sub);
-      if (config.billingDriver === 'stripe' || config.billingDriver === 'mock') {
-        setBillingDriver(config.billingDriver);
-      }
-      if (sub.has_access) {
-        navigate('/dashboard', { replace: true });
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao carregar planos');
-    } finally {
       setLoading(false);
+      return;
     }
-  }, [companyId, companies, navigate]);
+
+    let cid = companyId ?? getApiCompanyId() ?? listSessionCompanies()[0]?.id ?? null;
+    if (!cid) {
+      try {
+        const me = await fetchCurrentUser();
+        cid = listSessionCompanies(me)[0]?.id ?? null;
+      } catch {
+        cid = null;
+      }
+    }
+
+    if (cid && cid !== companyId) {
+      setCompanyId(cid);
+      setApiCompanyId(cid);
+    }
+
+    if (cid) {
+      const [subResult, configResult] = await Promise.allSettled([
+        fetchSubscriptionStatus(cid),
+        fetchPlatformConfig(),
+      ]);
+
+      if (subResult.status === 'fulfilled') {
+        setStatus(subResult.value);
+        if (subResult.value.has_access) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+      } else {
+        const reason = subResult.reason;
+        setError(reason instanceof Error ? reason.message : 'Falha ao carregar assinatura');
+      }
+
+      if (configResult.status === 'fulfilled') {
+        const driver = configResult.value.billingDriver;
+        if (driver === 'stripe' || driver === 'mock') {
+          setBillingDriver(driver);
+        }
+      }
+    }
+
+    setLoading(false);
+  }, [companyId, navigate]);
 
   useEffect(() => {
     if (activeRole !== 'empresa') {
@@ -75,8 +111,11 @@ export const PlanSelectionView: React.FC = () => {
   }, [activeRole, navigate, refresh]);
 
   const startTrial = async (plan: ApiPlan) => {
-    const cid = companyId ?? companies[0]?.id;
-    if (!cid) return;
+    const cid = companyId ?? getApiCompanyId() ?? listSessionCompanies()[0]?.id;
+    if (!cid) {
+      setError('Não foi possível identificar sua empresa. Entre novamente.');
+      return;
+    }
     setBusyPlanId(plan.id);
     setError(null);
     try {
@@ -90,8 +129,11 @@ export const PlanSelectionView: React.FC = () => {
   };
 
   const subscribeNow = async (plan: ApiPlan) => {
-    const cid = companyId ?? companies[0]?.id;
-    if (!cid) return;
+    const cid = companyId ?? getApiCompanyId() ?? listSessionCompanies()[0]?.id;
+    if (!cid) {
+      setError('Não foi possível identificar sua empresa. Entre novamente.');
+      return;
+    }
     setBusyPlanId(plan.id);
     setError(null);
     try {
@@ -110,13 +152,20 @@ export const PlanSelectionView: React.FC = () => {
 
   const trialUsed = Boolean(status?.trial_used);
   const expired = trialUsed && !status?.has_access;
+  const referralConstraints = status?.referral?.referral_constraints;
+  const allowedSlugs = referralConstraints?.allowed_plan_slugs?.filter(Boolean) ?? [];
+  const filteredPlans =
+    allowedSlugs.length > 0 ? plans.filter((p) => allowedSlugs.includes(p.slug)) : plans;
+  const visiblePlans = filteredPlans.length > 0 ? filteredPlans : plans;
+
+  const slugLabel = (slug: string) => slug.charAt(0).toUpperCase() + slug.slice(1);
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-[#09090b] text-slate-900 dark:text-slate-100 flex flex-col">
       <SEOHead
         title="Escolher plano — Kinito"
         description="Selecione um plano para iniciar o teste gratuito de 14 dias."
-        keywords="kinito, plano, trial"
+        keywords={['kinito', 'plano', 'trial']}
         category="billing"
         canonicalUrl="/escolher-plano"
       />
@@ -138,14 +187,26 @@ export const PlanSelectionView: React.FC = () => {
           </p>
         )}
 
+        {referralConstraints && allowedSlugs.length > 0 && (
+          <p className="text-xs font-medium text-indigo-800 dark:text-indigo-200 bg-indigo-500/10 border border-indigo-500/30 rounded-xl px-4 py-3">
+            Você foi indicado por <strong>{referralConstraints.referrer_company}</strong>.
+            Planos disponíveis com esta indicação: {allowedSlugs.map(slugLabel).join(', ')}.
+          </p>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
           </div>
+        ) : visiblePlans.length === 0 ? (
+          <p className="text-sm text-slate-500 text-center py-16">
+            Nenhum plano disponível no momento. Tente novamente em instantes.
+          </p>
         ) : (
           <div className="grid md:grid-cols-3 gap-4">
-            {plans.map((plan) => {
+            {visiblePlans.map((plan) => {
               const busy = busyPlanId === plan.id;
+              const features = planFeatureItems(plan.features);
               return (
                 <div
                   key={plan.id}
@@ -156,15 +217,15 @@ export const PlanSelectionView: React.FC = () => {
                     <h2 className="font-black text-lg">{plan.name}</h2>
                   </div>
                   <p className="text-3xl font-black">
-                    R$ {Number(plan.price).toFixed(2)}
+                    R$ {Number(plan.price || 0).toFixed(2)}
                     <span className="text-xs font-bold text-slate-500">/mês</span>
                   </p>
                   {plan.description && (
                     <p className="text-sm text-slate-500 flex-1">{plan.description}</p>
                   )}
-                  {Array.isArray(plan.features) && plan.features.length > 0 && (
+                  {features.length > 0 && (
                     <ul className="space-y-1 text-xs">
-                      {plan.features.map((f) => (
+                      {features.map((f) => (
                         <li key={f} className="flex items-center gap-2">
                           <Check className="w-3.5 h-3.5 text-emerald-500" />
                           {f}

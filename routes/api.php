@@ -48,6 +48,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('/auth/me', [AuthController::class, 'updateMe']);
         Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
         Route::post('/auth/email/verification-notification', [AuthController::class, 'sendVerification']);
+        Route::get('/config', [ConfigController::class, 'platform']);
 
         Route::middleware(['verified.api', 'password.changed', 'company.subscription'])->group(function () {
             Route::get('/dashboard', DashboardController::class);
@@ -113,7 +114,6 @@ Route::prefix('v1')->group(function () {
             Route::get('/logs/rides/details', [LogController::class, 'rideDetailLogs']);
             Route::get('/logs/audits', [LogController::class, 'audits']);
 
-            Route::get('/config', [ConfigController::class, 'platform']);
             Route::put('/config', [ConfigController::class, 'updatePlatform']);
 
             Route::post('/plans', [PlanController::class, 'store']);
