@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Building2, Check, Loader2, RotateCcw } from 'lucide-react';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Footer } from '../components/layout/Footer';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { useAppStore } from '../store/useAppStore';
 import {
   fetchProviders,
@@ -189,11 +189,7 @@ export const FornecedoresView: React.FC = () => {
 
   return (
     <PageContainer>
-      <SEOHead
-        title="Fornecedores | Kinito"
-        description="Gerencie o fornecedor principal de corridas."
-        canonicalUrl="/fornecedores"
-      />
+      <PageSEO page="fornecedores" />
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Fornecedores</h1>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">

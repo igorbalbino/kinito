@@ -22,6 +22,10 @@ const canonicals: Partial<Record<SeoKey, string>> = {
   notificacoes: '/notificacoes',
   configuracoes: '/configuracoes',
   perfil: '/perfil',
+  fornecedores: '/fornecedores',
+  verifyEmail: '/verificar-email',
+  pendingVerification: '/verificar-email-pendente',
+  planSelection: '/escolher-plano',
 };
 
 export const PageSEO: React.FC<{ page: SeoKey }> = ({ page }) => {

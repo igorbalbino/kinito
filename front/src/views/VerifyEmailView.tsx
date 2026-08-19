@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Loader2, MailWarning, XCircle } from 'lucide-react';
 import { BrandLogo } from '../components/common/BrandLogo';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import { resendVerificationEmail, verifyEmailApi } from '../lib/api';
 
 export const VerifyEmailView: React.FC = () => {
@@ -37,13 +37,7 @@ export const VerifyEmailView: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-[#09090b] text-slate-900 dark:text-slate-100 flex flex-col">
-      <SEOHead
-        title="Confirmar e-mail | Kinito"
-        description="Confirmação de e-mail da conta Kinito."
-        keywords={['confirmar email']}
-        category="Auth"
-        canonicalUrl="/verificar-email"
-      />
+      <PageSEO page="verifyEmail" />
       <header className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
         <Link to="/" className="flex items-center gap-3">
           <BrandLogo className="w-10 h-10" />
@@ -102,13 +96,7 @@ export const PendingVerificationView: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-[#09090b] text-slate-900 dark:text-slate-100 flex flex-col">
-      <SEOHead
-        title="Confirme seu e-mail | Kinito"
-        description="Confirme o e-mail para acessar o Kinito."
-        keywords={['confirmar email']}
-        category="Auth"
-        canonicalUrl="/verificar-email-pendente"
-      />
+      <PageSEO page="pendingVerification" />
       <header className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
         <Link to="/" className="flex items-center gap-3">
           <BrandLogo className="w-10 h-10" />

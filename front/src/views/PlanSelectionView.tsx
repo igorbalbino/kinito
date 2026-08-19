@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Check, CreditCard, Loader2, Sparkles } from 'lucide-react';
 import { BrandLogo } from '../components/common/BrandLogo';
-import { SEOHead } from '../components/common/SEOHead';
+import { PageSEO } from '../components/common/PageSEO';
 import {
   ApiPlan,
   fetchCurrentUser,
@@ -192,13 +192,7 @@ export const PlanSelectionView: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-[#09090b] text-slate-900 dark:text-slate-100 flex flex-col">
-      <SEOHead
-        title="Escolher plano — Kinito"
-        description="Selecione um plano para iniciar o teste gratuito de 14 dias."
-        keywords={['kinito', 'plano', 'trial']}
-        category="billing"
-        canonicalUrl="/escolher-plano"
-      />
+      <PageSEO page="planSelection" />
 
       <header className="p-6 flex items-center gap-3 max-w-5xl mx-auto w-full">
         <BrandLogo className="w-10 h-10" />

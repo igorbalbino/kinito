@@ -108,7 +108,7 @@ export const MotoristasView: React.FC = () => {
           </div>
           <button
             onClick={() => setSelectedDriverForApproval(pendingDrivers[0])}
-            className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 shadow-xs"
+            className="px-3.5 py-1.5 min-h-[36px] rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 shadow-xs"
           >
             Analisar
           </button>
@@ -226,7 +226,7 @@ export const MotoristasView: React.FC = () => {
                   <td className="py-3 px-4 text-right space-x-2">
                     <button
                       onClick={() => setSelectedDriverForApproval(driver)}
-                      className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-indigo-600 hover:text-white transition-colors"
+                      className="px-2.5 py-1.5 min-h-[36px] rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-indigo-600 hover:text-white transition-colors"
                     >
                       Documentos
                     </button>
@@ -234,7 +234,7 @@ export const MotoristasView: React.FC = () => {
                       <button
                         disabled={busyId === driver.id}
                         onClick={() => void handleBlock(driver)}
-                        className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 font-semibold hover:bg-rose-600 hover:text-white transition-colors disabled:opacity-50"
+                        className="px-2.5 py-1.5 min-h-[36px] rounded-lg bg-rose-500/10 text-rose-600 font-semibold hover:bg-rose-600 hover:text-white transition-colors disabled:opacity-50"
                       >
                         Bloquear
                       </button>
@@ -242,7 +242,7 @@ export const MotoristasView: React.FC = () => {
                       <button
                         disabled={busyId === driver.id}
                         onClick={() => void handleActivate(driver)}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 font-semibold hover:bg-emerald-600 hover:text-white transition-colors disabled:opacity-50"
+                        className="px-2.5 py-1.5 min-h-[36px] rounded-lg bg-emerald-500/10 text-emerald-600 font-semibold hover:bg-emerald-600 hover:text-white transition-colors disabled:opacity-50"
                       >
                         Ativar
                       </button>

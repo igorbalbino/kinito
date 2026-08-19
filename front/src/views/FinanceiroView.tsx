@@ -133,7 +133,7 @@ export const FinanceiroView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => downloadRideReceiptPdf(ride, financialMode)}
-                        className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-semibold flex items-center gap-1"
+                        className="px-2.5 py-1.5 min-h-[36px] rounded-lg bg-zinc-100 dark:bg-zinc-800 font-semibold flex items-center gap-1"
                       >
                         <FileText className="w-3.5 h-3.5" /> PDF
                       </button>
@@ -141,7 +141,7 @@ export const FinanceiroView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedRide(ride)}
-                      className="px-2 py-1 rounded-lg bg-indigo-600 text-white font-semibold"
+                      className="px-2.5 py-1.5 min-h-[36px] rounded-lg bg-indigo-600 text-white font-semibold"
                     >
                       Detalhe
                     </button>
@@ -182,7 +182,7 @@ export const FinanceiroView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => downloadRideReceiptPdf(ride, financialMode)}
-                          className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-semibold inline-flex items-center gap-1"
+                          className="px-2.5 py-1.5 min-h-[36px] rounded-lg bg-zinc-100 dark:bg-zinc-800 font-semibold inline-flex items-center gap-1"
                         >
                           <FileText className="w-3.5 h-3.5" /> PDF
                         </button>
@@ -190,7 +190,7 @@ export const FinanceiroView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setSelectedRide(ride)}
-                        className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-semibold"
+                        className="px-2.5 py-1.5 min-h-[36px] rounded-lg bg-indigo-600 text-white font-semibold"
                       >
                         Detalhe
                       </button>
@@ -263,7 +263,7 @@ export const FinanceiroView: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3">
         <MetricCard
           title="Valor Bruto Processado"
           value={formatBRL(totalGross)}
@@ -295,8 +295,6 @@ export const FinanceiroView: React.FC = () => {
           badge={financialMode === 'stripe' ? <span className="text-[10px] bg-emerald-500/20 text-emerald-500 font-bold px-1.5 py-0.5 rounded">Liberado</span> : <span className="text-[10px] bg-amber-500/20 text-amber-500 font-bold px-1.5 py-0.5 rounded">Pendente</span>}
         />
       </div>
-
-      <StripeFlowTimeline grossValue={250} />
 
       <div className="p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -378,6 +376,15 @@ export const FinanceiroView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      <details className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+        <summary className="px-5 py-4 cursor-pointer font-semibold text-sm text-zinc-900 dark:text-zinc-100 select-none hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+          Modelo de recebimento — fluxo financeiro por corrida
+        </summary>
+        <div className="px-1 pb-1">
+          <StripeFlowTimeline grossValue={250} />
+        </div>
+      </details>
 
       <Footer />
     </PageContainer>

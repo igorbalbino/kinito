@@ -60,15 +60,15 @@ export const LandingEmpresasView: React.FC = () => {
         </div>
       </header>
 
-      <section className="relative pt-14 pb-16 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/40 via-transparent to-transparent pointer-events-none" />
+      <section className="relative isolate pt-14 pb-16 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-indigo-100 via-transparent to-transparent dark:from-indigo-950/40 dark:via-transparent dark:to-transparent pointer-events-none" />
         <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
-          <p className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-full">
+          <p className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-full">
             <Building2 className="w-3.5 h-3.5" />
             {L.tag}
           </p>
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-[1.1]">
-            <span className="block text-indigo-400 mb-1">Kinito</span>
+            <span className="block text-indigo-600 dark:text-indigo-400 mb-1">Kinito</span>
             {L.headline}
           </h1>
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">{L.sub}</p>

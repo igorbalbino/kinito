@@ -68,7 +68,28 @@ export const LogsView: React.FC = () => {
             />
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+            {filteredLogs.map((log) => (
+              <div key={log.id} className="p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    log.level === 'info' ? 'bg-blue-500/10 text-blue-500' :
+                    log.level === 'warning' ? 'bg-amber-500/10 text-amber-500' :
+                    'bg-purple-500/10 text-purple-500'
+                  }`}>
+                    {log.level.toUpperCase()}
+                  </span>
+                  <span className="text-[11px] text-zinc-400 font-mono">{formatDate(log.timestamp)}</span>
+                </div>
+                <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{log.message}</div>
+                <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                  <span>{log.category}</span>
+                  <span>{log.actor} · {log.ip}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 font-medium bg-zinc-50/50 dark:bg-zinc-900/50">
@@ -111,7 +132,25 @@ export const LogsView: React.FC = () => {
             Trilha de Auditoria de Ações Críticas
           </h3>
 
-          <div className="overflow-x-auto">
+          <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+            {audits.map((aud) => (
+              <div key={aud.id} className="p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold text-xs text-indigo-600 dark:text-indigo-400">{aud.action}</span>
+                  <span className="text-[11px] text-zinc-400 font-mono">{formatDate(aud.timestamp)}</span>
+                </div>
+                <div className="text-xs text-zinc-900 dark:text-zinc-100 font-semibold">{aud.user}</div>
+                <div className="text-[11px] text-zinc-500">{aud.targetResource}</div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span>
+                    <span className="text-rose-500">{aud.previousValue || '-'}</span> → <span className="text-emerald-500 font-bold">{aud.newValue || '-'}</span>
+                  </span>
+                  <span className="text-zinc-400">{aud.ip}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 font-medium bg-zinc-50/50 dark:bg-zinc-900/50">

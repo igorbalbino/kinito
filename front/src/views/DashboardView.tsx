@@ -26,7 +26,6 @@ import { useAppStore } from '../store/useAppStore';
 import { ManualFinancialNotice } from '../components/common/ManualFinancialNotice';
 import { MetricCard } from '../components/common/MetricCard';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { StripeFlowTimeline } from '../components/common/StripeFlowTimeline';
 import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
 import { PageContainer } from '../components/layout/PageContainer';
@@ -191,8 +190,6 @@ export const DashboardView: React.FC = () => {
             />
           </div>
 
-          <StripeFlowTimeline grossValue={100} />
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
               <div className="flex items-center justify-between">
@@ -329,7 +326,7 @@ export const DashboardView: React.FC = () => {
                       <td className="py-3 px-3 text-right">
                         <button
                           onClick={() => setSelectedRide(ride)}
-                          className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-indigo-600 hover:text-white transition-colors"
+                          className="px-2.5 py-1.5 min-h-[36px] rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-indigo-600 hover:text-white transition-colors"
                         >
                           Ver Detalhes
                         </button>
@@ -371,8 +368,6 @@ export const DashboardView: React.FC = () => {
               icon={<DollarSign className="w-5 h-5 text-purple-500" />}
             />
           </div>
-
-          <StripeFlowTimeline grossValue={150} />
 
           <div className="p-4 sm:p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4 overflow-hidden min-w-0">
             <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
@@ -429,7 +424,7 @@ export const DashboardView: React.FC = () => {
                       <td className="py-3 px-3 text-right">
                         <button
                           onClick={() => setSelectedRide(ride)}
-                          className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold"
+                          className="px-2.5 py-1.5 min-h-[36px] rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold"
                         >
                           Ver
                         </button>

@@ -77,7 +77,7 @@ export const CorridasView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1 text-xs">
+          <div className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 text-xs">
             <button
               onClick={() => setViewMode('table')}
               className={`p-1.5 rounded-lg flex items-center gap-1 font-semibold transition-all ${
@@ -272,7 +272,7 @@ export const CorridasView: React.FC = () => {
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => setSelectedRide(ride)}
-                        className="px-3 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-indigo-600 hover:text-white transition-colors"
+                        className="px-3 py-1.5 min-h-[36px] rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-indigo-600 hover:text-white transition-colors"
                       >
                         Detalhes
                       </button>

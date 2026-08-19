@@ -240,7 +240,7 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                     type="button"
                     onClick={() => void handleReassign()}
                     disabled={actionBusy || !selectedNewDriverId}
-                    className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition-colors disabled:opacity-50"
+                    className="w-full py-1.5 min-h-[40px] bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition-colors disabled:opacity-50"
                   >
                     Confirmar Reatribuição
                   </button>
@@ -341,13 +341,13 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                 <div className="flex justify-end gap-2 pt-2">
                   <button
                     onClick={() => setIsEditingFinancials(false)}
-                    className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium"
+                    className="px-3 py-1.5 min-h-[40px] rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleSaveFinancials}
-                    className="px-3 py-1.5 rounded bg-indigo-600 text-white font-semibold"
+                    className="px-3 py-1.5 min-h-[40px] rounded bg-indigo-600 text-white font-semibold"
                   >
                     Salvar Alterações
                   </button>
@@ -402,7 +402,7 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                     <button
                       type="button"
                       onClick={() => setIsCancelling(false)}
-                      className="px-3 py-1.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                      className="px-3 py-1.5 min-h-[40px] rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
                       disabled={actionBusy}
                     >
                       Voltar
@@ -410,7 +410,7 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                     <button
                       type="button"
                       onClick={() => void handleCancel()}
-                      className="px-3 py-1.5 rounded bg-rose-600 text-white font-semibold disabled:opacity-50"
+                      className="px-3 py-1.5 min-h-[40px] rounded bg-rose-600 text-white font-semibold disabled:opacity-50"
                       disabled={actionBusy}
                     >
                       Confirmar Cancelamento
