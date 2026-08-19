@@ -6,6 +6,7 @@ import { Topbar } from './components/layout/Topbar';
 import { MobileBottomDock } from './components/layout/MobileBottomDock';
 import { MobileQuickDrawerSheet } from './components/modals/MobileQuickDrawerSheet';
 import { TactileFloatingFAB } from './components/common/TactileFloatingFAB';
+import { ScreenHelpFab } from './components/common/ScreenHelpFab';
 import { NewRideModal } from './components/modals/NewRideModal';
 import { ForcePasswordModal } from './components/auth/ForcePasswordModal';
 import { RequireAuth } from './components/auth/RequireAuth';
@@ -48,6 +49,7 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </div>
       <MobileBottomDock />
       <TactileFloatingFAB />
+      <ScreenHelpFab />
       <MobileQuickDrawerSheet />
       <NewRideModal />
       <ForcePasswordModal />

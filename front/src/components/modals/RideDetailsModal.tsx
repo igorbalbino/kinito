@@ -18,6 +18,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { Ride } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { SafeSelect } from '../common/SafeSelect';
+import { ActionErrorModal } from '../common/ActionErrorModal';
 import { rideAction, patchRideFinance } from '../../lib/api';
 import { normalizeRide } from '../../lib/normalize';
 import { unwrapResource } from '../../lib/sessionProfile';
@@ -32,6 +33,7 @@ interface RideDetailsModalProps {
 export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClose }) => {
   const { financialMode, upsertRide, drivers, activeRole } = useAppStore();
   const clientMode = isClientRole(activeRole);
+  const driverMode = activeRole === 'motorista';
   const canDispatch = isFleetOperator(activeRole);
 
   const [isEditingFinancials, setIsEditingFinancials] = useState(false);
@@ -359,6 +361,11 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                   <div className="text-[10px] text-zinc-400">Valor da corrida</div>
                   <div className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</div>
                 </div>
+              ) : driverMode ? (
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Seu ganho líquido</div>
+                  <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(ride.driverNet)}</div>
+                </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
                   <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
@@ -386,9 +393,6 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
 
           {!clientMode && ride.status !== 'concluida' && ride.status !== 'cancelada' && (
             <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
-              {actionError && (
-                <p className="text-xs text-rose-500 font-medium">{actionError}</p>
-              )}
               {isCancelling ? (
                 <div className="w-full space-y-2">
                   <input
@@ -438,14 +442,16 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                         Iniciar Corrida
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => void handleFinish()}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
-                      disabled={actionBusy}
-                    >
-                      <CheckCircle2 className="w-4 h-4" /> Concluir Corrida
-                    </button>
+                    {ride.status === 'em_andamento' && (
+                      <button
+                        type="button"
+                        onClick={() => void handleFinish()}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50"
+                        disabled={actionBusy}
+                      >
+                        <CheckCircle2 className="w-4 h-4" /> Concluir Corrida
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -453,6 +459,16 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
           )}
         </div>
       </div>
+      <ActionErrorModal
+        open={Boolean(actionError)}
+        title="Ação não permitida agora"
+        message={
+          /Transição inválida/i.test(actionError || '')
+            ? 'Essa ação não é permitida no status atual da corrida. Se ela estiver atribuída, clique em "Iniciar Corrida" antes de concluir.'
+            : actionError || ''
+        }
+        onClose={() => setActionError(null)}
+      />
     </div>
   );
 };

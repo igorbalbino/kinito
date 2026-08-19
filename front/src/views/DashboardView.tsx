@@ -26,6 +26,7 @@ import { useAppStore } from '../store/useAppStore';
 import { ManualFinancialNotice } from '../components/common/ManualFinancialNotice';
 import { MetricCard } from '../components/common/MetricCard';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { ActionErrorModal } from '../components/common/ActionErrorModal';
 import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
 import { PageContainer } from '../components/layout/PageContainer';
@@ -55,7 +56,16 @@ export const DashboardView: React.FC = () => {
 
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [apiMetrics, setApiMetrics] = useState<Record<string, number> | null>(null);
+  const [rideActionError, setRideActionError] = useState<string | null>(null);
   const clientMode = isClientRole(activeRole);
+
+  useEffect(() => {
+    if (!selectedRide) return;
+    const latestRide = rides.find((r) => r.id === selectedRide.id);
+    if (latestRide && latestRide !== selectedRide) {
+      setSelectedRide(latestRide);
+    }
+  }, [rides, selectedRide]);
 
   useEffect(() => {
     void fetchDashboard()
@@ -78,13 +88,24 @@ export const DashboardView: React.FC = () => {
     rides.find((r) => r.status === 'atribuida') ||
     null;
 
-  const handleFinishActive = async () => {
+  const handleDriverRideAction = async (action: 'start' | 'finish') => {
     if (!activeDriverRide) return;
     try {
-      const res = await rideAction(activeDriverRide.id, 'finish');
+      const res = await rideAction(activeDriverRide.id, action);
       upsertRide(normalizeRide(unwrapResource(res)));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Falha ao concluir corrida');
+      const fallback = action === 'start' ? 'Falha ao iniciar corrida.' : 'Falha ao concluir corrida.';
+      const raw = err instanceof Error ? err.message : fallback;
+      const invalidTransition = /Transição inválida/i.test(raw);
+      if (invalidTransition && action === 'finish') {
+        setRideActionError(
+          'Para concluir uma corrida, primeiro clique em "Iniciar Corrida". A sequência correta é: Atribuída → Em andamento → Concluída.',
+        );
+      } else if (invalidTransition && action === 'start') {
+        setRideActionError('Essa corrida não está em um status que permita iniciar agora.');
+      } else {
+        setRideActionError(raw || fallback);
+      }
     }
   };
 
@@ -490,11 +511,7 @@ export const DashboardView: React.FC = () => {
                 </div>
 
                 <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-indigo-500/20 space-y-2">
-                  <div className="flex justify-between font-bold">
-                    <span>Valor Bruto:</span>
-                    <span>{formatBRL(activeDriverRide.grossValue)}</span>
-                  </div>
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold border-t pt-1">
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
                     <span>Seu Ganho Líquido:</span>
                     <span>{formatBRL(activeDriverRide.driverNet)}</span>
                   </div>
@@ -502,13 +519,24 @@ export const DashboardView: React.FC = () => {
               </div>
 
               <div className="flex gap-3 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => void handleFinishActive()}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md"
-                >
-                  <CheckCircle2 className="w-4 h-4" /> Concluir Corrida
-                </button>
+                {activeDriverRide.status === 'atribuida' && (
+                  <button
+                    type="button"
+                    onClick={() => void handleDriverRideAction('start')}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-md"
+                  >
+                    <Car className="w-4 h-4" /> Iniciar Corrida
+                  </button>
+                )}
+                {activeDriverRide.status === 'em_andamento' && (
+                  <button
+                    type="button"
+                    onClick={() => void handleDriverRideAction('finish')}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md"
+                  >
+                    <CheckCircle2 className="w-4 h-4" /> Concluir Corrida
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -614,6 +642,11 @@ export const DashboardView: React.FC = () => {
       )}
 
       <RideDetailsModal ride={selectedRide} onClose={() => setSelectedRide(null)} />
+      <ActionErrorModal
+        open={Boolean(rideActionError)}
+        message={rideActionError || ''}
+        onClose={() => setRideActionError(null)}
+      />
 
       <Footer />
     </PageContainer>

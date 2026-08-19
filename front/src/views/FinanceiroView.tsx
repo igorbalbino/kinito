@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Download,
@@ -32,6 +32,14 @@ export const FinanceiroView: React.FC = () => {
 
   const [filterType, setFilterType] = useState<string>('todos');
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
+
+  useEffect(() => {
+    if (!selectedRide) return;
+    const latestRide = rides.find((r) => r.id === selectedRide.id);
+    if (latestRide && latestRide !== selectedRide) {
+      setSelectedRide(latestRide);
+    }
+  }, [rides, selectedRide]);
 
   const completedRides = rides.filter((r) => r.status === 'concluida');
   const totalGross = completedRides.reduce((acc, r) => acc + r.grossValue, 0);

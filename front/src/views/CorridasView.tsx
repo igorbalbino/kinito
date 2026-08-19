@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Clock,
   Grid,
@@ -21,6 +21,7 @@ import { isClientRole } from '../lib/navByRole';
 export const CorridasView: React.FC = () => {
   const { rides, setNewRideModalOpen, dataLoading, dataError, activeRole } = useAppStore();
   const clientMode = isClientRole(activeRole);
+  const driverMode = activeRole === 'motorista';
 
   const [viewMode, setViewMode] = useState<'table' | 'grid' | 'timeline'>('table');
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
@@ -28,6 +29,14 @@ export const CorridasView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [paymentFilter, setPaymentFilter] = useState<string>('todos');
+
+  useEffect(() => {
+    if (!selectedRide) return;
+    const latestRide = rides.find((r) => r.id === selectedRide.id);
+    if (latestRide && latestRide !== selectedRide) {
+      setSelectedRide(latestRide);
+    }
+  }, [rides, selectedRide]);
 
   const filteredRides = rides.filter((r) => {
     const matchesSearch =
@@ -201,7 +210,7 @@ export const CorridasView: React.FC = () => {
                   <span className="text-zinc-500">
                     {clientMode ? formatDate(ride.requestedAt) : ride.driverName || 'Sem motorista'}
                   </span>
-                  <span className="font-bold">{formatBRL(ride.grossValue)}</span>
+                  <span className="font-bold">{formatBRL(driverMode ? ride.driverNet : ride.grossValue)}</span>
                 </div>
               </button>
             ))}
@@ -224,8 +233,8 @@ export const CorridasView: React.FC = () => {
                       <th className="py-3 px-4">Motorista & Veículo</th>
                       <th className="py-3 px-4">Origem → Destino</th>
                       <th className="py-3 px-4">Distância</th>
-                      <th className="py-3 px-4">Valor Bruto</th>
-                      <th className="py-3 px-4">Líquido Motorista</th>
+                      {!driverMode && <th className="py-3 px-4">Valor Bruto</th>}
+                      <th className="py-3 px-4">{driverMode ? 'Seu Líquido' : 'Líquido Motorista'}</th>
                       <th className="py-3 px-4">Status</th>
                     </>
                   )}
@@ -242,7 +251,9 @@ export const CorridasView: React.FC = () => {
                           {ride.origin.address || ride.origin.neighborhood} →{' '}
                           {ride.destination.address || ride.destination.neighborhood}
                         </td>
-                        <td className="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</td>
+                        <td className="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">
+                          {formatBRL(driverMode ? ride.driverNet : ride.grossValue)}
+                        </td>
                         <td className="py-3 px-4">
                           <StatusBadge type="ride" status={ride.status} size="sm" />
                         </td>
@@ -262,7 +273,9 @@ export const CorridasView: React.FC = () => {
                           {ride.origin.neighborhood} → {ride.destination.neighborhood}
                         </td>
                         <td className="py-3 px-4 font-medium text-zinc-700 dark:text-zinc-300">{ride.distanceKm} km</td>
-                        <td className="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</td>
+                        {!driverMode && (
+                          <td className="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</td>
+                        )}
                         <td className="py-3 px-4 font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(ride.driverNet)}</td>
                         <td className="py-3 px-4">
                           <StatusBadge type="ride" status={ride.status} size="sm" />
@@ -318,7 +331,9 @@ export const CorridasView: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] text-zinc-400">Valor</div>
-                  <div className="font-bold text-base text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</div>
+                  <div className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                    {formatBRL(driverMode ? ride.driverNet : ride.grossValue)}
+                  </div>
                 </div>
               </div>
             </div>
@@ -347,7 +362,9 @@ export const CorridasView: React.FC = () => {
                     Origem: <strong>{ride.origin.address}</strong> → Destino: <strong>{ride.destination.address}</strong>
                   </p>
                   <div className="flex items-center justify-between pt-1 text-xs">
-                    <span className="font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(ride.grossValue)}</span>
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                      {formatBRL(driverMode ? ride.driverNet : ride.grossValue)}
+                    </span>
                     <StatusBadge type="ride" status={ride.status} size="sm" />
                   </div>
                 </div>

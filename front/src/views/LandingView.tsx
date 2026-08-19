@@ -57,7 +57,7 @@ export const LandingView: React.FC = () => {
         </div>
       </header>
 
-      <section className="relative isolate pt-14 pb-20 px-4 overflow-hidden">
+      <section className="relative isolate pt-16 sm:pt-20 pb-24 sm:pb-28 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-100 via-transparent to-transparent dark:from-emerald-950/30 dark:via-transparent dark:to-transparent pointer-events-none" />
         <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
           <p className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
@@ -89,7 +89,7 @@ export const LandingView: React.FC = () => {
         </div>
       </section>
 
-      <section className="px-4 pb-16 max-w-5xl mx-auto w-full grid sm:grid-cols-3 gap-6">
+      <section className="px-4 pb-16 max-w-5xl mx-auto w-full grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         {[
           { icon: MapPin, title: L.f1Title, desc: L.f1Desc },
           { icon: ShieldCheck, title: L.f2Title, desc: L.f2Desc },

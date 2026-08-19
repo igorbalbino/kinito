@@ -6,6 +6,7 @@ import { PageSEO } from '../components/common/PageSEO';
 import { useAppStore } from '../store/useAppStore';
 import {
   fetchProviders,
+  fetchCurrentUser,
   getStoredApiUser,
   revertDriverProviderApi,
   setApiSession,
@@ -40,8 +41,9 @@ export const FornecedoresView: React.FC = () => {
 
   const clientPrefs = apiUser?.client?.preferences;
   const clientId = apiUser?.client?.id;
-  const selectedCompanyId = clientPrefs?.defaultCompanyId ? Number(clientPrefs.defaultCompanyId) : null;
-  const mode = clientPrefs?.defaultProviderMode || 'ALL';
+  const inferredClientCompanyId = clientPrefs?.defaultCompanyId ?? apiUser?.client?.companyId ?? null;
+  const selectedCompanyId = inferredClientCompanyId ? Number(inferredClientCompanyId) : null;
+  const mode = clientPrefs?.defaultProviderMode || (selectedCompanyId ? 'COMPANY' : 'ALL');
 
   const driver = apiUser?.driver;
   const driverPrimaryId = driver?.primaryCompanyId ? Number(driver.primaryCompanyId) : null;
@@ -58,7 +60,17 @@ export const FornecedoresView: React.FC = () => {
   };
 
   const selectClientCompany = async (companyId: number | null, nextMode: 'COMPANY' | 'ALL') => {
-    if (!clientId) {
+    let resolvedClientId = clientId;
+    if (!resolvedClientId) {
+      try {
+        const fresh = await fetchCurrentUser();
+        setApiUser(fresh);
+        resolvedClientId = fresh.client?.id;
+      } catch {
+        // fall through to user-facing error below
+      }
+    }
+    if (!resolvedClientId) {
       setError('Perfil de cliente não encontrado na sessão.');
       return;
     }
@@ -66,7 +78,7 @@ export const FornecedoresView: React.FC = () => {
     setError(null);
     setMessage(null);
     try {
-      const res = await updateClientPreferencesApi(clientId, {
+      const res = await updateClientPreferencesApi(resolvedClientId, {
         default_provider_mode: nextMode,
         default_company_id: nextMode === 'ALL' ? null : companyId,
       });
@@ -78,7 +90,7 @@ export const FornecedoresView: React.FC = () => {
       persistUserPatch({
         client: {
           ...apiUser?.client,
-          id: clientId,
+          id: resolvedClientId,
           companyId: prefs?.defaultCompanyId || null,
           preferences: {
             defaultProviderMode: prefs?.defaultProviderMode || nextMode,

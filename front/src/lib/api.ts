@@ -157,6 +157,40 @@ export function sanitizeApiUser(user: ApiUser): ApiUser {
   }
   const email = String(raw.email || '').trim();
   const emailFallback = email.includes('@') ? email.split('@')[0]! : 'Usuário';
+  const client = raw.client && typeof raw.client === 'object' ? (raw.client as NonNullable<ApiUser['client']>) : undefined;
+  const driver = raw.driver && typeof raw.driver === 'object' ? (raw.driver as NonNullable<ApiUser['driver']>) : undefined;
+
+  const safeClient: ApiUser['client'] | undefined = client
+    ? {
+        id: client.id,
+        companyId: client.companyId ? String(client.companyId) : null,
+        companyName: client.companyName ? sanitizePersonName(client.companyName, 'Empresa') : null,
+        preferences: client.preferences
+          ? {
+              defaultProviderMode: client.preferences.defaultProviderMode
+                ? String(client.preferences.defaultProviderMode).toUpperCase()
+                : undefined,
+              defaultCompanyId: client.preferences.defaultCompanyId ? String(client.preferences.defaultCompanyId) : null,
+            }
+          : undefined,
+      }
+    : undefined;
+
+  const safeDriver: ApiUser['driver'] | undefined = driver
+    ? {
+        id: driver.id,
+        companyId: driver.companyId ? String(driver.companyId) : null,
+        companyName: driver.companyName ? sanitizePersonName(driver.companyName, 'Empresa') : null,
+        primaryCompanyId: driver.primaryCompanyId ? String(driver.primaryCompanyId) : null,
+        previousPrimaryCompanyId: driver.previousPrimaryCompanyId ? String(driver.previousPrimaryCompanyId) : null,
+        previousPrimaryCompanyName: driver.previousPrimaryCompanyName
+          ? sanitizePersonName(driver.previousPrimaryCompanyName, 'Empresa')
+          : null,
+        providerSwitchPending: Boolean(driver.providerSwitchPending),
+        providerMode: driver.providerMode ? String(driver.providerMode).toUpperCase() : undefined,
+      }
+    : undefined;
+
   return {
     id: raw.id,
     name: sanitizePersonName(raw.name, emailFallback),
@@ -166,6 +200,8 @@ export function sanitizeApiUser(user: ApiUser): ApiUser {
     roles: Array.isArray(raw.roles) ? raw.roles.map(String) : undefined,
     companies: sanitizeCompanyList(raw.companies),
     ownedCompanies: sanitizeCompanyList(raw.ownedCompanies),
+    client: safeClient,
+    driver: safeDriver,
   };
 }
 

@@ -60,7 +60,7 @@ export const LandingEmpresasView: React.FC = () => {
         </div>
       </header>
 
-      <section className="relative isolate pt-14 pb-16 px-4 overflow-hidden">
+      <section className="relative isolate pt-16 sm:pt-20 pb-24 sm:pb-28 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-100 via-transparent to-transparent dark:from-indigo-950/40 dark:via-transparent dark:to-transparent pointer-events-none" />
         <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
           <p className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-full">

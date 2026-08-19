@@ -4,6 +4,7 @@ import {
   fetchClientsList,
   fetchCompaniesFull,
   fetchDriversList,
+  fetchMySpendings,
   fetchNotifications,
   fetchPlatformConfig,
   fetchRideLogs,
@@ -44,6 +45,7 @@ export function useBootstrapApiData(enabled = true) {
     setActiveRole,
     setSelectedCompanyId,
     setFinancialMode,
+    activeRole,
     dataLoaded,
     dataLoading,
   } = useAppStore();
@@ -74,17 +76,42 @@ export function useBootstrapApiData(enabled = true) {
         setFinancialMode(config.paymentProvider as FinancialMode);
       }
 
-      const [rides, drivers, clients, companies, transactions, notifications, logs, audits] =
-        await Promise.all([
+      let rides: Record<string, unknown>[] = [];
+      let drivers: Record<string, unknown>[] = [];
+      let clients: Record<string, unknown>[] = [];
+      let companies: Record<string, unknown>[] = [];
+      let transactions: Record<string, unknown>[] = [];
+      let notifications: Record<string, unknown>[] = [];
+      let logs: Record<string, unknown>[] = [];
+      let audits: Record<string, unknown>[] = [];
+
+      if (activeRole === 'admin' || activeRole === 'empresa') {
+        [rides, drivers, clients, companies, transactions, notifications, logs, audits] =
+          await Promise.all([
+            fetchRides().catch(() => []),
+            fetchDriversList().catch(() => []),
+            fetchClientsList().catch(() => []),
+            fetchCompaniesFull().catch(() => []),
+            fetchTransactions().catch(() => []),
+            fetchNotifications().catch(() => []),
+            fetchRideLogs().catch(() => []),
+            fetchAudits().catch(() => []),
+          ]);
+      } else if (activeRole === 'motorista') {
+        [rides, notifications] = await Promise.all([
           fetchRides().catch(() => []),
-          fetchDriversList().catch(() => []),
-          fetchClientsList().catch(() => []),
-          fetchCompaniesFull().catch(() => []),
-          fetchTransactions().catch(() => []),
           fetchNotifications().catch(() => []),
-          fetchRideLogs().catch(() => []),
-          fetchAudits().catch(() => []),
         ]);
+      } else {
+        const [clientRides, clientNotifications, mySpendings] = await Promise.all([
+          fetchRides().catch(() => []),
+          fetchNotifications().catch(() => []),
+          fetchMySpendings().catch(() => ({ items: [] as Record<string, unknown>[] })),
+        ]);
+        rides = clientRides;
+        notifications = clientNotifications;
+        transactions = Array.isArray(mySpendings.items) ? mySpendings.items : [];
+      }
 
       setRides(rides.map((r) => normalizeRide(r as Record<string, unknown>)));
       setDrivers(drivers.map((d) => normalizeDriver(d as Record<string, unknown>)));
@@ -102,6 +129,7 @@ export function useBootstrapApiData(enabled = true) {
       });
     }
   }, [
+    activeRole,
     enabled,
     setActiveRole,
     setAudits,
