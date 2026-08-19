@@ -580,8 +580,11 @@ export async function apiLogout(): Promise<void> {
   }
 }
 
+/** Default page size for list endpoints — balances payload vs. screen coverage. */
+export const DEFAULT_LIST_PAGE_SIZE = 40;
+
 export async function fetchRides(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/corridas?per_page=100'));
+  return paginated(await apiFetch(`/api/v1/corridas?per_page=${DEFAULT_LIST_PAGE_SIZE}`));
 }
 
 export async function fetchPlatformConfig(): Promise<{
@@ -616,7 +619,7 @@ export async function rideAction(
 }
 
 export async function fetchClientsList(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/clientes?per_page=100'));
+  return paginated(await apiFetch(`/api/v1/clientes?per_page=${DEFAULT_LIST_PAGE_SIZE}`));
 }
 
 export async function createClientApi(payload: Record<string, unknown>): Promise<{
@@ -636,7 +639,7 @@ export async function createDriverApi(payload: Record<string, unknown>): Promise
 }
 
 export async function fetchDriversList(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/motoristas?per_page=100'));
+  return paginated(await apiFetch(`/api/v1/motoristas?per_page=${DEFAULT_LIST_PAGE_SIZE}`));
 }
 
 export async function approveDriverApi(id: string, companyId: number): Promise<Record<string, unknown>> {
@@ -651,15 +654,15 @@ export async function blockDriverApi(id: string): Promise<Record<string, unknown
 }
 
 export async function fetchCompaniesFull(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/empresas?per_page=100'));
+  return paginated(await apiFetch(`/api/v1/empresas?per_page=${DEFAULT_LIST_PAGE_SIZE}`));
 }
 
 export async function fetchTransactions(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/financeiro/transactions?per_page=100'));
+  return paginated(await apiFetch(`/api/v1/financeiro/transactions?per_page=${DEFAULT_LIST_PAGE_SIZE}`));
 }
 
 export async function fetchNotifications(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/notificacoes'));
+  return paginated(await apiFetch(`/api/v1/notificacoes?per_page=${DEFAULT_LIST_PAGE_SIZE}`));
 }
 
 export async function markNotificationReadApi(id: string): Promise<void> {
@@ -671,11 +674,11 @@ export async function markAllNotificationsReadApi(): Promise<void> {
 }
 
 export async function fetchRideLogs(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/logs/rides'));
+  return paginated(await apiFetch(`/api/v1/logs/rides?per_page=${DEFAULT_LIST_PAGE_SIZE}`));
 }
 
 export async function fetchAudits(): Promise<Record<string, unknown>[]> {
-  return paginated(await apiFetch('/api/v1/logs/audits?per_page=100'));
+  return paginated(await apiFetch(`/api/v1/logs/audits?per_page=${DEFAULT_LIST_PAGE_SIZE}`));
 }
 
 export async function fetchDashboard(): Promise<{

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -73,20 +73,44 @@ export const DashboardView: React.FC = () => {
       .catch(() => setApiMetrics(null));
   }, [activeRole, dataLoaded]);
 
-  const completedRides = rides.filter((r) => r.status === 'concluida');
-  const inProgressRides = rides.filter((r) => r.status === 'em_andamento' || r.status === 'atribuida');
-  const pendingRides = rides.filter((r) => r.status === 'pendente');
-  const cancelledRides = rides.filter((r) => r.status === 'cancelada');
+  const completedRides = useMemo(
+    () => rides.filter((r) => r.status === 'concluida'),
+    [rides],
+  );
+  const inProgressRides = useMemo(
+    () => rides.filter((r) => r.status === 'em_andamento' || r.status === 'atribuida'),
+    [rides],
+  );
+  const pendingRides = useMemo(() => rides.filter((r) => r.status === 'pendente'), [rides]);
+  const cancelledRides = useMemo(() => rides.filter((r) => r.status === 'cancelada'), [rides]);
 
-  const totalGrossRevenue = apiMetrics?.grossRevenue ?? apiMetrics?.monthlyRevenue ?? completedRides.reduce((acc, r) => acc + r.grossValue, 0);
-  const totalPlatformFees = apiMetrics?.platformCommission ?? completedRides.reduce((acc, r) => acc + r.platformCommission, 0);
-  const totalStripeFees = completedRides.reduce((acc, r) => acc + r.stripeFee, 0);
-  const totalDriverPayouts = apiMetrics?.totalEarnings ?? completedRides.reduce((acc, r) => acc + r.driverNet, 0);
+  const totalGrossRevenue = useMemo(
+    () =>
+      apiMetrics?.grossRevenue ??
+      apiMetrics?.monthlyRevenue ??
+      completedRides.reduce((acc, r) => acc + r.grossValue, 0),
+    [apiMetrics, completedRides],
+  );
+  const totalPlatformFees = useMemo(
+    () => apiMetrics?.platformCommission ?? completedRides.reduce((acc, r) => acc + r.platformCommission, 0),
+    [apiMetrics, completedRides],
+  );
+  const totalStripeFees = useMemo(
+    () => completedRides.reduce((acc, r) => acc + r.stripeFee, 0),
+    [completedRides],
+  );
+  const totalDriverPayouts = useMemo(
+    () => apiMetrics?.totalEarnings ?? completedRides.reduce((acc, r) => acc + r.driverNet, 0),
+    [apiMetrics, completedRides],
+  );
 
-  const activeDriverRide =
-    rides.find((r) => r.status === 'em_andamento') ||
-    rides.find((r) => r.status === 'atribuida') ||
-    null;
+  const activeDriverRide = useMemo(
+    () =>
+      rides.find((r) => r.status === 'em_andamento') ||
+      rides.find((r) => r.status === 'atribuida') ||
+      null,
+    [rides],
+  );
 
   const handleDriverRideAction = async (action: 'start' | 'finish') => {
     if (!activeDriverRide) return;
@@ -109,7 +133,7 @@ export const DashboardView: React.FC = () => {
     }
   };
 
-  const chartData = (() => {
+  const chartData = useMemo(() => {
     const byDay = new Map<string, { receita: number; corridas: number; comissao: number }>();
     for (const r of completedRides) {
       const day = (r.completedAt || r.requestedAt || '').slice(0, 10);
@@ -124,17 +148,22 @@ export const DashboardView: React.FC = () => {
       .sort(([a], [b]) => a.localeCompare(b))
       .slice(-14)
       .map(([day, v]) => ({ day: day.slice(5), ...v }));
-  })();
-  const chartSeries = chartData.length
-    ? chartData
-    : [{ day: '—', receita: 0, corridas: 0, comissao: 0 }];
+  }, [completedRides]);
 
-  const statusPieData = [
-    { name: 'Concluídas', value: completedRides.length, color: '#10b981' },
-    { name: 'Em Andamento', value: inProgressRides.length, color: '#a855f7' },
-    { name: 'Pendentes', value: pendingRides.length, color: '#f59e0b' },
-    { name: 'Canceladas', value: cancelledRides.length, color: '#f43f5e' },
-  ];
+  const chartSeries = useMemo(
+    () => (chartData.length ? chartData : [{ day: '—', receita: 0, corridas: 0, comissao: 0 }]),
+    [chartData],
+  );
+
+  const statusPieData = useMemo(
+    () => [
+      { name: 'Concluídas', value: completedRides.length, color: '#10b981' },
+      { name: 'Em Andamento', value: inProgressRides.length, color: '#a855f7' },
+      { name: 'Pendentes', value: pendingRides.length, color: '#f59e0b' },
+      { name: 'Canceladas', value: cancelledRides.length, color: '#f43f5e' },
+    ],
+    [completedRides.length, inProgressRides.length, pendingRides.length, cancelledRides.length],
+  );
 
   return (
     <PageContainer>

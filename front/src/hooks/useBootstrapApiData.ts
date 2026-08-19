@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   fetchAudits,
   fetchClientsList,
@@ -28,8 +28,23 @@ import {
   normalizeTransaction,
 } from '../lib/normalize';
 import { rolesFromApi } from '../lib/mappers';
+import { perfLog, perfMark } from '../lib/perf';
 import { useAppStore } from '../store/useAppStore';
-import type { FinancialMode } from '../types';
+import type { FinancialMode, UserRole } from '../types';
+
+async function safeListFetch<T>(
+  label: string,
+  fn: () => Promise<T[]>,
+): Promise<T[]> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn(`[bootstrap] ${label} falhou — usando lista vazia`, err);
+    }
+    return [];
+  }
+}
 
 export function useBootstrapApiData(enabled = true) {
   const {
@@ -50,14 +65,22 @@ export function useBootstrapApiData(enabled = true) {
     dataLoading,
   } = useAppStore();
 
+  const inFlightRef = useRef(false);
+  const generationRef = useRef(0);
+
   const load = useCallback(async () => {
     if (!enabled || !isApiConfigured() || !getApiToken()) return;
+    if (inFlightRef.current) return;
+
+    inFlightRef.current = true;
+    const generation = ++generationRef.current;
+    const roleAtStart = useAppStore.getState().activeRole;
+    const endBootstrap = perfMark(`bootstrap:${roleAtStart}`);
 
     setDataMeta({ loading: true, error: null });
     try {
       const user = getStoredApiUser();
       const token = getApiToken();
-      // Re-write session without any accidental credential fields from older builds.
       if (user && token) {
         setApiSession(token, sanitizeApiUser(user), getApiCompanyId());
       }
@@ -72,10 +95,13 @@ export function useBootstrapApiData(enabled = true) {
       if (companyId) setSelectedCompanyId(String(companyId));
 
       const config = await fetchPlatformConfig().catch(() => null);
+      if (generation !== generationRef.current) return;
+
       if (config?.paymentProvider === 'stripe' || config?.paymentProvider === 'manual') {
         setFinancialMode(config.paymentProvider as FinancialMode);
       }
 
+      const endFetch = perfMark(`bootstrap:fetch:${roleAtStart}`);
       let rides: Record<string, unknown>[] = [];
       let drivers: Record<string, unknown>[] = [];
       let clients: Record<string, unknown>[] = [];
@@ -85,34 +111,40 @@ export function useBootstrapApiData(enabled = true) {
       let logs: Record<string, unknown>[] = [];
       let audits: Record<string, unknown>[] = [];
 
-      if (activeRole === 'admin' || activeRole === 'empresa') {
+      const role = roleAtStart as UserRole;
+
+      if (role === 'admin' || role === 'empresa') {
         [rides, drivers, clients, companies, transactions, notifications, logs, audits] =
           await Promise.all([
-            fetchRides().catch(() => []),
-            fetchDriversList().catch(() => []),
-            fetchClientsList().catch(() => []),
-            fetchCompaniesFull().catch(() => []),
-            fetchTransactions().catch(() => []),
-            fetchNotifications().catch(() => []),
-            fetchRideLogs().catch(() => []),
-            fetchAudits().catch(() => []),
+            safeListFetch('corridas', fetchRides),
+            safeListFetch('motoristas', fetchDriversList),
+            safeListFetch('clientes', fetchClientsList),
+            safeListFetch('empresas', fetchCompaniesFull),
+            safeListFetch('transações', fetchTransactions),
+            safeListFetch('notificações', fetchNotifications),
+            safeListFetch('logs', fetchRideLogs),
+            safeListFetch('auditoria', fetchAudits),
           ]);
-      } else if (activeRole === 'motorista') {
+      } else if (role === 'motorista') {
         [rides, notifications] = await Promise.all([
-          fetchRides().catch(() => []),
-          fetchNotifications().catch(() => []),
+          safeListFetch('corridas', fetchRides),
+          safeListFetch('notificações', fetchNotifications),
         ]);
       } else {
         const [clientRides, clientNotifications, mySpendings] = await Promise.all([
-          fetchRides().catch(() => []),
-          fetchNotifications().catch(() => []),
+          safeListFetch('corridas', fetchRides),
+          safeListFetch('notificações', fetchNotifications),
           fetchMySpendings().catch(() => ({ items: [] as Record<string, unknown>[] })),
         ]);
         rides = clientRides;
         notifications = clientNotifications;
         transactions = Array.isArray(mySpendings.items) ? mySpendings.items : [];
       }
+      endFetch();
 
+      if (generation !== generationRef.current) return;
+
+      const endNormalize = perfMark(`bootstrap:normalize:${roleAtStart}`);
       setRides(rides.map((r) => normalizeRide(r as Record<string, unknown>)));
       setDrivers(drivers.map((d) => normalizeDriver(d as Record<string, unknown>)));
       setClients(clients.map((c) => normalizeClient(c as Record<string, unknown>)));
@@ -121,15 +153,29 @@ export function useBootstrapApiData(enabled = true) {
       setNotifications(notifications.map((n) => normalizeNotification(n as Record<string, unknown>)));
       setLogs(logs.map((l) => normalizeLog(l as Record<string, unknown>)));
       setAudits(audits.map((a) => normalizeAudit(a as Record<string, unknown>)));
+      endNormalize();
+
+      perfLog(`bootstrap:counts:${roleAtStart}`, {
+        rides: rides.length,
+        drivers: drivers.length,
+        clients: clients.length,
+      });
+
       setDataMeta({ loaded: true, loading: false, error: null });
+      endBootstrap();
     } catch (e) {
+      if (generation !== generationRef.current) return;
       setDataMeta({
         loading: false,
         error: e instanceof Error ? e.message : 'Falha ao carregar dados',
       });
+      endBootstrap();
+    } finally {
+      if (generation === generationRef.current) {
+        inFlightRef.current = false;
+      }
     }
   }, [
-    activeRole,
     enabled,
     setActiveRole,
     setAudits,
@@ -146,8 +192,10 @@ export function useBootstrapApiData(enabled = true) {
   ]);
 
   useEffect(() => {
-    if (!dataLoaded && !dataLoading) {
-      void load();
-    }
-  }, [dataLoaded, dataLoading, load]);
+    if (!enabled || !isApiConfigured() || !getApiToken()) return;
+    if (dataLoaded || dataLoading || inFlightRef.current) return;
+    void load();
+  }, [enabled, dataLoaded, dataLoading, load, activeRole]);
+
+  return { reload: load };
 }

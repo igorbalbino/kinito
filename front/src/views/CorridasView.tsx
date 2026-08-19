@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Clock,
   Grid,
@@ -38,19 +38,22 @@ export const CorridasView: React.FC = () => {
     }
   }, [rides, selectedRide]);
 
-  const filteredRides = rides.filter((r) => {
-    const matchesSearch =
-      r.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (!clientMode && r.clientName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (r.driverName && r.driverName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      r.origin.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.destination.address.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredRides = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return rides.filter((r) => {
+      const matchesSearch =
+        r.code.toLowerCase().includes(q) ||
+        (!clientMode && r.clientName.toLowerCase().includes(q)) ||
+        (r.driverName && r.driverName.toLowerCase().includes(q)) ||
+        r.origin.address.toLowerCase().includes(q) ||
+        r.destination.address.toLowerCase().includes(q);
 
-    const matchesStatus = statusFilter === 'todos' || r.status === statusFilter;
-    const matchesPayment = paymentFilter === 'todos' || r.paymentMethod === paymentFilter;
+      const matchesStatus = statusFilter === 'todos' || r.status === statusFilter;
+      const matchesPayment = paymentFilter === 'todos' || r.paymentMethod === paymentFilter;
 
-    return matchesSearch && matchesStatus && matchesPayment;
-  });
+      return matchesSearch && matchesStatus && matchesPayment;
+    });
+  }, [rides, searchQuery, statusFilter, paymentFilter, clientMode]);
 
   return (
     <PageContainer>
