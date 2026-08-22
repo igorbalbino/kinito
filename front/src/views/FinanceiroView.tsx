@@ -270,7 +270,7 @@ export const FinanceiroView: React.FC = () => {
       ) : (
         <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 flex items-center gap-2 text-xs font-semibold">
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-          <span>Status Geral: Todos os registros estão sinalizados como "Pendente / Estimativa Manual".</span>
+          <span>Modo manual: valores são estimativa até a conferência. O status de cada lançamento segue o registro real.</span>
         </div>
       )}
 
@@ -340,7 +340,7 @@ export const FinanceiroView: React.FC = () => {
             <div key={tx.id} className="p-4 space-y-1.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-mono font-bold text-indigo-600 text-xs">{tx.code}</span>
-                <StatusBadge type="payment" status={financialMode === 'stripe' ? tx.status : 'pendente'} size="sm" />
+                <StatusBadge type="payment" status={tx.status} size="sm" />
               </div>
               <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{tx.description}</div>
               <div className="text-[11px] text-zinc-500 truncate">{tx.sender} → {tx.recipient}</div>
@@ -374,7 +374,7 @@ export const FinanceiroView: React.FC = () => {
                   <td className="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">{formatBRL(tx.amount)}</td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1.5">
-                      <StatusBadge type="payment" status={financialMode === 'stripe' ? tx.status : 'pendente'} size="sm" />
+                      <StatusBadge type="payment" status={tx.status} size="sm" />
                       <span className="text-[10px] text-zinc-400 font-mono">
                         ({financialMode === 'stripe' ? 'Stripe Connect' : 'Manual'})
                       </span>
