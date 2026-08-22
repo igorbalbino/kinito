@@ -61,6 +61,17 @@ class RidePolicy
             && $this->inCompanyFleet($user, $ride);
     }
 
+    public function adjustPrice(User $user, Ride $ride): bool
+    {
+        if ($this->manage($user, $ride)) {
+            return true;
+        }
+
+        return $user->isActingAs(UserRole::Motorista)
+            && $user->hasRole(UserRole::Motorista->value)
+            && $user->driver?->id === $ride->driver_id;
+    }
+
     public function accept(User $user, Ride $ride): bool
     {
         if ($user->isActingAs(UserRole::Admin) && $user->hasRole(UserRole::Admin->value)) {

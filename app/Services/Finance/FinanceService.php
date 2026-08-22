@@ -22,26 +22,37 @@ class FinanceService
     }
 
     /**
+     * Stripe ride-split is active only when provider is stripe AND secret is configured.
+     */
+    public function isStripeActive(): bool
+    {
+        return config('kinito.payment_provider') === PaymentProvider::Stripe->value
+            && filled(config('kinito.stripe.secret'));
+    }
+
+    /**
      * @return array{gross: float, stripe_fee: float, platform_commission: float, company_cut: float, driver_net: float}
      */
-    public function calculateSplit(float $gross, ?float $companyCommissionRate = null): array
+    public function calculateSplit(float $gross, ?float $companyCommissionRate = null, ?string $paymentMethod = null): array
     {
-        $provider = config('kinito.payment_provider', 'manual');
-        $stripeFee = 0.0;
+        $companyPercent = $companyCommissionRate ?? (float) config('kinito.commissions.company_percent', 10);
+        $stripeActive = $this->isStripeActive();
 
-        if ($provider === PaymentProvider::Stripe->value || $this->paymentDriver() === 'stripe') {
-            $percent = (float) config('kinito.stripe.fee_percent', 3.9);
-            $fixed = (float) config('kinito.stripe.fee_fixed', 0.50);
-            $stripeFee = round(($gross * ($percent / 100)) + $fixed, 2);
+        $stripeFee = 0.0;
+        $platformCommission = 0.0;
+
+        if ($stripeActive) {
+            $stripeFee = $this->stripeFeeForMethod($gross, $paymentMethod);
+            $platformPercent = (float) config('kinito.commissions.platform_percent', 15);
+            $afterStripe = max($gross - $stripeFee, 0);
+            $platformCommission = round($afterStripe * ($platformPercent / 100), 2);
+            $base = $afterStripe;
+        } else {
+            $base = $gross;
         }
 
-        $platformPercent = (float) config('kinito.commissions.platform_percent', 15);
-        $companyPercent = $companyCommissionRate ?? (float) config('kinito.commissions.company_percent', 10);
-
-        $afterStripe = max($gross - $stripeFee, 0);
-        $platformCommission = round($afterStripe * ($platformPercent / 100), 2);
-        $companyCut = round($afterStripe * ($companyPercent / 100), 2);
-        $driverNet = round($afterStripe - $platformCommission - $companyCut, 2);
+        $companyCut = round($base * ($companyPercent / 100), 2);
+        $driverNet = round($base - $platformCommission - $companyCut, 2);
 
         return [
             'gross' => round($gross, 2),
@@ -52,11 +63,36 @@ class FinanceService
         ];
     }
 
+    private function stripeFeeForMethod(float $gross, ?string $paymentMethod): float
+    {
+        $method = strtolower((string) $paymentMethod);
+
+        // Offline settlement — no Stripe processing fee.
+        if (in_array($method, ['dinheiro', 'faturado', 'cash'], true)) {
+            return 0.0;
+        }
+
+        $fees = config('kinito.stripe.fees_by_method', []);
+        $row = $fees[$method] ?? $fees['default'] ?? [
+            'percent' => (float) config('kinito.stripe.fee_percent', 3.9),
+            'fixed' => (float) config('kinito.stripe.fee_fixed', 0.50),
+        ];
+
+        $percent = (float) ($row['percent'] ?? 0);
+        $fixed = (float) ($row['fixed'] ?? 0);
+
+        return round(($gross * ($percent / 100)) + $fixed, 2);
+    }
+
     public function applyToRide(Ride $ride, ?float $gross = null, bool $manual = false): Ride
     {
         $gross ??= (float) ($ride->gross_value ?? 0);
         $companyRate = (float) ($ride->company?->commission_rate ?? config('kinito.commissions.company_percent', 10));
-        $split = $this->calculateSplit($gross, $companyRate);
+        $paymentMethod = $ride->payment_method;
+        $methodValue = $paymentMethod instanceof \BackedEnum
+            ? $paymentMethod->value
+            : (is_string($paymentMethod) ? $paymentMethod : null);
+        $split = $this->calculateSplit($gross, $companyRate, $methodValue);
 
         $provider = config('kinito.payment_provider', 'manual');
         $financialStatus = $manual || $provider === PaymentProvider::Manual->value

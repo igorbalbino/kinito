@@ -67,14 +67,16 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
     }
   };
 
+  const canAdjustPrice =
+    (canDispatch || driverMode) &&
+    ride.status !== 'cancelada';
+
   const handleSaveFinancials = () => {
     void (async () => {
       setActionError(null);
       try {
         const res = await patchRideFinance(ride.id, {
           gross_value: Number(grossInput),
-          driver_net: Number(driverNetInput),
-          platform_commission: Number(platformFeeInput),
         });
         upsertRide(normalizeRide(unwrapResource(res)));
         setIsEditingFinancials(false);
@@ -273,8 +275,9 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
               </div>
               <div className="flex items-center gap-2">
                 <StatusBadge type="payment" status={ride.paymentStatus} size="sm" />
-                {canDispatch && financialMode === 'manual' && !isEditingFinancials && (
+                {canAdjustPrice && !isEditingFinancials && (
                   <button
+                    type="button"
                     onClick={() => {
                       setGrossInput(ride.grossValue);
                       setDriverNetInput(ride.driverNet);
@@ -283,7 +286,7 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
                     }}
                     className="px-2.5 py-1 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-semibold hover:bg-amber-500/30 text-[11px]"
                   >
-                    Editar Valores Manuais
+                    Alterar valor
                   </button>
                 )}
               </div>
@@ -309,49 +312,36 @@ export const RideDetailsModal: React.FC<RideDetailsModalProps> = ({ ride, onClos
               </div>
             )}
 
-            {isEditingFinancials && canDispatch ? (
+            {isEditingFinancials && canAdjustPrice ? (
               <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl space-y-3">
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-[10px] text-zinc-400 font-medium">Valor Bruto (R$)</label>
-                    <input
-                      type="number"
-                      value={grossInput}
-                      onChange={(e) => setGrossInput(parseFloat(e.target.value) || 0)}
-                      className="w-full mt-1 p-2 rounded bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-zinc-400 font-medium">Comissão Plataforma (R$)</label>
-                    <input
-                      type="number"
-                      value={platformFeeInput}
-                      onChange={(e) => setPlatformFeeInput(parseFloat(e.target.value) || 0)}
-                      className="w-full mt-1 p-2 rounded bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-bold text-purple-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-zinc-400 font-medium">Valor Líquido Motorista (R$)</label>
-                    <input
-                      type="number"
-                      value={driverNetInput}
-                      onChange={(e) => setDriverNetInput(parseFloat(e.target.value) || 0)}
-                      className="w-full mt-1 p-2 rounded bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-bold text-emerald-600"
-                    />
-                  </div>
+                <div>
+                  <label className="text-[10px] text-zinc-400 font-medium">Valor da corrida (R$)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={grossInput}
+                    onChange={(e) => setGrossInput(parseFloat(e.target.value) || 0)}
+                    className="w-full mt-1 p-2 rounded bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-bold"
+                  />
+                  <p className="text-[10px] text-zinc-500 mt-1">
+                    Ao salvar, taxas e líquido do motorista são recalculados automaticamente.
+                  </p>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <button
+                    type="button"
                     onClick={() => setIsEditingFinancials(false)}
                     className="px-3 py-1.5 min-h-[40px] rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium"
                   >
                     Cancelar
                   </button>
                   <button
+                    type="button"
                     onClick={handleSaveFinancials}
                     className="px-3 py-1.5 min-h-[40px] rounded bg-indigo-600 text-white font-semibold"
                   >
-                    Salvar Alterações
+                    Salvar valor
                   </button>
                 </div>
               </div>

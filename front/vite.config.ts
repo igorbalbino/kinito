@@ -20,14 +20,14 @@ export default defineConfig(() => {
     },
     build: {
       // Isolated vendor-pdf (jspdf) can exceed 500 kB; main app chunks stay well below.
-      chunkSizeWarningLimit: 600,
+      chunkSizeWarningLimit: 700,
       rollupOptions: {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-')) {
               return 'vendor-recharts';
             }
-            if (id.includes('node_modules/jspdf') || id.includes('node_modules/html2canvas')) {
+            if (id.includes('node_modules/jspdf') || id.includes('node_modules/html2canvas') || id.includes('node_modules/xlsx')) {
               return 'vendor-pdf';
             }
             if (

@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ChevronDown,
   Download,
   FileText,
+  Search,
   ShieldCheck,
 } from 'lucide-react';
-import { downloadCSV, formatBRL, formatDate } from '../lib/utils';
+import { formatBRL, formatDate } from '../lib/utils';
 import { useAppStore } from '../store/useAppStore';
 import { ManualFinancialNotice } from '../components/common/ManualFinancialNotice';
 import { MetricCard } from '../components/common/MetricCard';
@@ -18,6 +20,12 @@ import { SafeSelect } from '../components/common/SafeSelect';
 import { RideDetailsModal } from '../components/modals/RideDetailsModal';
 import { isClientRole } from '../lib/navByRole';
 import { downloadRideReceiptPdf } from '../lib/rideReceiptPdf';
+import {
+  exportRowsAsCsv,
+  exportRowsAsPdfHtml,
+  exportRowsAsXlsx,
+  type ExportRow,
+} from '../lib/financeExport';
 import type { Ride } from '../types';
 
 export const FinanceiroView: React.FC = () => {
@@ -31,6 +39,9 @@ export const FinanceiroView: React.FC = () => {
   const clientMode = isClientRole(activeRole);
 
   const [filterType, setFilterType] = useState<string>('todos');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
 
   useEffect(() => {
@@ -43,43 +54,68 @@ export const FinanceiroView: React.FC = () => {
 
   const completedRides = rides.filter((r) => r.status === 'concluida');
   const totalGross = completedRides.reduce((acc, r) => acc + r.grossValue, 0);
-  const totalStripeFees = financialMode === 'stripe' ? completedRides.reduce((acc, r) => acc + r.stripeFee, 0) : 0;
-  const totalPlatformCut = completedRides.reduce((acc, r) => acc + r.platformCommission, 0);
+  const totalStripeFees =
+    financialMode === 'stripe' ? completedRides.reduce((acc, r) => acc + r.stripeFee, 0) : 0;
+  const totalPlatformCut =
+    financialMode === 'stripe'
+      ? completedRides.reduce((acc, r) => acc + r.platformCommission, 0)
+      : 0;
   const totalCompanyCut = completedRides.reduce((acc, r) => acc + r.companyCut, 0);
   const totalDriverNet = completedRides.reduce((acc, r) => acc + r.driverNet, 0);
 
-  const clientSpendRides = useMemo(
-    () =>
-      [...rides]
-        .filter((r) => r.status !== 'cancelada' || r.grossValue > 0)
-        .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()),
-    [rides],
-  );
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  const clientSpendRides = useMemo(() => {
+    let list = [...rides]
+      .filter((r) => r.status !== 'cancelada' || r.grossValue > 0)
+      .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+    if (normalizedSearch) {
+      list = list.filter((r) => {
+        const hay = [
+          r.code,
+          r.origin.address,
+          r.destination.address,
+          r.clientName,
+          r.driverName,
+          r.status,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(normalizedSearch);
+      });
+    }
+    return list;
+  }, [rides, normalizedSearch]);
+
   const clientTotalSpent = clientSpendRides
     .filter((r) => r.status === 'concluida' || r.status === 'em_andamento' || r.status === 'atribuida')
     .reduce((acc, r) => acc + r.grossValue, 0);
 
-  const filteredTx = transactions.filter((tx) => {
-    if (filterType === 'todos') return true;
-    return tx.type === filterType;
-  });
+  const filteredTx = useMemo(() => {
+    return transactions.filter((tx) => {
+      if (filterType !== 'todos' && tx.type !== filterType) return false;
+      if (!normalizedSearch) return true;
+      const hay = [tx.code, tx.description, tx.sender, tx.recipient, tx.status, tx.type]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return hay.includes(normalizedSearch);
+    });
+  }, [transactions, filterType, normalizedSearch]);
 
-  const handleExportCSV = () => {
-    if (clientMode) {
-      const rows = clientSpendRides.map((r) => ({
-        Codigo: r.code,
-        Origem: r.origin.address,
-        Destino: r.destination.address,
-        Valor: r.grossValue,
-        Status: r.status,
-        Data: r.requestedAt,
-      }));
-      downloadCSV('meus_gastos_kinito.csv', rows);
-      return;
-    }
-    const rows = filteredTx.map((tx) => ({
+  const filterNote = [
+    filterType !== 'todos' ? `tipo=${filterType}` : null,
+    normalizedSearch ? `termo="${searchTerm.trim()}"` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ') || 'nenhum (todos os registros)';
+
+  const fleetExportRows = (): ExportRow[] =>
+    filteredTx.map((tx) => ({
       Codigo: tx.code,
       Tipo: tx.type,
+      Descricao: tx.description,
       ValorBruto: tx.amount,
       Remetente: tx.sender,
       Destinatario: tx.recipient,
@@ -87,8 +123,113 @@ export const FinanceiroView: React.FC = () => {
       ModoProcessamento: tx.paymentMode,
       Data: tx.createdAt,
     }));
-    downloadCSV('extrato_financeiro_kinito.csv', rows);
+
+  const clientExportRows = (): ExportRow[] =>
+    clientSpendRides.map((r) => ({
+      Codigo: r.code,
+      Origem: r.origin.address,
+      Destino: r.destination.address,
+      Valor: r.grossValue,
+      Status: r.status,
+      Data: r.requestedAt,
+    }));
+
+  const runExport = async (format: 'csv' | 'xlsx' | 'pdf') => {
+    setExportBusy(true);
+    setExportOpen(false);
+    try {
+      if (clientMode) {
+        const rows = clientExportRows();
+        if (format === 'csv') exportRowsAsCsv('meus_gastos_kinito.csv', rows);
+        else if (format === 'xlsx') exportRowsAsXlsx('meus_gastos_kinito.xlsx', 'Gastos', rows);
+        else {
+          await exportRowsAsPdfHtml({
+            title: 'Meus gastos — Kinito',
+            subtitle: 'Extrato de corridas do cliente',
+            filterNote,
+            filename: 'meus_gastos_kinito.pdf',
+            columns: [
+              { key: 'Codigo', label: 'Código' },
+              { key: 'Origem', label: 'Origem' },
+              { key: 'Destino', label: 'Destino' },
+              { key: 'Valor', label: 'Valor' },
+              { key: 'Status', label: 'Status' },
+              { key: 'Data', label: 'Data' },
+            ],
+            rows,
+          });
+        }
+        return;
+      }
+
+      const rows = fleetExportRows();
+      if (format === 'csv') exportRowsAsCsv('extrato_financeiro_kinito.csv', rows);
+      else if (format === 'xlsx') exportRowsAsXlsx('extrato_financeiro_kinito.xlsx', 'Extrato', rows);
+      else {
+        await exportRowsAsPdfHtml({
+          title: 'Extrato financeiro — Kinito',
+          subtitle: 'Lançamentos filtrados do módulo financeiro',
+          filterNote,
+          filename: 'extrato_financeiro_kinito.pdf',
+          columns: [
+            { key: 'Codigo', label: 'Código' },
+            { key: 'Tipo', label: 'Tipo' },
+            { key: 'Descricao', label: 'Descrição' },
+            { key: 'ValorBruto', label: 'Valor' },
+            { key: 'Remetente', label: 'Remetente' },
+            { key: 'Destinatario', label: 'Destinatário' },
+            { key: 'Status', label: 'Status' },
+            { key: 'Data', label: 'Data' },
+          ],
+          rows,
+        });
+      }
+    } finally {
+      setExportBusy(false);
+    }
   };
+
+  const ExportMenu = () => (
+    <div className="relative">
+      <button
+        type="button"
+        disabled={exportBusy}
+        onClick={() => setExportOpen((o) => !o)}
+        className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 disabled:opacity-60"
+      >
+        <Download className="w-4 h-4" />
+        {exportBusy ? 'Exportando…' : 'Exportar'}
+        <ChevronDown className="w-3.5 h-3.5" />
+      </button>
+      {exportOpen && (
+        <div className="absolute right-0 mt-1 z-20 min-w-[160px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg py-1 text-xs">
+          {(['csv', 'pdf', 'xlsx'] as const).map((fmt) => (
+            <button
+              key={fmt}
+              type="button"
+              onClick={() => void runExport(fmt)}
+              className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold uppercase"
+            >
+              {fmt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const SearchField = ({ placeholder }: { placeholder: string }) => (
+    <div className="relative flex-1 min-w-[180px]">
+      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+      <input
+        type="search"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder={placeholder}
+        className="w-full pl-8 pr-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 text-xs"
+      />
+    </div>
+  );
 
   if (clientMode) {
     return (
@@ -104,18 +245,16 @@ export const FinanceiroView: React.FC = () => {
               Valores das suas corridas. Baixe o recibo em PDF no detalhe.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" /> Exportar CSV
-          </button>
+          <ExportMenu />
         </header>
+
+        <section aria-label="Filtros de gastos" className="flex flex-wrap gap-2">
+          <SearchField placeholder="Buscar por código, origem, destino…" />
+        </section>
 
         <section aria-label="Resumo de gastos" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <MetricCard title="Total gasto" value={formatBRL(clientTotalSpent)} subtitle="Corridas ativas e concluídas" />
-          <MetricCard title="Corridas" value={String(clientSpendRides.length)} subtitle="No histórico" />
+          <MetricCard title="Corridas" value={String(clientSpendRides.length)} subtitle="No histórico filtrado" />
         </section>
 
         {financialMode === 'manual' && (
@@ -246,15 +385,7 @@ export const FinanceiroView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" /> Exportar Extrato CSV
-          </button>
-        </div>
+        <ExportMenu />
       </header>
 
       {financialMode === 'stripe' ? (
@@ -270,7 +401,9 @@ export const FinanceiroView: React.FC = () => {
       ) : (
         <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 flex items-center gap-2 text-xs font-semibold">
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-          <span>Modo manual: valores são estimativa até a conferência. O status de cada lançamento segue o registro real.</span>
+          <span>
+            Modo manual: sem comissão de plataforma nem taxa Stripe. Valores são estimativa até a conferência.
+          </span>
         </div>
       )}
 
@@ -281,17 +414,17 @@ export const FinanceiroView: React.FC = () => {
           subtitle={financialMode === 'stripe' ? 'Confirmado via Stripe' : 'Estimativa Não Confirmada'}
         />
         <MetricCard
-          title="Taxa Stripe (3.9% + R$0.50)"
+          title="Taxa Stripe (por método)"
           value={financialMode === 'stripe' ? formatBRL(totalStripeFees) : 'R$ 0,00'}
-          subtitle={financialMode === 'stripe' ? 'Deduzido na Origem' : 'Desativado no Modo Manual'}
+          subtitle={financialMode === 'stripe' ? 'PIX / cartão conforme método' : 'Desativado no Modo Manual'}
         />
         <MetricCard
-          title="Comissão Plataforma (15%)"
+          title="Comissão Plataforma"
           value={formatBRL(totalPlatformCut)}
-          subtitle={financialMode === 'stripe' ? 'Retenção Automática' : 'Pendente de Confirmação'}
+          subtitle={financialMode === 'stripe' ? 'Retenção Automática' : 'Zerada sem Stripe'}
         />
         <MetricCard
-          title="Comissão Empresas (10%)"
+          title="Comissão Empresas"
           value={formatBRL(totalCompanyCut)}
           subtitle="Repasse Frota"
         />
@@ -303,22 +436,35 @@ export const FinanceiroView: React.FC = () => {
         <MetricCard
           title="Saldo Disponível"
           value={formatBRL(totalPlatformCut + totalCompanyCut)}
-          badge={financialMode === 'stripe' ? <span className="text-[10px] bg-emerald-500/20 text-emerald-500 font-bold px-1.5 py-0.5 rounded">Liberado</span> : <span className="text-[10px] bg-amber-500/20 text-amber-500 font-bold px-1.5 py-0.5 rounded">Pendente</span>}
+          badge={
+            financialMode === 'stripe' ? (
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-500 font-bold px-1.5 py-0.5 rounded">
+                Liberado
+              </span>
+            ) : (
+              <span className="text-[10px] bg-amber-500/20 text-amber-500 font-bold px-1.5 py-0.5 rounded">
+                Pendente
+              </span>
+            )
+          }
         />
       </section>
 
       <section aria-labelledby="financeiro-extrato" className="p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <h2 id="financeiro-extrato" className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
-              Extrato Detalhado de Lançamentos
-            </h2>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Histórico completo de pagamentos, repasses, comissões e taxas.
-            </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <h2 id="financeiro-extrato" className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                Extrato Detalhado de Lançamentos
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Histórico completo de pagamentos, repasses, comissões e taxas.
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <SearchField placeholder="Buscar código, nome, descrição…" />
             <SafeSelect
               value={filterType}
               onChange={setFilterType}
@@ -343,13 +489,18 @@ export const FinanceiroView: React.FC = () => {
                 <StatusBadge type="payment" status={tx.status} size="sm" />
               </div>
               <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{tx.description}</div>
-              <div className="text-[11px] text-zinc-500 truncate">{tx.sender} → {tx.recipient}</div>
+              <div className="text-[11px] text-zinc-500 truncate">
+                {tx.sender} → {tx.recipient}
+              </div>
               <div className="flex justify-between text-xs pt-1">
                 <span className="font-bold">{formatBRL(tx.amount)}</span>
                 <span className="text-zinc-400">{formatDate(tx.createdAt)}</span>
               </div>
             </div>
           ))}
+          {!filteredTx.length && (
+            <p className="p-6 text-xs text-zinc-500">Nenhum lançamento para os filtros atuais.</p>
+          )}
         </div>
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-xs">

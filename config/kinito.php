@@ -18,6 +18,24 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
         'fee_percent' => (float) env('STRIPE_FEE_PERCENT', 3.9),
         'fee_fixed' => (float) env('STRIPE_FEE_FIXED', 0.50),
+        'fees_by_method' => [
+            'credit_card' => [
+                'percent' => (float) env('STRIPE_FEE_CREDIT_PERCENT', 3.99),
+                'fixed' => (float) env('STRIPE_FEE_CREDIT_FIXED', 0.39),
+            ],
+            'debit_card' => [
+                'percent' => (float) env('STRIPE_FEE_DEBIT_PERCENT', 2.29),
+                'fixed' => (float) env('STRIPE_FEE_DEBIT_FIXED', 0.39),
+            ],
+            'pix' => [
+                'percent' => (float) env('STRIPE_FEE_PIX_PERCENT', 1.19),
+                'fixed' => (float) env('STRIPE_FEE_PIX_FIXED', 0),
+            ],
+            'default' => [
+                'percent' => (float) env('STRIPE_FEE_PERCENT', 3.9),
+                'fixed' => (float) env('STRIPE_FEE_FIXED', 0.50),
+            ],
+        ],
         'prices' => [
             'starter' => env('STRIPE_PRICE_STARTER'),
             'pro' => env('STRIPE_PRICE_PRO'),

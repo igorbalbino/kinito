@@ -166,7 +166,7 @@ class RideController extends Controller
 
     public function manualFinance(Request $request, Ride $ride): RideResource
     {
-        $this->authorize('manage', $ride);
+        $this->authorize('adjustPrice', $ride);
 
         $data = $request->validate([
             'gross_value' => ['required', 'numeric', 'min:0'],
@@ -176,7 +176,17 @@ class RideController extends Controller
             'manual_override_notes' => ['nullable', 'string'],
         ]);
 
-        if (isset($data['platform_commission']) || isset($data['driver_net'])) {
+        $acting = $request->user()->actingRole();
+        $isDriverOnly = $acting === UserRole::Motorista;
+
+        // Drivers may only change gross; split is always recalculated.
+        if ($isDriverOnly) {
+            $this->finance->applyToRide($ride, (float) $data['gross_value'], true);
+
+            return new RideResource($ride->fresh()->load(['client.user', 'driver.user', 'company']));
+        }
+
+        if (isset($data['platform_commission']) || isset($data['driver_net']) || isset($data['company_cut'])) {
             $ride->update([
                 'gross_value' => $data['gross_value'],
                 'platform_commission' => $data['platform_commission'] ?? $ride->platform_commission,
