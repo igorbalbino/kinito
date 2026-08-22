@@ -95,7 +95,7 @@ export const FinanceiroView: React.FC = () => {
       <PageContainer>
         <PageSEO page="financeiro" />
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               Meus gastos
@@ -105,17 +105,18 @@ export const FinanceiroView: React.FC = () => {
             </p>
           </div>
           <button
+            type="button"
             onClick={handleExportCSV}
             className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2"
           >
             <Download className="w-4 h-4" /> Exportar CSV
           </button>
-        </div>
+        </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <section aria-label="Resumo de gastos" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <MetricCard title="Total gasto" value={formatBRL(clientTotalSpent)} subtitle="Corridas ativas e concluídas" />
           <MetricCard title="Corridas" value={String(clientSpendRides.length)} subtitle="No histórico" />
-        </div>
+        </section>
 
         {financialMode === 'manual' && (
           <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs font-medium">
@@ -123,7 +124,7 @@ export const FinanceiroView: React.FC = () => {
           </div>
         )}
 
-        <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        <section aria-label="Histórico de gastos" className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden">
           <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
             {clientSpendRides.map((ride) => (
               <div key={ride.id} className="p-4 space-y-2">
@@ -208,7 +209,7 @@ export const FinanceiroView: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
 
         <RideDetailsModal ride={selectedRide} onClose={() => setSelectedRide(null)} />
         <Footer />
@@ -222,13 +223,14 @@ export const FinanceiroView: React.FC = () => {
 
       <ManualFinancialNotice />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               Módulo Financeiro & Repasses
             </h1>
             <button
+              type="button"
               onClick={() => setFinancialMode(financialMode === 'stripe' ? 'manual' : 'stripe')}
               className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${
                 financialMode === 'stripe'
@@ -246,13 +248,14 @@ export const FinanceiroView: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={handleExportCSV}
             className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2"
           >
             <Download className="w-4 h-4" /> Exportar Extrato CSV
           </button>
         </div>
-      </div>
+      </header>
 
       {financialMode === 'stripe' ? (
         <div className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-900 dark:text-indigo-200 flex flex-wrap items-center gap-3 text-xs">
@@ -271,7 +274,7 @@ export const FinanceiroView: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3">
+      <section aria-label="Métricas financeiras" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3">
         <MetricCard
           title="Valor Bruto Processado"
           value={formatBRL(totalGross)}
@@ -302,14 +305,14 @@ export const FinanceiroView: React.FC = () => {
           value={formatBRL(totalPlatformCut + totalCompanyCut)}
           badge={financialMode === 'stripe' ? <span className="text-[10px] bg-emerald-500/20 text-emerald-500 font-bold px-1.5 py-0.5 rounded">Liberado</span> : <span className="text-[10px] bg-amber-500/20 text-amber-500 font-bold px-1.5 py-0.5 rounded">Pendente</span>}
         />
-      </div>
+      </section>
 
-      <div className="p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
+      <section aria-labelledby="financeiro-extrato" className="p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
-            <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+            <h2 id="financeiro-extrato" className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
               Extrato Detalhado de Lançamentos
-            </h3>
+            </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Histórico completo de pagamentos, repasses, comissões e taxas.
             </p>
@@ -383,7 +386,7 @@ export const FinanceiroView: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
       <details className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
         <summary className="px-5 py-4 cursor-pointer font-semibold text-sm text-zinc-900 dark:text-zinc-100 select-none hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">

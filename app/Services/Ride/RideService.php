@@ -56,7 +56,18 @@ class RideService
                 ? (float) $data['gross_value']
                 : $this->estimateGross((float) ($data['distance_km'] ?? 0));
 
+            $modelo = $company->settings?->modelo_corridas ?? ModeloCorridas::Ambos;
             $assignDriverId = ! empty($data['driver_id']) ? (int) $data['driver_id'] : null;
+
+            // AGENDAMENTO-only companies never auto-assign; INSTANTANEAS/AMBOS do when no driver given.
+            if (! $assignDriverId && $modelo !== ModeloCorridas::Agendamento) {
+                $assignDriverId = $this->pickAutoDriver($company)?->id;
+            }
+
+            if ($modelo === ModeloCorridas::Agendamento) {
+                // Manual assignment only — ignore accidental auto picks; keep explicit driver_id from fleet.
+                $assignDriverId = ! empty($data['driver_id']) ? (int) $data['driver_id'] : null;
+            }
 
             $ride = Ride::query()->create([
                 'code' => 'COR-'.now()->format('ymd').strtoupper(Str::random(5)),
@@ -81,6 +92,8 @@ class RideService
 
             if ($assignDriverId) {
                 $ride = $this->accept($ride, Driver::query()->findOrFail($assignDriverId));
+            } elseif ($modelo !== ModeloCorridas::Agendamento) {
+                $this->notifyCompanyNoDriver($company, $ride);
             }
 
             $this->finance->applyToRide($ride->fresh(['company']), $gross);
@@ -329,6 +342,58 @@ class RideService
     private function estimateGross(float $distanceKm): float
     {
         return round(max(12, $distanceKm * 3.5), 2);
+    }
+
+    /**
+     * Prefer an active fleet driver without an open ride; fall back to any active linked driver.
+     */
+    private function pickAutoDriver(Company $company): ?Driver
+    {
+        $busy = [RideStatus::Aceita->value, RideStatus::EmAndamento->value];
+
+        $base = Driver::query()
+            ->where('status', DriverStatus::Ativo)
+            ->where(function ($q) {
+                $q->where('provider_switch_pending', false)
+                    ->orWhereNull('provider_switch_pending');
+            })
+            ->whereHas('companies', function ($q) use ($company) {
+                $q->where('companies.id', $company->id)
+                    ->where('driver_company.status', DriverStatus::Ativo->value);
+            });
+
+        $idle = (clone $base)
+            ->whereDoesntHave('rides', fn ($q) => $q->whereIn('status', $busy))
+            ->orderBy('id')
+            ->first();
+
+        if ($idle) {
+            return $idle;
+        }
+
+        return $base->orderBy('id')->first();
+    }
+
+    private function notifyCompanyNoDriver(Company $company, Ride $ride): void
+    {
+        $recipients = collect([$company->owner])
+            ->merge($company->users ?? [])
+            ->filter()
+            ->unique('id');
+
+        foreach ($recipients as $user) {
+            if (! $user instanceof \App\Models\User) {
+                continue;
+            }
+            $this->notifications->notify(
+                $user,
+                'Corrida sem motorista',
+                "A corrida {$ride->code} ficou disponível — nenhum motorista ativo livre na frota.",
+                'corrida',
+                'warning',
+                'in_app',
+            );
+        }
     }
 
     /**

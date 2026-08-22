@@ -178,7 +178,7 @@ export const DashboardView: React.FC = () => {
 
       {!clientMode && <ManualFinancialNotice />}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 min-w-0">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 min-w-0">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 break-words">
@@ -198,6 +198,7 @@ export const DashboardView: React.FC = () => {
         {!clientMode && (
           <div className="flex items-center gap-3 shrink-0">
             <button
+              type="button"
               onClick={() => setNewRideModalOpen(true)}
               className="w-full sm:w-auto px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 min-h-[44px] active:scale-95"
             >
@@ -205,11 +206,11 @@ export const DashboardView: React.FC = () => {
             </button>
           </div>
         )}
-      </div>
+      </header>
 
       {activeRole === 'admin' && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <section aria-label="Métricas" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               title="Receita Bruta da Plataforma"
               value={formatBRL(totalGrossRevenue)}
@@ -238,15 +239,15 @@ export const DashboardView: React.FC = () => {
               subtitle={`${drivers.length} cadastrados`}
               icon={<UserCheck className="w-5 h-5 text-emerald-500" />}
             />
-          </div>
+          </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <section aria-label="Gráficos" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                  <h2 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
                     Faturamento Bruto & Comissão (Últimos 14 dias)
-                  </h3>
+                  </h2>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     Evolução do volume financeiro processado pela plataforma
                   </p>
@@ -284,9 +285,9 @@ export const DashboardView: React.FC = () => {
 
             <div className="p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4 flex flex-col justify-between">
               <div>
-                <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                <h2 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
                   Distribuição por Status
-                </h3>
+                </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Proporção de status das corridas ativas
                 </p>
@@ -315,14 +316,14 @@ export const DashboardView: React.FC = () => {
                 ))}
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="p-4 sm:p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4 overflow-hidden min-w-0">
+          <section aria-labelledby="dashboard-corridas-tempo-real" className="p-4 sm:p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4 overflow-hidden min-w-0">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                <h2 id="dashboard-corridas-tempo-real" className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
                   Corridas em Tempo Real
-                </h3>
+                </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Acompanhamento instantâneo dos últimos despachos e status
                 </p>
@@ -386,13 +387,13 @@ export const DashboardView: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </section>
         </>
       )}
 
       {activeRole === 'empresa' && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <section aria-label="Métricas da frota" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               title="Faturamento da Empresa"
               value={formatBRL(totalGrossRevenue)}
@@ -417,12 +418,12 @@ export const DashboardView: React.FC = () => {
               subtitle="Repasse de frota"
               icon={<DollarSign className="w-5 h-5 text-purple-500" />}
             />
-          </div>
+          </section>
 
-          <div className="p-4 sm:p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4 overflow-hidden min-w-0">
-            <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+          <section aria-labelledby="dashboard-frota-corridas" className="p-4 sm:p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4 overflow-hidden min-w-0">
+            <h2 id="dashboard-frota-corridas" className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
               Corridas Despachadas da Sua Frota
-            </h3>
+            </h2>
 
             <div className="md:hidden space-y-3">
               {rides.slice(0, 6).map((ride) => (
@@ -484,13 +485,13 @@ export const DashboardView: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </section>
         </>
       )}
 
       {activeRole === 'motorista' && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <section aria-label="Métricas do motorista" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               title="Ganhos concluídos"
               value={formatBRL(totalDriverPayouts)}
@@ -514,16 +515,16 @@ export const DashboardView: React.FC = () => {
               subtitle={dataLoading ? 'Carregando…' : dataError || 'Dados da API'}
               icon={<Star className="w-5 h-5 text-amber-500" />}
             />
-          </div>
+          </section>
 
           {activeDriverRide ? (
-            <div className="p-5 rounded-2xl border-2 border-indigo-500/40 bg-indigo-500/10 text-zinc-900 dark:text-zinc-100 space-y-4 overflow-hidden min-w-0">
+            <section aria-labelledby="dashboard-corrida-ativa" className="p-5 rounded-2xl border-2 border-indigo-500/40 bg-indigo-500/10 text-zinc-900 dark:text-zinc-100 space-y-4 overflow-hidden min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="w-3 h-3 rounded-full bg-indigo-500 animate-ping shrink-0" />
-                  <h3 className="font-bold text-sm text-indigo-700 dark:text-indigo-300 truncate">
+                  <h2 id="dashboard-corrida-ativa" className="font-bold text-sm text-indigo-700 dark:text-indigo-300 truncate">
                     Corrida ativa ({activeDriverRide.code})
-                  </h3>
+                  </h2>
                 </div>
                 <StatusBadge type="ride" status={activeDriverRide.status} size="sm" />
               </div>
@@ -567,7 +568,7 @@ export const DashboardView: React.FC = () => {
                   </button>
                 )}
               </div>
-            </div>
+            </section>
           ) : (
             <div className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-500">
               Nenhuma corrida ativa no momento.
@@ -578,8 +579,8 @@ export const DashboardView: React.FC = () => {
 
       {activeRole === 'cliente' && (
         <>
-          <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-700 text-white space-y-4 shadow-xl">
-            <h2 className="text-2xl font-black">Pedir corrida agora</h2>
+          <section aria-labelledby="dashboard-pedir-corrida" className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-700 text-white space-y-4 shadow-xl">
+            <h2 id="dashboard-pedir-corrida" className="text-2xl font-black">Pedir corrida agora</h2>
             <p className="text-sm opacity-90 max-w-xl">
               Informe origem e destino. Em poucos cliques sua solicitação está no ar.
             </p>
@@ -590,9 +591,9 @@ export const DashboardView: React.FC = () => {
             >
               <Car className="w-5 h-5" /> Pedir corrida
             </button>
-          </div>
+          </section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <section aria-label="Resumo do cliente" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <MetricCard
               title="Minhas corridas"
               value={rides.length}
@@ -611,11 +612,11 @@ export const DashboardView: React.FC = () => {
               subtitle="Aguardando ou ativas"
               icon={<Car className="w-5 h-5 text-blue-500" />}
             />
-          </div>
+          </section>
 
-          <div className="p-4 sm:p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-3">
+          <section aria-labelledby="dashboard-ultimas-corridas" className="p-4 sm:p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">Últimas corridas</h3>
+              <h2 id="dashboard-ultimas-corridas" className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">Últimas corridas</h2>
               <button
                 type="button"
                 onClick={() => navigate('/corridas')}
@@ -666,7 +667,7 @@ export const DashboardView: React.FC = () => {
                 Histórico completo
               </button>
             </div>
-          </div>
+          </section>
         </>
       )}
 

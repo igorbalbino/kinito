@@ -187,6 +187,7 @@ function redactSecrets(text: string): string {
 }
 
 export function normalizeNotification(raw: Record<string, unknown>): SystemNotification {
+  const meta = raw.meta && typeof raw.meta === 'object' ? (raw.meta as SystemNotification['meta']) : undefined;
   return {
     id: String(raw.id),
     title: String(raw.title || ''),
@@ -195,6 +196,8 @@ export function normalizeNotification(raw: Record<string, unknown>): SystemNotif
     category: (String(raw.category || 'sistema') as SystemNotification['category']),
     timestamp: String(raw.timestamp || raw.createdAt || new Date().toISOString()),
     read: Boolean(raw.read),
+    link: raw.link != null ? String(raw.link) : undefined,
+    meta,
   };
 }
 

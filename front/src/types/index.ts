@@ -184,6 +184,13 @@ export interface SystemNotification {
   read: boolean;
   link?: string;
   type: 'info' | 'success' | 'warning' | 'error';
+  meta?: {
+    type?: string;
+    transfer_id?: number;
+    company_id?: number;
+    company_name?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface FeatureFlags {

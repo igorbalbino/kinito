@@ -21,6 +21,7 @@ class AppNotificationResource extends JsonResource
             'link' => $this->link,
             'type' => $this->type,
             'channel' => $this->channel,
+            'meta' => $this->meta,
         ];
     }
 }

@@ -2,20 +2,33 @@ import React, { useMemo, useState } from 'react';
 import { HelpCircle, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { screenHelpByRoute } from '../../content/screenHelpByRoute';
+import { useAppStore } from '../../store/useAppStore';
+import { cn } from '../../lib/utils';
 
 export const ScreenHelpFab: React.FC = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const handPreference = useAppStore((s) => s.handPreference);
 
   const help = useMemo(() => screenHelpByRoute[location.pathname], [location.pathname]);
   if (!help) return null;
+
+  const positionClass =
+    handPreference === 'left'
+      ? 'left-4 bottom-36 md:bottom-6'
+      : handPreference === 'right'
+        ? 'right-4 bottom-36 md:bottom-6'
+        : 'left-1/2 -translate-x-1/2 bottom-36 md:bottom-6 md:left-auto md:right-4 md:translate-x-0';
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed right-4 bottom-24 md:bottom-6 z-40 w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl border border-white/20 flex items-center justify-center"
+        className={cn(
+          'fixed z-40 w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl border border-white/20 flex items-center justify-center transition-all duration-300',
+          positionClass
+        )}
         title="Ajuda da tela"
         aria-label="Abrir ajuda da tela"
       >

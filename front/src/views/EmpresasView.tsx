@@ -15,7 +15,7 @@ export const EmpresasView: React.FC = () => {
     <PageContainer>
       <PageSEO page="empresas" />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             Empresas & Frotas Distribuidoras
@@ -27,11 +27,11 @@ export const EmpresasView: React.FC = () => {
             Plano corporativo, split de recebíveis por CNPJ e colaboradores com permissão.
           </p>
         </div>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <section aria-label="Lista de empresas" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {companies.map((comp) => (
-          <div
+          <article
             key={comp.id}
             className="p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4 hover:border-purple-500/50 transition-all shadow-2xs"
           >
@@ -39,7 +39,7 @@ export const EmpresasView: React.FC = () => {
               <div className="flex items-center gap-3">
                 <img src={comp.logo} alt={comp.name} className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border" />
                 <div>
-                  <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{comp.name}</h3>
+                  <h2 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{comp.name}</h2>
                   <p className="text-[10px] text-zinc-400 font-mono">CNPJ: {comp.cnpj}</p>
                 </div>
               </div>
@@ -69,22 +69,23 @@ export const EmpresasView: React.FC = () => {
                 <span className="font-bold text-emerald-600 dark:text-emerald-400 ml-1">{formatBRL(comp.monthlyRevenue)}</span>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedCompany(comp)}
                 className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition-colors"
               >
                 Colaboradores
               </button>
             </div>
-          </div>
+          </article>
         ))}
-      </div>
+      </section>
 
       {selectedCompany && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-4 text-xs">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">{selectedCompany.name}</h3>
+                <h2 className="font-bold text-base text-zinc-900 dark:text-zinc-100">{selectedCompany.name}</h2>
                 <p className="text-zinc-400 text-xs">Colaboradores & Gestores de Frota</p>
               </div>
               <button onClick={() => setSelectedCompany(null)} className="px-3 py-1 bg-zinc-200 dark:bg-zinc-800 rounded-lg">Fechar</button>

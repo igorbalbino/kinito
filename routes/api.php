@@ -110,6 +110,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/notificacoes/{notification}/read', [NotificationController::class, 'markRead']);
             Route::post('/notificacoes/read-all', [NotificationController::class, 'markAllRead']);
 
+            Route::post('/provider-transfers/{transfer}/accept', [\App\Http\Controllers\Api\ProviderTransferController::class, 'accept']);
+            Route::post('/provider-transfers/{transfer}/reject', [\App\Http\Controllers\Api\ProviderTransferController::class, 'reject']);
+
             Route::get('/logs/rides', [LogController::class, 'rideLogs']);
             Route::get('/logs/rides/details', [LogController::class, 'rideDetailLogs']);
             Route::get('/logs/audits', [LogController::class, 'audits']);

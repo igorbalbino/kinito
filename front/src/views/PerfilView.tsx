@@ -47,22 +47,23 @@ export const PerfilView: React.FC = () => {
     <PageContainer narrow>
       <PageSEO page="perfil" />
 
-      <div>
+      <header>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
           Meu Perfil & Configurações de Segurança
         </h1>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
           Gerencie seus dados pessoais, credenciais de acesso e autenticação de dois fatores (2FA).
         </p>
-      </div>
+      </header>
 
+      <section aria-label="Dados do perfil">
       <form onSubmit={handleSave} autoComplete="off" className="p-6 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-6 text-xs">
         <div className="flex items-center gap-4 pb-6 border-b border-zinc-100 dark:border-zinc-800">
           <div className="w-16 h-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xl uppercase shadow-md">
             {profile.name.slice(0, 2)}
           </div>
           <div>
-            <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">{profile.name}</h3>
+            <h2 className="font-bold text-base text-zinc-900 dark:text-zinc-100">{profile.name}</h2>
             <p className="text-zinc-500 font-medium">{profile.roleTitle}</p>
             <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-500">
               Sessão Ativa Autenticada
@@ -95,9 +96,9 @@ export const PerfilView: React.FC = () => {
         </div>
 
         <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
-          <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+          <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             <KeyRound className="w-4 h-4 text-indigo-500" /> Alterar Senha de Acesso
-          </h4>
+          </h3>
 
           {pwdError && <p className="text-xs text-rose-500 font-medium">{pwdError}</p>}
 
@@ -161,6 +162,7 @@ export const PerfilView: React.FC = () => {
           </div>
         </div>
       </form>
+      </section>
 
       <Footer />
     </PageContainer>

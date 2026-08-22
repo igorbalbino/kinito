@@ -73,7 +73,7 @@ export const CorridasView: React.FC = () => {
         </p>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             {clientMode ? 'Minhas corridas' : 'Gestão de Corridas & Despacho'}
@@ -91,6 +91,7 @@ export const CorridasView: React.FC = () => {
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5 text-xs">
             <button
+              type="button"
               onClick={() => setViewMode('table')}
               className={`p-1.5 rounded-lg flex items-center gap-1 font-semibold transition-all ${
                 viewMode === 'table'
@@ -102,6 +103,7 @@ export const CorridasView: React.FC = () => {
               <List className="w-4 h-4" />
             </button>
             <button
+              type="button"
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-lg flex items-center gap-1 font-semibold transition-all ${
                 viewMode === 'grid'
@@ -114,6 +116,7 @@ export const CorridasView: React.FC = () => {
             </button>
             {!clientMode && (
               <button
+                type="button"
                 onClick={() => setViewMode('timeline')}
                 className={`p-1.5 rounded-lg flex items-center gap-1 font-semibold transition-all ${
                   viewMode === 'timeline'
@@ -128,15 +131,16 @@ export const CorridasView: React.FC = () => {
           </div>
 
           <button
+            type="button"
             onClick={() => setNewRideModalOpen(true)}
             className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 min-h-[44px] active:scale-95"
           >
             <Plus className="w-4 h-4" /> {clientMode ? 'Solicitar' : 'Nova Corrida'}
           </button>
         </div>
-      </div>
+      </header>
 
-      <div className="p-4 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-3">
+      <section aria-label="Filtros" className="p-4 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
           <div className="relative md:col-span-2">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-400" />
@@ -186,10 +190,10 @@ export const CorridasView: React.FC = () => {
             />
           </div>
         </div>
-      </div>
+      </section>
 
       {viewMode === 'table' && (
-        <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden min-w-0">
+        <section aria-label="Lista de corridas" className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden min-w-0">
           <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
             {filteredRides.map((ride) => (
               <button
@@ -298,16 +302,17 @@ export const CorridasView: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       )}
 
       {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <section aria-label="Cards de corridas" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredRides.slice(0, 12).map((ride) => (
-            <div
+            <button
               key={ride.id}
+              type="button"
               onClick={() => setSelectedRide(ride)}
-              className="p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 cursor-pointer space-y-4 transition-all shadow-2xs hover:shadow-md"
+              className="w-full text-left p-5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 cursor-pointer space-y-4 transition-all shadow-2xs hover:shadow-md"
             >
               <div className="flex items-center justify-between">
                 <span className="font-mono font-bold text-sm text-indigo-600 dark:text-indigo-400">{ride.code}</span>
@@ -339,23 +344,24 @@ export const CorridasView: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
-        </div>
+        </section>
       )}
 
       {!clientMode && viewMode === 'timeline' && (
-        <div className="p-6 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-6">
-          <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+        <section aria-labelledby="corridas-timeline" className="p-6 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-6">
+          <h2 id="corridas-timeline" className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
             Linha do Tempo de Execução dos Serviços
-          </h3>
+          </h2>
           <div className="relative border-l-2 border-indigo-500/30 ml-4 space-y-6">
             {filteredRides.slice(0, 10).map((ride) => (
               <div key={ride.id} className="ml-6 relative group">
                 <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-indigo-600 border-2 border-white dark:border-zinc-900" />
-                <div
+                <button
+                  type="button"
                   onClick={() => setSelectedRide(ride)}
-                  className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 bg-zinc-50/50 dark:bg-zinc-800/40 cursor-pointer transition-all space-y-2"
+                  className="w-full text-left p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 bg-zinc-50/50 dark:bg-zinc-800/40 cursor-pointer transition-all space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono font-bold text-indigo-600">{ride.code} • {ride.clientName}</span>
@@ -370,11 +376,11 @@ export const CorridasView: React.FC = () => {
                     </span>
                     <StatusBadge type="ride" status={ride.status} size="sm" />
                   </div>
-                </div>
+                </button>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       <RideDetailsModal ride={selectedRide} onClose={() => setSelectedRide(null)} />

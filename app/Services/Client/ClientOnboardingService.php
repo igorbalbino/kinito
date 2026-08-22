@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Services\Audit\AuditService;
 use App\Services\Notification\NotificationService;
+use App\Services\Provider\ProviderTransferService;
 use App\Support\EnsureUserRoles;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -20,6 +21,7 @@ class ClientOnboardingService
     public function __construct(
         private readonly AuditService $audit,
         private readonly NotificationService $notifications,
+        private readonly ProviderTransferService $transfers,
     ) {}
 
     /**
@@ -61,7 +63,7 @@ class ClientOnboardingService
 
     /**
      * Company or driver creates a client and links them.
-     * New users get an invite e-mail (confirm first); password is sent only after verification.
+     * Existing clients get a consent transfer request instead of forced provider switch.
      *
      * @param  array<string, mixed>  $data
      */
@@ -70,26 +72,8 @@ class ClientOnboardingService
         $placeholderPassword = Str::password(32);
         $wasNewUser = ! User::query()->where('email', $data['email'])->exists();
 
-        $result = DB::transaction(function () use ($data, $actor, $company, $origin, $placeholderPassword, $wasNewUser) {
-            $user = User::query()->firstOrCreate(
-                ['email' => $data['email']],
-                [
-                    'name' => $data['name'],
-                    'phone' => $data['phone'] ?? null,
-                    'password' => $placeholderPassword,
-                    'must_change_password' => true,
-                ]
-            );
-
-            if ($wasNewUser) {
-                $user->forceFill([
-                    'must_change_password' => true,
-                    'password' => $placeholderPassword,
-                    'email_verified_at' => null,
-                ])->save();
-            } elseif (! empty($data['phone']) && ! $user->phone) {
-                $user->update(['phone' => $data['phone']]);
-            }
+        if (! $wasNewUser) {
+            $user = User::query()->where('email', $data['email'])->firstOrFail();
 
             if (! $user->hasRole(UserRole::Cliente->value)) {
                 EnsureUserRoles::assign($user, UserRole::Cliente);
@@ -99,6 +83,46 @@ class ClientOnboardingService
                 ['user_id' => $user->id],
                 ['status' => ClientStatus::Ativo]
             );
+
+            // Soft membership so the company can see them after accept.
+            $company->clients()->syncWithoutDetaching([
+                $client->id => [
+                    'origin' => $origin,
+                    'is_active' => true,
+                ],
+            ]);
+
+            $result = $this->transfers->requestClientTransfer($client, $company, $actor);
+
+            $this->audit->log('CLIENT_TRANSFER_REQUESTED_BY_ACTOR', $actor, $client, null, [
+                'company_id' => $company->id,
+                'transfer_pending' => $result['transfer_pending'],
+            ]);
+
+            return [
+                'user' => $user->fresh(),
+                'client' => $result['client'],
+                'invite_pending' => false,
+                'transfer_pending' => $result['transfer_pending'],
+            ];
+        }
+
+        $result = DB::transaction(function () use ($data, $actor, $company, $origin, $placeholderPassword) {
+            $user = User::query()->create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'] ?? null,
+                'password' => $placeholderPassword,
+                'must_change_password' => true,
+                'email_verified_at' => null,
+            ]);
+
+            EnsureUserRoles::assign($user, UserRole::Cliente);
+
+            $client = Client::query()->create([
+                'user_id' => $user->id,
+                'status' => ClientStatus::Ativo,
+            ]);
 
             $company->clients()->syncWithoutDetaching([
                 $client->id => [
@@ -116,36 +140,35 @@ class ClientOnboardingService
                 ]
             );
 
-            if ($wasNewUser) {
-                $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
-                $safeMessage = "A empresa {$company->name} cadastrou você no Kinito. "
-                    .'Confirme o e-mail enviado para ativar o acesso e receber a senha temporária.';
+            $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
+            $safeMessage = "A empresa {$company->name} cadastrou você no Kinito. "
+                .'Confirme o e-mail enviado para ativar o acesso e receber a senha temporária.';
 
-                $this->notifications->notify(
-                    $user,
-                    'Convite Kinito',
-                    $safeMessage,
-                    'sistema',
-                    'info',
-                    'in_app',
-                    $link,
-                );
-            }
+            $this->notifications->notify(
+                $user,
+                'Convite Kinito',
+                $safeMessage,
+                'sistema',
+                'info',
+                'in_app',
+                $link,
+            );
 
             $this->audit->log('CLIENT_CREATED_BY_ACTOR', $actor, $client, null, [
                 'company_id' => $company->id,
                 'origin' => $origin,
-                'invite_pending' => $wasNewUser,
+                'invite_pending' => true,
             ]);
 
             return [
                 'user' => $user->fresh(),
                 'client' => $client,
-                'invite_pending' => $wasNewUser && ! $user->fresh()->hasVerifiedEmail(),
+                'invite_pending' => true,
+                'transfer_pending' => false,
             ];
         });
 
-        if ($wasNewUser && ($result['invite_pending'] ?? false)) {
+        if ($result['invite_pending'] ?? false) {
             $this->notifications->sendClientInviteEmail($result['user'], $company->name);
         }
 

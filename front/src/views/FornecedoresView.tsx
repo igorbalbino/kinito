@@ -202,20 +202,20 @@ export const FornecedoresView: React.FC = () => {
   return (
     <PageContainer>
       <PageSEO page="fornecedores" />
-      <div>
+      <header>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Fornecedores</h1>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
           {clientMode
             ? 'Escolha uma empresa específica ou use o marketplace (todos).'
             : 'Escolha uma empresa específica ou receba corridas de todos os fornecedores disponíveis.'}
         </p>
-      </div>
+      </header>
 
       {error && <p className="text-sm text-rose-500 font-medium">{error}</p>}
       {message && <p className="text-sm text-emerald-600 font-medium">{message}</p>}
 
       {isDriverProfile && switchPending && (
-        <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100 text-xs space-y-3">
+        <section aria-label="Troca de fornecedor pendente" className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100 text-xs space-y-3">
           <p>
             Aguardando aceite de <strong>{driver?.companyName}</strong>. Você está suspenso de corridas até a
             aprovação.
@@ -231,7 +231,7 @@ export const FornecedoresView: React.FC = () => {
           >
             <RotateCcw className="w-3.5 h-3.5" /> Voltar ao fornecedor anterior
           </button>
-        </div>
+        </section>
       )}
 
       {isDriverProfile && !switchPending && (
@@ -239,6 +239,7 @@ export const FornecedoresView: React.FC = () => {
           type="button"
           disabled={busy}
           onClick={() => void selectDriverAll()}
+          aria-pressed={driverProviderMode === 'ALL'}
           className={`w-full text-left p-4 rounded-xl border transition-all ${
             driverProviderMode === 'ALL'
               ? 'border-indigo-500 bg-indigo-500/10'
@@ -257,6 +258,7 @@ export const FornecedoresView: React.FC = () => {
           type="button"
           disabled={busy}
           onClick={() => void selectClientCompany(null, 'ALL')}
+          aria-pressed={mode === 'ALL'}
           className={`w-full text-left p-4 rounded-xl border transition-all ${
             mode === 'ALL'
               ? 'border-indigo-500 bg-indigo-500/10'
@@ -275,7 +277,7 @@ export const FornecedoresView: React.FC = () => {
           <Loader2 className="w-4 h-4 animate-spin" /> Carregando fornecedores…
         </div>
       ) : (
-        <div className="space-y-2">
+        <section aria-label="Lista de fornecedores" className="space-y-2">
           {providers.map((p) => {
             const selected = clientMode
               ? mode === 'COMPANY' && selectedCompanyId === p.id
@@ -285,6 +287,7 @@ export const FornecedoresView: React.FC = () => {
                 key={p.id}
                 type="button"
                 disabled={busy || (isDriverProfile && selected && !switchPending)}
+                aria-pressed={selected}
                 onClick={() => {
                   if (clientMode) void selectClientCompany(p.id, 'COMPANY');
                   else if (isDriverProfile) void selectDriverCompany(p.id);
@@ -315,7 +318,7 @@ export const FornecedoresView: React.FC = () => {
               </button>
             );
           })}
-        </div>
+        </section>
       )}
 
       <Footer />

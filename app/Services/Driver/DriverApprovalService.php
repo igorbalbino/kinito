@@ -24,11 +24,12 @@ class DriverApprovalService
         private readonly AuditService $audit,
         private readonly NotificationService $notifications,
         private readonly ProviderPreferenceService $providers,
+        private readonly \App\Services\Provider\ProviderTransferService $transfers,
     ) {}
 
     /**
      * Company creates a driver linked to the fleet (can receive rides).
-     * New users get invite e-mail first; password is sent only after verification.
+     * Existing drivers get a consent transfer request instead of forced primary switch.
      *
      * @param  array<string, mixed>  $data
      */
@@ -37,30 +38,8 @@ class DriverApprovalService
         $placeholderPassword = Str::password(32);
         $wasNewUser = ! User::query()->where('email', $data['email'])->exists();
 
-        $result = DB::transaction(function () use ($data, $actor, $company, $placeholderPassword, $wasNewUser) {
-            $user = User::query()->firstOrCreate(
-                ['email' => $data['email']],
-                [
-                    'name' => $data['name'],
-                    'phone' => $data['phone'] ?? null,
-                    'password' => $placeholderPassword,
-                    'must_change_password' => true,
-                ]
-            );
-
-            if ($wasNewUser) {
-                $user->forceFill([
-                    'must_change_password' => true,
-                    'password' => $placeholderPassword,
-                    'email_verified_at' => null,
-                ])->save();
-            } elseif (! empty($data['phone']) && ! $user->phone) {
-                $user->update(['phone' => $data['phone']]);
-            }
-
-            if (! empty($data['name']) && $user->name !== $data['name'] && $wasNewUser) {
-                $user->update(['name' => $data['name']]);
-            }
+        if (! $wasNewUser) {
+            $user = User::query()->where('email', $data['email'])->firstOrFail();
 
             if (! $user->hasRole(UserRole::Motorista->value)) {
                 EnsureUserRoles::assign($user, UserRole::Motorista);
@@ -77,35 +56,12 @@ class DriverApprovalService
                 ]
             );
 
-            if (! $wasNewUser) {
-                $driver->fill(array_filter([
-                    'vehicle_model' => $data['vehicle_model'] ?? null,
-                    'vehicle_plate' => $data['vehicle_plate'] ?? null,
-                    'vehicle_color' => $data['vehicle_color'] ?? null,
-                    'city' => $data['city'] ?? null,
-                ], fn ($v) => $v !== null && $v !== ''))->save();
-            }
-
-            if ($driver->status !== DriverStatus::Ativo && $driver->status !== DriverStatus::Bloqueado) {
-                $driver->update(['status' => DriverStatus::Ativo]);
-            }
-
-            $driver->companies()->syncWithoutDetaching([
-                $company->id => [
-                    'status' => DriverStatus::Ativo->value,
-                    'approved_at' => now(),
-                    'approved_by' => $actor->id,
-                    'origin' => 'empresa',
-                ],
-            ]);
-
-            if (! $driver->primary_company_id) {
-                $driver->forceFill([
-                    'primary_company_id' => $company->id,
-                    'provider_switch_pending' => false,
-                    'provider_mode' => DefaultProviderMode::Company,
-                ])->save();
-            }
+            $driver->fill(array_filter([
+                'vehicle_model' => $data['vehicle_model'] ?? null,
+                'vehicle_plate' => $data['vehicle_plate'] ?? null,
+                'vehicle_color' => $data['vehicle_color'] ?? null,
+                'city' => $data['city'] ?? null,
+            ], fn ($v) => $v !== null && $v !== ''))->save();
 
             if ($driver->documents()->doesntExist()) {
                 foreach (['CNH', 'CRLV'] as $docName) {
@@ -120,33 +76,91 @@ class DriverApprovalService
 
             EnsureUserProfiles::grantDriverClientProfile($user, $company);
 
-            if ($wasNewUser) {
-                $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
-                $this->notifications->notify(
-                    $user,
-                    'Convite Kinito — motorista',
-                    "A empresa {$company->name} cadastrou você como motorista. "
-                    .'Confirme o e-mail enviado para ativar o acesso e receber a senha temporária.',
-                    'motorista',
-                    'info',
-                    'in_app',
-                    $link,
-                );
+            $result = $this->transfers->requestDriverTransfer($driver, $company, $actor);
+
+            $this->audit->log('DRIVER_TRANSFER_REQUESTED_BY_COMPANY', $actor, $driver, null, [
+                'company_id' => $company->id,
+                'transfer_pending' => $result['transfer_pending'],
+            ]);
+
+            return [
+                'user' => $user->fresh(),
+                'driver' => $result['driver'],
+                'invite_pending' => false,
+                'transfer_pending' => $result['transfer_pending'],
+            ];
+        }
+
+        $result = DB::transaction(function () use ($data, $actor, $company, $placeholderPassword) {
+            $user = User::query()->create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'] ?? null,
+                'password' => $placeholderPassword,
+                'must_change_password' => true,
+                'email_verified_at' => null,
+            ]);
+
+            EnsureUserRoles::assign($user, UserRole::Motorista);
+
+            $driver = Driver::query()->create([
+                'user_id' => $user->id,
+                'status' => DriverStatus::Ativo,
+                'vehicle_model' => $data['vehicle_model'] ?? null,
+                'vehicle_plate' => $data['vehicle_plate'] ?? null,
+                'vehicle_color' => $data['vehicle_color'] ?? null,
+                'city' => $data['city'] ?? null,
+                'primary_company_id' => $company->id,
+                'provider_switch_pending' => false,
+                'provider_mode' => DefaultProviderMode::Company,
+            ]);
+
+            $driver->companies()->syncWithoutDetaching([
+                $company->id => [
+                    'status' => DriverStatus::Ativo->value,
+                    'approved_at' => now(),
+                    'approved_by' => $actor->id,
+                    'origin' => 'empresa',
+                ],
+            ]);
+
+            foreach (['CNH', 'CRLV'] as $docName) {
+                DriverDocument::query()->create([
+                    'driver_id' => $driver->id,
+                    'name' => $docName,
+                    'status' => DocumentStatus::Pendente,
+                    'uploaded_at' => now(),
+                ]);
             }
+
+            EnsureUserProfiles::grantDriverClientProfile($user, $company);
+
+            $link = rtrim((string) config('kinito.frontend_url'), '/').'/login';
+            $this->notifications->notify(
+                $user,
+                'Convite Kinito — motorista',
+                "A empresa {$company->name} cadastrou você como motorista. "
+                .'Confirme o e-mail enviado para ativar o acesso e receber a senha temporária.',
+                'motorista',
+                'info',
+                'in_app',
+                $link,
+            );
 
             $this->audit->log('DRIVER_CREATED_BY_COMPANY', $actor, $driver, null, [
                 'company_id' => $company->id,
-                'invite_pending' => $wasNewUser,
+                'invite_pending' => true,
             ]);
 
             return [
                 'user' => $user->fresh(),
                 'driver' => $driver->fresh(),
-                'invite_pending' => $wasNewUser && ! $user->fresh()->hasVerifiedEmail(),
+                'invite_pending' => true,
+                'transfer_pending' => false,
             ];
         });
 
-        if ($wasNewUser && ($result['invite_pending'] ?? false)) {
+        if ($result['invite_pending'] ?? false) {
             $this->notifications->sendDriverInviteEmail($result['user'], $company->name);
         }
 

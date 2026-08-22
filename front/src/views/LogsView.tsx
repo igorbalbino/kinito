@@ -20,7 +20,7 @@ export const LogsView: React.FC = () => {
     <PageContainer>
       <PageSEO page="logs" />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             Logs & Trilha de Auditoria do Sistema
@@ -32,6 +32,7 @@ export const LogsView: React.FC = () => {
 
         <div className="p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1 text-xs font-semibold">
           <button
+            type="button"
             onClick={() => setActiveTab('logs')}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               activeTab === 'logs' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xs' : 'text-zinc-500'
@@ -40,6 +41,7 @@ export const LogsView: React.FC = () => {
             Logs do Sistema ({logs.length})
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('audit')}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               activeTab === 'audit' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xs' : 'text-zinc-500'
@@ -48,12 +50,12 @@ export const LogsView: React.FC = () => {
             Auditoria de Segurança ({audits.length})
           </button>
         </div>
-      </div>
+      </header>
 
       {activeTab === 'logs' && (
-        <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
+        <section aria-labelledby="logs-eventos" className="p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">Eventos em Tempo Real</h3>
+            <h2 id="logs-eventos" className="font-bold text-sm text-zinc-900 dark:text-zinc-100">Eventos em Tempo Real</h2>
             <SafeSelect
               value={levelFilter}
               onChange={setLevelFilter}
@@ -123,14 +125,14 @@ export const LogsView: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       )}
 
       {activeTab === 'audit' && (
-        <div className="p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
-          <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+        <section aria-labelledby="logs-auditoria" className="p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 space-y-4">
+          <h2 id="logs-auditoria" className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
             Trilha de Auditoria de Ações Críticas
-          </h3>
+          </h2>
 
           <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
             {audits.map((aud) => (
@@ -178,7 +180,7 @@ export const LogsView: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       )}
 
       <Footer />

@@ -126,7 +126,7 @@ export const ConfiguracoesView: React.FC = () => {
     <PageContainer narrow className="pb-24">
       <PageSEO page="configuracoes" />
 
-      <div className="flex items-start justify-between gap-3">
+      <header className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
             {t.settingsPage.title}
@@ -144,10 +144,10 @@ export const ConfiguracoesView: React.FC = () => {
             <ArrowLeft className="w-3.5 h-3.5" /> Menu
           </button>
         )}
-      </div>
+      </header>
 
       {!section && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <section aria-label="Menu de configurações" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {menuItems.map((item) => (
             <button
               key={item.id}
@@ -162,7 +162,7 @@ export const ConfiguracoesView: React.FC = () => {
               <p className="text-xs text-slate-500 dark:text-slate-400">{item.desc}</p>
             </button>
           ))}
-        </div>
+        </section>
       )}
 
       {section === 'plano' && showFleetSettings && <PlanBillingPanel />}
@@ -171,13 +171,13 @@ export const ConfiguracoesView: React.FC = () => {
       {section === 'fornecedor' && showProviderSettings && <ProviderSummaryPanel />}
 
       {section === 'mao' && (
-        <div className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
+        <section aria-labelledby="config-mao" className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
               <Smartphone className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-base text-slate-100">Modo Mão Dominante</h3>
+              <h2 id="config-mao" className="font-semibold text-base text-slate-100">Modo Mão Dominante</h2>
               <p className="text-xs text-slate-400">
                 Ajusta o botão flutuante e áreas de toque para fácil alcance do polegar.
               </p>
@@ -188,6 +188,7 @@ export const ConfiguracoesView: React.FC = () => {
             <button
               type="button"
               onClick={() => setHandPreference('right')}
+              aria-pressed={handPreference === 'right'}
               className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 text-xs font-semibold min-h-[64px] active:scale-95 ${
                 handPreference === 'right'
                   ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
@@ -201,6 +202,7 @@ export const ConfiguracoesView: React.FC = () => {
             <button
               type="button"
               onClick={() => setHandPreference('left')}
+              aria-pressed={handPreference === 'left'}
               className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 text-xs font-semibold min-h-[64px] active:scale-95 ${
                 handPreference === 'left'
                   ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
@@ -214,6 +216,7 @@ export const ConfiguracoesView: React.FC = () => {
             <button
               type="button"
               onClick={() => setHandPreference('center')}
+              aria-pressed={handPreference === 'center'}
               className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 text-xs font-semibold min-h-[64px] active:scale-95 ${
                 handPreference === 'center'
                   ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
@@ -224,20 +227,20 @@ export const ConfiguracoesView: React.FC = () => {
               <span>Centralizado</span>
             </button>
           </div>
-        </div>
+        </section>
       )}
 
       {section === 'financeiro' && showFleetSettings && (
-        <div className="p-6 rounded-2xl border border-indigo-500/40 bg-white/5 shadow-lg space-y-5">
+        <section aria-labelledby="config-financeiro" className="p-6 rounded-2xl border border-indigo-500/40 bg-white/5 shadow-lg space-y-5">
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
                 <CreditCard className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold text-base text-slate-100">
+                <h2 id="config-financeiro" className="font-semibold text-base text-slate-100">
                   Processamento Financeiro (Stripe vs Manual)
-                </h3>
+                </h2>
                 <p className="text-xs text-slate-400">
                   Alterne o fluxo operacional para simular Stripe ou modo manual
                 </p>
@@ -251,9 +254,11 @@ export const ConfiguracoesView: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div
+            <button
+              type="button"
               onClick={() => setFinancialMode('stripe')}
-              className={`p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
+              aria-pressed={financialMode === 'stripe'}
+              className={`w-full text-left p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
                 financialMode === 'stripe'
                   ? 'border-emerald-500 bg-emerald-500/10 shadow-lg'
                   : 'border-white/10 hover:border-white/20'
@@ -266,11 +271,13 @@ export const ConfiguracoesView: React.FC = () => {
               <p className="text-xs text-slate-300 leading-relaxed">
                 Badges de confirmação, webhook e split automático.
               </p>
-            </div>
+            </button>
 
-            <div
+            <button
+              type="button"
               onClick={() => setFinancialMode('manual')}
-              className={`p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
+              aria-pressed={financialMode === 'manual'}
+              className={`w-full text-left p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
                 financialMode === 'manual'
                   ? 'border-amber-500 bg-amber-500/10 shadow-lg'
                   : 'border-white/10 hover:border-white/20'
@@ -283,24 +290,24 @@ export const ConfiguracoesView: React.FC = () => {
               <p className="text-xs text-slate-300 leading-relaxed">
                 Valores editáveis e indicadores pendentes de liquidação.
               </p>
-            </div>
+            </button>
           </div>
-        </div>
+        </section>
       )}
 
       {section === 'flags' && showAdminFlags && (
-        <div className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
-          <h3 className="font-semibold text-sm text-slate-100 flex items-center gap-2">
+        <section aria-labelledby="config-flags" className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
+          <h2 id="config-flags" className="font-semibold text-sm text-slate-100 flex items-center gap-2">
             <Sliders className="w-4 h-4 text-indigo-400" />
             Feature Flags do Sistema
-          </h3>
+          </h2>
           <div className="divide-y divide-white/10">
             {flagLabels.map((flag) => {
               const isChecked = featureFlags[flag.key];
               return (
                 <div key={flag.key} className="py-3.5 flex items-center justify-between gap-4">
                   <div>
-                    <h4 className="font-medium text-xs text-slate-200">{flag.title}</h4>
+                    <h3 className="font-medium text-xs text-slate-200">{flag.title}</h3>
                     <p className="text-[11px] text-slate-400">{flag.desc}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer shrink-0 min-h-[44px]">
@@ -316,7 +323,7 @@ export const ConfiguracoesView: React.FC = () => {
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
       <Footer />

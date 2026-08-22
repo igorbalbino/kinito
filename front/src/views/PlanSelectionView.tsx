@@ -197,7 +197,7 @@ export const PlanSelectionView: React.FC = () => {
       <header className="p-6 flex items-center gap-3 max-w-5xl mx-auto w-full">
         <BrandLogo className="w-10 h-10" />
         <div>
-          <p className="font-extrabold text-lg">Kinito Empresas</p>
+          <h1 className="font-extrabold text-lg">Kinito Empresas</h1>
           <p className="text-xs text-slate-500">
             {expired ? 'Seu trial expirou — assine para continuar' : 'Escolha um plano para começar'}
           </p>

@@ -41,7 +41,7 @@ export const LandingEmpresasView: React.FC = () => {
               <span className="text-[10px] text-slate-500">{L.navTag}</span>
             </div>
           </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <nav aria-label="Navegação principal" className="flex items-center gap-2 sm:gap-3">
             <LanguageSelector variant="compact" />
             <Link to="/" className="text-xs font-semibold text-slate-500 hover:text-indigo-500">
               {L.forClients}
@@ -56,62 +56,82 @@ export const LandingEmpresasView: React.FC = () => {
             >
               {L.ctaRegister}
             </button>
-          </div>
+          </nav>
         </div>
       </header>
 
-      <section className="relative isolate pt-16 sm:pt-20 pb-24 sm:pb-28 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-100 via-transparent to-transparent dark:from-indigo-950/40 dark:via-transparent dark:to-transparent pointer-events-none" />
-        <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
-          <p className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-full">
-            <Building2 className="w-3.5 h-3.5" />
-            {L.tag}
-          </p>
-          <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-[1.1]">
-            <span className="block text-indigo-600 dark:text-indigo-400 mb-1">Kinito</span>
-            {L.headline}
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">{L.sub}</p>
-          <button
-            type="button"
-            onClick={() => navigate('/register/empresa')}
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold"
-          >
-            {L.ctaRegister}
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      </section>
-
-      <section className="px-4 pb-16 max-w-5xl mx-auto w-full grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { icon: Zap, title: L.b1Title, desc: L.b1Desc },
-          { icon: Users, title: L.b2Title, desc: L.b2Desc },
-          { icon: BarChart3, title: L.b3Title, desc: L.b3Desc },
-          { icon: ShieldCheck, title: L.b4Title, desc: L.b4Desc },
-        ].map(({ icon: Icon, title, desc }) => (
-          <div key={title} className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5">
-            <Icon className="w-5 h-5 text-indigo-500 mb-3" />
-            <h2 className="font-bold text-sm mb-1">{title}</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{desc}</p>
+      <main className="flex-1 flex flex-col">
+        <section className="relative isolate pt-16 sm:pt-20 pb-24 sm:pb-28 px-4 overflow-hidden" aria-labelledby="empresas-hero-title">
+          <div className="absolute inset-0 bg-gradient-to-b from-indigo-100 via-transparent to-transparent dark:from-indigo-950/40 dark:via-transparent dark:to-transparent pointer-events-none" />
+          <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
+            <p className="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-full">
+              <Building2 className="w-3.5 h-3.5" />
+              {L.tag}
+            </p>
+            <h1 id="empresas-hero-title" className="text-4xl sm:text-5xl font-black tracking-tight leading-[1.1]">
+              <span className="block text-indigo-600 dark:text-indigo-400 mb-1">Kinito</span>
+              {L.headline}
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">{L.sub}</p>
+            <button
+              type="button"
+              onClick={() => navigate('/register/empresa')}
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold"
+            >
+              {L.ctaRegister}
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
-        ))}
-      </section>
+        </section>
 
-      <section className="px-4 pb-12 max-w-3xl mx-auto w-full text-center space-y-3">
-        <h2 className="text-xl font-black">{L.proofTitle}</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300">{L.proofDesc}</p>
-      </section>
+        <section
+          aria-labelledby="empresas-features-title"
+          className="px-4 pb-16 mt-2.5 sm:mt-3 max-w-5xl mx-auto w-full"
+        >
+          <h2 id="empresas-features-title" className="sr-only">
+            Recursos para empresas
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { icon: Zap, title: L.b1Title, desc: L.b1Desc },
+              { icon: Users, title: L.b2Title, desc: L.b2Desc },
+              { icon: BarChart3, title: L.b3Title, desc: L.b3Desc },
+              { icon: ShieldCheck, title: L.b4Title, desc: L.b4Desc },
+            ].map(({ icon: Icon, title, desc }) => (
+              <article
+                key={title}
+                className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5"
+              >
+                <Icon className="w-5 h-5 text-indigo-500 mb-3" aria-hidden="true" />
+                <h3 className="font-bold text-sm mb-1">{title}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{desc}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
-      <section className="px-4 pb-20 max-w-3xl mx-auto w-full space-y-4">
-        <h2 className="text-xl font-black text-center">{L.faqTitle}</h2>
-        {L.faq.map((item) => (
-          <details key={item.q} className="p-4 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5">
-            <summary className="font-semibold text-sm cursor-pointer">{item.q}</summary>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">{item.a}</p>
-          </details>
-        ))}
-      </section>
+        <section aria-labelledby="empresas-proof-title" className="px-4 pb-12 max-w-3xl mx-auto w-full text-center space-y-3">
+          <h2 id="empresas-proof-title" className="text-xl font-black">
+            {L.proofTitle}
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{L.proofDesc}</p>
+        </section>
+
+        <section aria-labelledby="empresas-faq-title" className="px-4 pb-20 max-w-3xl mx-auto w-full space-y-4">
+          <h2 id="empresas-faq-title" className="text-xl font-black text-center">
+            {L.faqTitle}
+          </h2>
+          {L.faq.map((item) => (
+            <details
+              key={item.q}
+              className="p-4 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5"
+            >
+              <summary className="font-semibold text-sm cursor-pointer">{item.q}</summary>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">{item.a}</p>
+            </details>
+          ))}
+        </section>
+      </main>
 
       <Footer />
     </div>

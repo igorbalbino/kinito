@@ -25,7 +25,7 @@ export const ClientesView: React.FC = () => {
     <PageContainer>
       <PageSEO page="clientes" />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             Base de Clientes
@@ -39,14 +39,15 @@ export const ClientesView: React.FC = () => {
         </div>
 
         <button
+          type="button"
           onClick={() => setIsModalOpen(true)}
           className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 min-h-[44px] active:scale-95"
         >
           <UserPlus className="w-4 h-4" /> Cadastrar Cliente
         </button>
-      </div>
+      </header>
 
-      <div className="p-4 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+      <section aria-label="Busca de clientes" className="p-4 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-400" />
           <input
@@ -57,9 +58,9 @@ export const ClientesView: React.FC = () => {
             className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden min-w-0">
+      <section aria-label="Lista de clientes" className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden min-w-0">
         <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
           {filteredClients.slice(0, 20).map((client) => (
             <button
@@ -147,7 +148,7 @@ export const ClientesView: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
       <ClientModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
@@ -158,7 +159,7 @@ export const ClientesView: React.FC = () => {
               <div className="flex items-center gap-3">
                 <img src={selectedClient.avatar} alt={selectedClient.name} className="w-10 h-10 rounded-full" />
                 <div>
-                  <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">{selectedClient.name}</h3>
+                  <h2 className="font-bold text-base text-zinc-900 dark:text-zinc-100">{selectedClient.name}</h2>
                   <p className="text-zinc-400">{selectedClient.email}</p>
                 </div>
               </div>
@@ -177,7 +178,7 @@ export const ClientesView: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="font-bold mb-2">Endereços Favoritos do Cliente</h4>
+              <h3 className="font-bold mb-2">Endereços Favoritos do Cliente</h3>
               <ul className="space-y-1 text-zinc-600 dark:text-zinc-400 list-disc pl-4">
                 {selectedClient.favoriteAddresses.map((addr, idx) => (
                   <li key={idx}>{addr}</li>

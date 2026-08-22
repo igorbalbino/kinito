@@ -142,6 +142,47 @@ class ProviderPreferenceService
             throw new InvalidArgumentException('Esta empresa já é o fornecedor principal.');
         }
 
+        $previouslyApproved = $driver->companies()
+            ->where('companies.id', $company->id)
+            ->where(function ($q) {
+                $q->whereNotNull('driver_company.approved_at')
+                    ->orWhere('driver_company.status', DriverStatus::Ativo->value);
+            })
+            ->exists();
+
+        // Re-entry: once liberated/approved for this company, switch immediately without new permission.
+        if ($previouslyApproved) {
+            DB::transaction(function () use ($driver, $company, $currentPrimary) {
+                if ($currentPrimary && (int) $currentPrimary !== (int) $company->id) {
+                    $driver->previous_primary_company_id = $currentPrimary;
+                }
+
+                $driver->companies()->syncWithoutDetaching([
+                    $company->id => [
+                        'status' => DriverStatus::Ativo->value,
+                        'approved_at' => now(),
+                    ],
+                ]);
+
+                $driver->forceFill([
+                    'primary_company_id' => $company->id,
+                    'provider_switch_pending' => false,
+                    'previous_primary_company_id' => null,
+                    'provider_mode' => DefaultProviderMode::Company,
+                ])->save();
+            });
+
+            $driver = $driver->fresh(['user', 'companies', 'primaryCompany', 'previousPrimaryCompany']);
+
+            $this->audit->log('DRIVER_PROVIDER_SWITCH_REENTRY', $actor, $driver, null, [
+                'company_id' => $company->id,
+            ]);
+
+            $this->notifyCompanyOfSelection($company, 'driver', (string) ($driver->user?->name ?? 'Motorista'));
+
+            return $driver;
+        }
+
         DB::transaction(function () use ($driver, $company, $currentPrimary) {
             if ($currentPrimary && (int) $currentPrimary !== (int) $company->id) {
                 $driver->previous_primary_company_id = $currentPrimary;

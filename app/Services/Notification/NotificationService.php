@@ -30,6 +30,7 @@ class NotificationService
         string $type = 'info',
         string $channel = 'email',
         ?string $link = null,
+        ?array $meta = null,
     ): AppNotification {
         $notification = AppNotification::query()->create([
             'user_id' => $user->id,
@@ -39,6 +40,7 @@ class NotificationService
             'type' => $type,
             'channel' => $channel,
             'link' => $link,
+            'meta' => $meta,
             'read' => false,
             'sent_at' => now(),
         ]);

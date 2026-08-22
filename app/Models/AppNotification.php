@@ -17,6 +17,7 @@ class AppNotification extends Model
         'type',
         'channel',
         'link',
+        'meta',
         'read',
         'sent_at',
     ];
@@ -26,6 +27,7 @@ class AppNotification extends Model
         return [
             'read' => 'boolean',
             'sent_at' => 'datetime',
+            'meta' => 'array',
         ];
     }
 

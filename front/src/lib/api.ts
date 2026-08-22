@@ -673,6 +673,14 @@ export async function markAllNotificationsReadApi(): Promise<void> {
   await apiFetch('/api/v1/notificacoes/read-all', { method: 'POST' });
 }
 
+export async function acceptProviderTransferApi(transferId: number | string): Promise<void> {
+  await apiFetch(`/api/v1/provider-transfers/${transferId}/accept`, { method: 'POST' });
+}
+
+export async function rejectProviderTransferApi(transferId: number | string): Promise<void> {
+  await apiFetch(`/api/v1/provider-transfers/${transferId}/reject`, { method: 'POST' });
+}
+
 export async function fetchRideLogs(): Promise<Record<string, unknown>[]> {
   return paginated(await apiFetch(`/api/v1/logs/rides?per_page=${DEFAULT_LIST_PAGE_SIZE}`));
 }

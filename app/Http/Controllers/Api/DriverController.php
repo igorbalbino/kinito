@@ -79,12 +79,18 @@ class DriverController extends Controller
 
         $result = $this->drivers->createByCompany($data, $request->user(), $company);
         $invitePending = (bool) ($result['invite_pending'] ?? false);
+        $transferPending = (bool) ($result['transfer_pending'] ?? false);
+
+        $message = match (true) {
+            $invitePending => 'Motorista criado. Enviamos um e-mail para ele confirmar a conta e receber a senha.',
+            $transferPending => 'Motorista já existe. Enviamos uma notificação para ele aceitar ou recusar a troca de empresa.',
+            default => 'Motorista vinculado à empresa.',
+        };
 
         return response()->json([
-            'message' => $invitePending
-                ? 'Motorista criado. Enviamos um e-mail para ele confirmar a conta e receber a senha.'
-                : 'Motorista vinculado à empresa.',
+            'message' => $message,
             'invite_pending' => $invitePending,
+            'transfer_pending' => $transferPending,
             'driver' => new DriverResource($result['driver']->load(['user', 'documents', 'companies', 'primaryCompany'])),
         ], 201);
     }

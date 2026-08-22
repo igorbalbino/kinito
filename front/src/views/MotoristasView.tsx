@@ -71,7 +71,7 @@ export const MotoristasView: React.FC = () => {
     <PageContainer>
       <PageSEO page="motoristas" />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             Frota de Motoristas
@@ -91,31 +91,32 @@ export const MotoristasView: React.FC = () => {
           <Plus className="w-4 h-4" />
           Novo motorista
         </button>
-      </div>
+      </header>
 
       {pendingDrivers.length > 0 && (
-        <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 flex items-center justify-between">
+        <section aria-labelledby="motoristas-pendentes" className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Clock className="w-5 h-5 text-amber-500 shrink-0" />
             <div>
-              <h4 className="font-bold text-sm">
+              <h2 id="motoristas-pendentes" className="font-bold text-sm">
                 {pendingDrivers.length} motorista(s) aguardando validação
-              </h4>
+              </h2>
               <p className="text-xs text-amber-800 dark:text-amber-300/90">
                 Revise a documentação para aprovar o cadastro.
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setSelectedDriverForApproval(pendingDrivers[0])}
             className="px-3.5 py-1.5 min-h-[36px] rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 shadow-xs"
           >
             Analisar
           </button>
-        </div>
+        </section>
       )}
 
-      <div className="p-4 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <section aria-label="Filtros" className="p-4 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="relative md:col-span-2">
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-400" />
           <input
@@ -139,9 +140,9 @@ export const MotoristasView: React.FC = () => {
             { value: 'bloqueado', label: 'Bloqueado' },
           ]}
         />
-      </div>
+      </section>
 
-      <div className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden min-w-0">
+      <section aria-label="Lista de motoristas" className="rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 overflow-hidden min-w-0">
         <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
           {filteredDrivers.map((driver) => (
             <div key={driver.id} className="p-4 space-y-3">
@@ -253,7 +254,7 @@ export const MotoristasView: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
       <DriverApprovalModal driver={selectedDriverForApproval} onClose={() => setSelectedDriverForApproval(null)} />
       <DriverCreateModal isOpen={createOpen} onClose={() => setCreateOpen(false)} />

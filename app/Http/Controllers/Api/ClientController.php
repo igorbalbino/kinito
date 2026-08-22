@@ -83,12 +83,18 @@ class ClientController extends Controller
         $result = $this->clients->createByActor($data, $request->user(), $company, $origin);
 
         $invitePending = (bool) ($result['invite_pending'] ?? false);
+        $transferPending = (bool) ($result['transfer_pending'] ?? false);
+
+        $message = match (true) {
+            $invitePending => 'Cliente criado. Enviamos um e-mail para ele confirmar a conta e receber a senha.',
+            $transferPending => 'Cliente já existe. Enviamos uma notificação para ele aceitar ou recusar a troca de empresa.',
+            default => 'Cliente vinculado à empresa.',
+        };
 
         return response()->json([
-            'message' => $invitePending
-                ? 'Cliente criado. Enviamos um e-mail para ele confirmar a conta e receber a senha.'
-                : 'Cliente vinculado à empresa.',
+            'message' => $message,
             'invite_pending' => $invitePending,
+            'transfer_pending' => $transferPending,
             'client' => new ClientResource($result['client']->load(['user', 'preferences', 'companies'])),
         ], 201);
     }

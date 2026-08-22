@@ -79,7 +79,9 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
       .catch(() => undefined);
   }, [isModalOpen, clientPrefs?.defaultCompanyId, clientProviderMode]);
 
-  if (!isModalOpen) return null;
+  const selectedModelo = providerOptions.find((o) => o.id === companyId)?.modeloCorridas;
+  const isAgendamentoOnly = selectedModelo === 'AGENDAMENTO';
+  const autoAssignMode = selectedModelo === 'INSTANTANEAS' || selectedModelo === 'AMBOS' || !selectedModelo;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +103,11 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
         payload.company_id = Number(companyId);
         payload.client_id = Number(clientId || clients[0]?.id);
         if (driverId) payload.driver_id = Number(driverId);
+        else if (isAgendamentoOnly) {
+          alert('Empresas só com agendamento precisam atribuir o motorista manualmente.');
+          setSubmitting(false);
+          return;
+        }
       } else if (!letApiResolveCompany && companyId) {
         // Instant: still send company_id; RideService reroutes if primary is AGENDAMENTO.
         payload.company_id = Number(companyId);
@@ -115,6 +122,8 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
       setSubmitting(false);
     }
   };
+
+  if (!isModalOpen) return null;
 
   const darkBtn = 'bg-white/5 border-white/10 text-slate-100';
 
@@ -345,7 +354,14 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
 
           {!clientMode && (
             <div>
-              <label className="text-[11px] font-medium text-slate-300">Motorista (opcional)</label>
+              <label className="text-[11px] font-medium text-slate-300">
+                {isAgendamentoOnly ? 'Motorista (obrigatório para agendamento)' : 'Motorista'}
+              </label>
+              {autoAssignMode && !isAgendamentoOnly ? (
+                <p className="mt-1.5 text-[11px] text-slate-400">
+                  Atribuição automática pela frota. Você pode forçar um motorista abaixo se quiser.
+                </p>
+              ) : null}
               <SafeSelect
                 className="mt-1.5"
                 label="Motorista"
@@ -354,7 +370,10 @@ export const NewRideModal: React.FC<NewRideModalProps> = ({ isOpen: propIsOpen, 
                 sanitizeLabels
                 buttonClassName={darkBtn}
                 options={[
-                  { value: '', label: 'Atribuir depois' },
+                  {
+                    value: '',
+                    label: isAgendamentoOnly ? 'Selecione o motorista' : 'Automático / atribuir depois',
+                  },
                   ...drivers
                     .filter((d) => d.status === 'ativo')
                     .slice(0, 30)
