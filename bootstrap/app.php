@@ -37,8 +37,34 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
+            $message = $e->getMessage();
+            if (! app()->environment(['local', 'testing'])) {
+                \Illuminate\Support\Facades\Log::warning('API InvalidArgumentException', [
+                    'message' => $message,
+                    'path' => $request->path(),
+                ]);
+                $message = 'Não foi possível processar a solicitação.';
+            }
+
             return response()->json([
-                'message' => $e->getMessage(),
+                'message' => $message,
             ], 422);
+        });
+
+        $exceptions->render(function (\Stripe\Exception\ApiErrorException $e, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            \Illuminate\Support\Facades\Log::warning('Stripe API error', [
+                'message' => $e->getMessage(),
+                'path' => $request->path(),
+            ]);
+
+            $message = app()->environment(['local', 'testing'])
+                ? $e->getMessage()
+                : 'Falha no processamento de pagamento.';
+
+            return response()->json(['message' => $message], 422);
         });
     })->create();

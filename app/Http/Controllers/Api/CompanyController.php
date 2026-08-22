@@ -76,6 +76,12 @@ class CompanyController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
+        $privileged = ['is_active', 'is_provider', 'is_distributor', 'commission_rate'];
+        $wantsPrivileged = collect($privileged)->contains(fn (string $key) => array_key_exists($key, $data));
+        if ($wantsPrivileged) {
+            $this->authorize('manage', $company);
+        }
+
         $company->update($data);
 
         return new CompanyResource($company->fresh()->load(['settings', 'users', 'activeSubscription.plan']));

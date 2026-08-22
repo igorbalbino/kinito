@@ -84,11 +84,11 @@ class ClientOnboardingService
                 ['status' => ClientStatus::Ativo]
             );
 
-            // Soft membership so the company can see them after accept.
+            // Soft membership pending consent — no PII exposure as fully linked until accept.
             $company->clients()->syncWithoutDetaching([
                 $client->id => [
                     'origin' => $origin,
-                    'is_active' => true,
+                    'is_active' => false,
                 ],
             ]);
 

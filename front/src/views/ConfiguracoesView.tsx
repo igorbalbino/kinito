@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle,
   ArrowLeft,
   Building2,
   CalendarClock,
@@ -9,14 +8,12 @@ import {
   Hand,
   MessageCircle,
   ShieldCheck,
-  Sliders,
   Smartphone,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
-import { FeatureFlags } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { WhatsAppConnectPanel } from '../components/settings/WhatsAppConnectPanel';
 import { PlanBillingPanel } from '../components/settings/PlanBillingPanel';
@@ -25,23 +22,19 @@ import { ProviderSummaryPanel } from '../components/settings/ProviderSummaryPane
 import { PageContainer } from '../components/layout/PageContainer';
 import { isClientRole, isFleetOperator } from '../lib/navByRole';
 
-type ConfigSection = 'plano' | 'whatsapp' | 'mao' | 'financeiro' | 'flags' | 'modelo' | 'fornecedor';
+type ConfigSection = 'plano' | 'whatsapp' | 'mao' | 'financeiro' | 'modelo' | 'fornecedor';
 
 export const ConfiguracoesView: React.FC = () => {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const {
-    featureFlags,
-    toggleFeatureFlag,
     financialMode,
-    setFinancialMode,
     handPreference,
     setHandPreference,
     activeRole,
   } = useAppStore();
 
   const showFleetSettings = isFleetOperator(activeRole);
-  const showAdminFlags = activeRole === 'admin';
   const showProviderSettings = isClientRole(activeRole) || activeRole === 'motorista';
   const section = (params.get('sec') as ConfigSection | null) || null;
 
@@ -52,20 +45,6 @@ export const ConfiguracoesView: React.FC = () => {
   const backToHub = () => {
     setParams({});
   };
-
-  const flagLabels: { key: keyof FeatureFlags; title: string; desc: string }[] = [
-    { key: 'saasMode', title: 'Modo SaaS Multi-tenant', desc: 'Isolamento de dados por empresas distribuidoras e frotas.' },
-    { key: 'stripe', title: 'Integração Processamento Stripe', desc: 'Habilita Split de Pagamentos e Webhooks automáticos.' },
-    { key: 'comissaoAutomatica', title: 'Comissão Automática de Plataforma', desc: 'Calcula retenção de 15% na origem da transação.' },
-    { key: 'geolocalizacao', title: 'Geolocalização & Roteamento GPS', desc: 'Rastreio em tempo real de motoristas por coordenadas.' },
-    { key: 'apiPublica', title: 'API Pública de Integração (REST/Webhooks)', desc: 'Fornece chaves de API para ERPs de terceiros.' },
-    { key: 'logsAvancados', title: 'Logs Avançados do Sistema', desc: 'Registra eventos detalhados de requisições e retornos.' },
-    { key: 'notificacoesPush', title: 'Notificações em Tempo Real', desc: 'Alertas sonoros e visuais para despacho de corridas.' },
-    { key: 'moduloClientes', title: 'Módulo de Gestão de Clientes', desc: 'Exibe telas e relatórios de clientes na sidebar.' },
-    { key: 'moduloMotoristas', title: 'Módulo de Aprovação de Motoristas', desc: 'Habilita workflow de validação de CNH e CRLV.' },
-    { key: 'relatoriosFinanceiros', title: 'Relatórios Financeiros Consolidados', desc: 'Permite exportação de relatórios em formato CSV/Excel.' },
-    { key: 'auditoriaSistema', title: 'Trilha de Auditoria de Segurança', desc: 'Registra IP, data e usuário em alterações de estado.' },
-  ];
 
   const menuItems = useMemo(() => {
     const items: { id: ConfigSection; title: string; desc: string; icon: React.ReactNode }[] = [];
@@ -107,20 +86,12 @@ export const ConfiguracoesView: React.FC = () => {
       items.push({
         id: 'financeiro',
         title: 'Financeiro',
-        desc: 'Modo Stripe ou processamento manual',
+        desc: 'Status Stripe / manual (somente leitura)',
         icon: <ShieldCheck className="w-5 h-5" />,
       });
     }
-    if (showAdminFlags) {
-      items.push({
-        id: 'flags',
-        title: 'Feature flags',
-        desc: 'Interruptores do sistema (admin)',
-        icon: <Sliders className="w-5 h-5" />,
-      });
-    }
     return items;
-  }, [showFleetSettings, showAdminFlags, showProviderSettings]);
+  }, [showFleetSettings, showProviderSettings]);
 
   return (
     <PageContainer narrow className="pb-24">
@@ -239,10 +210,10 @@ export const ConfiguracoesView: React.FC = () => {
               </div>
               <div>
                 <h2 id="config-financeiro" className="font-semibold text-base text-slate-100">
-                  Processamento Financeiro (Stripe vs Manual)
+                  Processamento Financeiro
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Alterne o fluxo operacional para simular Stripe ou modo manual
+                  Status definido pela plataforma (PAYMENT_PROVIDER) — somente leitura
                 </p>
               </div>
             </div>
@@ -253,75 +224,22 @@ export const ConfiguracoesView: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => setFinancialMode('stripe')}
-              aria-pressed={financialMode === 'stripe'}
-              className={`w-full text-left p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
-                financialMode === 'stripe'
-                  ? 'border-emerald-500 bg-emerald-500/10 shadow-lg'
-                  : 'border-white/10 hover:border-white/20'
-              }`}
-            >
-              <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                Stripe (Automático)
-              </span>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Badges de confirmação, webhook e split automático.
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setFinancialMode('manual')}
-              aria-pressed={financialMode === 'manual'}
-              className={`w-full text-left p-5 rounded-2xl border-2 cursor-pointer transition-all space-y-3 ${
-                financialMode === 'manual'
-                  ? 'border-amber-500 bg-amber-500/10 shadow-lg'
-                  : 'border-white/10 hover:border-white/20'
-              }`}
-            >
-              <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-                Manual
-              </span>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Valores editáveis e indicadores pendentes de liquidação.
-              </p>
-            </button>
-          </div>
-        </section>
-      )}
-
-      {section === 'flags' && showAdminFlags && (
-        <section aria-labelledby="config-flags" className="p-6 rounded-2xl border border-white/10 bg-white/5 space-y-4">
-          <h2 id="config-flags" className="font-semibold text-sm text-slate-100 flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-indigo-400" />
-            Feature Flags do Sistema
-          </h2>
-          <div className="divide-y divide-white/10">
-            {flagLabels.map((flag) => {
-              const isChecked = featureFlags[flag.key];
-              return (
-                <div key={flag.key} className="py-3.5 flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-medium text-xs text-slate-200">{flag.title}</h3>
-                    <p className="text-[11px] text-slate-400">{flag.desc}</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer shrink-0 min-h-[44px]">
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => toggleFeatureFlag(flag.key)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[12px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600" />
-                  </label>
-                </div>
-              );
-            })}
+          <div
+            className={`p-5 rounded-2xl border-2 space-y-2 ${
+              financialMode === 'stripe'
+                ? 'border-emerald-500 bg-emerald-500/10'
+                : 'border-amber-500 bg-amber-500/10'
+            }`}
+          >
+            <span className="font-bold text-sm text-slate-100 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              {financialMode === 'stripe' ? 'Stripe (Automático)' : 'Manual'}
+            </span>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {financialMode === 'stripe'
+                ? 'Webhooks, PaymentIntent e split automático ativos.'
+                : 'Sem taxa de plataforma/Stripe. Valores estimados até conferência manual.'}
+            </p>
           </div>
         </section>
       )}

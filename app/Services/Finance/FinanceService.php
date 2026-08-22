@@ -16,18 +16,18 @@ use Throwable;
 
 class FinanceService
 {
-    public function paymentDriver(): string
-    {
-        return filled(config('kinito.stripe.secret')) ? 'stripe' : 'mock';
-    }
-
     /**
-     * Stripe ride-split is active only when provider is stripe AND secret is configured.
+     * Stripe ride-split / PaymentIntent is active only when provider is stripe AND secret is configured.
      */
     public function isStripeActive(): bool
     {
         return config('kinito.payment_provider') === PaymentProvider::Stripe->value
             && filled(config('kinito.stripe.secret'));
+    }
+
+    public function paymentDriver(): string
+    {
+        return $this->isStripeActive() ? 'stripe' : 'mock';
     }
 
     /**
@@ -135,11 +135,16 @@ class FinanceService
 
     public function createPaymentIntent(Ride $ride): Payment
     {
-        if ($this->paymentDriver() === 'stripe') {
+        if ($this->isStripeActive()) {
             return $this->createStripePaymentIntent($ride);
         }
 
-        return $this->createMockPaymentIntent($ride);
+        // Local/testing only: stub PaymentIntent for webhook integration without Stripe.
+        if (app()->environment(['local', 'testing'])) {
+            return $this->createMockPaymentIntent($ride);
+        }
+
+        throw new InvalidArgumentException('PaymentIntent indisponível: Stripe inativo (PAYMENT_PROVIDER/STRIPE_SECRET).');
     }
 
     /** @deprecated Use createPaymentIntent() */

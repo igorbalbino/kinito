@@ -12,7 +12,6 @@ import { useAppStore } from '../store/useAppStore';
 import { ManualFinancialNotice } from '../components/common/ManualFinancialNotice';
 import { MetricCard } from '../components/common/MetricCard';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { StripeFlowTimeline } from '../components/common/StripeFlowTimeline';
 import { PageSEO } from '../components/common/PageSEO';
 import { Footer } from '../components/layout/Footer';
 import { PageContainer } from '../components/layout/PageContainer';
@@ -31,7 +30,6 @@ import type { Ride } from '../types';
 export const FinanceiroView: React.FC = () => {
   const {
     financialMode,
-    setFinancialMode,
     transactions,
     rides,
     activeRole,
@@ -368,17 +366,16 @@ export const FinanceiroView: React.FC = () => {
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               Módulo Financeiro & Repasses
             </h1>
-            <button
-              type="button"
-              onClick={() => setFinancialMode(financialMode === 'stripe' ? 'manual' : 'stripe')}
-              className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold border ${
                 financialMode === 'stripe'
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                   : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
               }`}
+              title="Definido pela configuração da plataforma"
             >
-              {financialMode === 'stripe' ? '⚡ Stripe Connect Ativo' : '⚠️ Processamento Manual'}
-            </button>
+              {financialMode === 'stripe' ? 'Stripe Connect Ativo' : 'Processamento Manual'}
+            </span>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Gestão do Split de pagamentos, comissões da plataforma, repasses para motoristas e extratos.
@@ -538,15 +535,6 @@ export const FinanceiroView: React.FC = () => {
           </table>
         </div>
       </section>
-
-      <details className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
-        <summary className="px-5 py-4 cursor-pointer font-semibold text-sm text-zinc-900 dark:text-zinc-100 select-none hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
-          Modelo de recebimento — fluxo financeiro por corrida
-        </summary>
-        <div className="px-1 pb-1">
-          <StripeFlowTimeline grossValue={250} />
-        </div>
-      </details>
 
       <Footer />
     </PageContainer>

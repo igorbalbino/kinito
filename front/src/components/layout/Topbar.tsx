@@ -28,7 +28,6 @@ export const Topbar: React.FC = () => {
     activeRole,
     switchActiveRole,
     financialMode,
-    setFinancialMode,
     notifications,
     markNotificationRead,
     markAllNotificationsRead,
@@ -39,7 +38,7 @@ export const Topbar: React.FC = () => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const showFinanceToggle = isFleetOperator(activeRole);
+  const showFinanceBadge = isFleetOperator(activeRole);
   const currentProfile = sessionDisplayProfile(activeRole);
   const availableRoles = currentProfile.roles;
 
@@ -79,19 +78,18 @@ export const Topbar: React.FC = () => {
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         <LanguageSelector variant="compact" />
 
-        {showFinanceToggle && (
-          <button
-            onClick={() => setFinancialMode(financialMode === 'stripe' ? 'manual' : 'stripe')}
-            className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium border transition-all ${
+        {showFinanceBadge && (
+          <span
+            className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium border ${
               financialMode === 'stripe'
-                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30'
             }`}
-            title="Clique para alterar o modo de processamento financeiro"
+            title="Modo definido pela configuração da plataforma (somente leitura)"
           >
             <span className={`w-2 h-2 rounded-full ${financialMode === 'stripe' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
             <span>{financialMode === 'stripe' ? t.common.stripeConnected : t.common.manualMode}</span>
-          </button>
+          </span>
         )}
 
         <button

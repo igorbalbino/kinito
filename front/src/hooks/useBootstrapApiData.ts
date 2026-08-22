@@ -57,7 +57,6 @@ export function useBootstrapApiData(enabled = true) {
     setLogs,
     setAudits,
     setDataMeta,
-    setActiveRole,
     setSelectedCompanyId,
     setFinancialMode,
     activeRole,
@@ -88,7 +87,11 @@ export function useBootstrapApiData(enabled = true) {
         const allowed = rolesFromApi(user.roles);
         const current = useAppStore.getState().activeRole;
         if (!allowed.includes(current)) {
-          setActiveRole(allowed[0] ?? 'cliente');
+          const next = allowed[0] ?? 'cliente';
+          useAppStore.getState().switchActiveRole(next);
+          setDataMeta({ loading: false, error: null });
+          // Domain reset — effect will re-run for the corrected role.
+          return;
         }
       }
       const companyId = getApiCompanyId();
@@ -177,7 +180,6 @@ export function useBootstrapApiData(enabled = true) {
     }
   }, [
     enabled,
-    setActiveRole,
     setAudits,
     setClients,
     setCompanies,

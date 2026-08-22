@@ -57,20 +57,22 @@ class WhatsAppWebhookController extends Controller
 
     private function authorizeGateway(Request $request): bool
     {
-        $apiKey = (string) config('kinito.whatsapp.gateway.api_key');
+        $apiKey = (string) config('kinito.whatsapp.gateway.api_key', '');
         $provided = (string) $request->header('X-Internal-Api-Key', '');
 
-        if ($apiKey === '' || ! hash_equals($apiKey, $provided)) {
+        // Fail closed: empty configured key or empty provided key never authenticates.
+        if ($apiKey === '' || $provided === '' || ! hash_equals($apiKey, $provided)) {
             return false;
         }
 
         $companyId = (int) $request->input('user_id', 0);
-        $settings = CompanySetting::query()->where('company_id', $companyId)->first();
+        $settings = $companyId > 0
+            ? CompanySetting::query()->where('company_id', $companyId)->first()
+            : null;
         $secret = $settings?->whatsapp_webhook_secret;
 
-        // Tick pode não ter body com user_id em alguns casos — aceita só API key se sem secret.
+        // Company without webhook secret: API key alone (already verified above).
         if (! $secret) {
-            // Conexão ainda sem secret persistido: aceita API key (tick/health path).
             return true;
         }
 

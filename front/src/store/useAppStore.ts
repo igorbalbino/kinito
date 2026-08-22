@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { Language } from '../i18n/translations';
+import { ACTIVE_ROLE_KEY } from '../lib/api';
 import {
   Client,
   Company,
   Driver,
   DriverStatus,
-  FeatureFlags,
   FinancialMode,
   FinancialTransaction,
   Ride,
@@ -31,9 +31,6 @@ interface AppState {
   financialMode: FinancialMode;
   setFinancialMode: (mode: FinancialMode) => void;
 
-  featureFlags: FeatureFlags;
-  toggleFeatureFlag: (flagKey: keyof FeatureFlags) => void;
-
   rides: Ride[];
   drivers: Driver[];
   clients: Client[];
@@ -58,7 +55,6 @@ interface AppState {
   resetDomainData: () => void;
 
   upsertRide: (ride: Ride) => void;
-  updateRideFinancials: (rideId: string, values: { grossValue: number; driverNet: number; platformCommission: number }) => void;
 
   updateDriverStatus: (driverId: string, status: DriverStatus) => void;
   updateDriverDocument: (driverId: string, docId: string, docStatus: 'aprovado' | 'rejeitado' | 'pendente') => void;
@@ -82,7 +78,6 @@ interface AppState {
   setQuickActionSheetOpen: (open: boolean) => void;
 }
 
-const ACTIVE_ROLE_KEY = 'kinito_active_role';
 const emptyDomain = {
   rides: [] as Ride[],
   drivers: [] as Driver[],
@@ -120,24 +115,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   financialMode: 'manual',
   setFinancialMode: (financialMode) => set({ financialMode }),
 
-  featureFlags: {
-    saasMode: true,
-    stripe: true,
-    comissaoAutomatica: true,
-    geolocalizacao: true,
-    apiPublica: true,
-    logsAvancados: true,
-    notificacoesPush: true,
-    moduloClientes: true,
-    moduloMotoristas: true,
-    relatoriosFinanceiros: true,
-    auditoriaSistema: true,
-  },
-  toggleFeatureFlag: (flagKey) =>
-    set((state) => ({
-      featureFlags: { ...state.featureFlags, [flagKey]: !state.featureFlags[flagKey] },
-    })),
-
   ...emptyDomain,
   dataLoaded: false,
   dataLoading: false,
@@ -167,21 +144,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       rides[idx] = ride;
       return { rides };
     }),
-
-  updateRideFinancials: (rideId, values) =>
-    set((state) => ({
-      rides: state.rides.map((r) =>
-        r.id === rideId
-          ? {
-              ...r,
-              grossValue: values.grossValue,
-              driverNet: values.driverNet,
-              platformCommission: values.platformCommission,
-              manualOverrideNotes: 'Valores atualizados manualmente',
-            }
-          : r,
-      ),
-    })),
 
   updateDriverStatus: (driverId, status) =>
     set((state) => ({

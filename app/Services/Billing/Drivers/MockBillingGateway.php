@@ -73,19 +73,42 @@ class MockBillingGateway implements BillingGateway
 
     public function verifyWebhook(Request $request): BillingWebhookEvent
     {
+        $this->assertMockWebhookAllowed($request);
+
         $type = (string) $request->input('type', 'checkout.session.completed');
         $sessionId = (string) $request->input('session_id', '');
 
         $cached = $sessionId !== '' ? Cache::get("billing.mock.{$sessionId}") : null;
 
+        if (! is_array($cached) || empty($cached['company_id']) || empty($cached['plan_id'])) {
+            throw new InvalidArgumentException('Mock billing webhook exige session_id válido.');
+        }
+
         return new BillingWebhookEvent(
             type: $type,
             payload: $request->all(),
-            companyId: isset($cached['company_id']) ? (int) $cached['company_id'] : (int) $request->input('company_id'),
-            planId: isset($cached['plan_id']) ? (int) $cached['plan_id'] : (int) $request->input('plan_id'),
+            companyId: (int) $cached['company_id'],
+            planId: (int) $cached['plan_id'],
             externalSubscriptionId: 'mock_sub_'.($sessionId ?: Str::random(8)),
             externalCustomerId: $cached['customer_id'] ?? null,
         );
+    }
+
+    private function assertMockWebhookAllowed(Request $request): void
+    {
+        if (! app()->environment(['local', 'testing'])) {
+            throw new InvalidArgumentException('Mock billing webhook só é permitido em ambiente local.');
+        }
+
+        $secret = (string) config('kinito.billing.mock_webhook_secret', '');
+        if ($secret === '') {
+            throw new InvalidArgumentException('BILLING_MOCK_WEBHOOK_SECRET não configurado.');
+        }
+
+        $provided = (string) $request->header('X-Billing-Mock-Secret', '');
+        if ($provided === '' || ! hash_equals($secret, $provided)) {
+            throw new InvalidArgumentException('Secret de mock billing inválido.');
+        }
     }
 
     /**

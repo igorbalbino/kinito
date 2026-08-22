@@ -10,6 +10,7 @@ return [
     */
     'billing' => [
         'driver' => env('BILLING_DRIVER', 'auto'),
+        'mock_webhook_secret' => env('BILLING_MOCK_WEBHOOK_SECRET'),
     ],
 
     'stripe' => [
@@ -75,7 +76,7 @@ return [
 
         'gateway' => [
             'url' => env('WHATSAPP_GATEWAY_URL', env('WHATSAPP_BAILEYS_URL')),
-            'api_key' => env('WHATSAPP_GATEWAY_API_KEY', env('WHATSAPP_BAILEYS_TOKEN', 'kinito-gateway-dev')),
+            'api_key' => env('WHATSAPP_GATEWAY_API_KEY', env('WHATSAPP_BAILEYS_TOKEN')),
             'timeout' => (int) env('WHATSAPP_GATEWAY_TIMEOUT', 20),
         ],
 

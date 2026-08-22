@@ -32,5 +32,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="BILLING_MOCK_WEBHOOK_SECRET" value="test-mock-webhook-secret"/>
+        <env name="PAYMENT_PROVIDER" value="manual"/>
     </php>
 </phpunit>

@@ -43,7 +43,6 @@ export const MobileQuickDrawerSheet: React.FC = () => {
     theme,
     toggleTheme,
     financialMode,
-    setFinancialMode,
     handPreference,
     setHandPreference,
     isQuickActionSheetOpen,
@@ -184,17 +183,17 @@ export const MobileQuickDrawerSheet: React.FC = () => {
 
         <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
           {isFleetOperator(activeRole) ? (
-            <button
-              onClick={() => setFinancialMode(financialMode === 'stripe' ? 'manual' : 'stripe')}
-              className={`flex-1 p-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 min-h-[48px] active:scale-95 transition-all ${
+            <span
+              className={`flex-1 p-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 min-h-[48px] ${
                 financialMode === 'stripe'
                   ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                   : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
               }`}
+              title="Modo definido pela plataforma (somente leitura)"
             >
               <span className={`w-2 h-2 rounded-full ${financialMode === 'stripe' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
               <span>{financialMode === 'stripe' ? 'Modo Stripe Ativo' : 'Modo Manual'}</span>
-            </button>
+            </span>
           ) : (
             <button
               onClick={() => handleNavigate('/perfil')}

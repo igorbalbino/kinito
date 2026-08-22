@@ -32,17 +32,17 @@ Route::prefix('v1')->group(function () {
 
     Route::post('/empresas/register', [CompanyController::class, 'register'])->middleware('throttle:10,1');
 
-    Route::post('/webhooks/stripe', StripeWebhookController::class);
-    Route::post('/webhooks/billing', BillingWebhookController::class);
+    Route::post('/webhooks/stripe', StripeWebhookController::class)->middleware('throttle:60,1');
+    Route::post('/webhooks/billing', BillingWebhookController::class)->middleware('throttle:60,1');
     Route::get('/billing/mock/complete', [BillingWebhookController::class, 'mockComplete'])
-        ->middleware('signed')
+        ->middleware(['signed', 'throttle:30,1'])
         ->name('billing.mock.complete');
-    Route::post('/webhooks/whatsapp', WhatsAppWebhookController::class);
-    Route::post('/webhooks/whatsapp/tick', [WhatsAppWebhookController::class, 'tick']);
+    Route::post('/webhooks/whatsapp', WhatsAppWebhookController::class)->middleware('throttle:60,1');
+    Route::post('/webhooks/whatsapp/tick', [WhatsAppWebhookController::class, 'tick'])->middleware('throttle:60,1');
 
     Route::get('/plans', [PlanController::class, 'index']);
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::patch('/auth/me', [AuthController::class, 'updateMe']);

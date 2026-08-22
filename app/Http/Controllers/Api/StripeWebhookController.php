@@ -34,7 +34,7 @@ class StripeWebhookController extends Controller
      */
     private function verifiedPayload(Request $request): array
     {
-        if ($this->finance->paymentDriver() === 'stripe') {
+        if ($this->finance->isStripeActive()) {
             $secret = (string) config('kinito.stripe.webhook_secret');
             $sig = (string) $request->header('Stripe-Signature', '');
 
@@ -50,6 +50,16 @@ class StripeWebhookController extends Controller
                     'object' => json_decode(json_encode($event->data->object), true) ?? [],
                 ],
             ];
+        }
+
+        if (! app()->environment(['local', 'testing'])) {
+            throw new \RuntimeException('Mock ride webhook só é permitido em ambiente local.');
+        }
+
+        $secret = (string) config('kinito.billing.mock_webhook_secret', '');
+        $provided = (string) $request->header('X-Billing-Mock-Secret', '');
+        if ($secret === '' || $provided === '' || ! hash_equals($secret, $provided)) {
+            throw new \RuntimeException('Mock ride webhook secret inválido.');
         }
 
         $payload = $request->all();

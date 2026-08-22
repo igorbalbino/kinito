@@ -116,15 +116,14 @@ class StripeBillingGateway implements BillingGateway
         $payload = $request->getContent();
         $sig = (string) $request->header('Stripe-Signature', '');
 
-        if ($secret !== '' && $sig !== '') {
-            $event = Webhook::constructEvent($payload, $sig, $secret);
-            $type = $event->type;
-            $object = $event->data->object;
-            $data = json_decode(json_encode($object), true) ?? [];
-        } else {
-            $type = (string) $request->input('type', '');
-            $data = (array) $request->input('data.object', $request->input('data', []));
+        if ($secret === '' || $sig === '') {
+            throw new InvalidArgumentException('Stripe webhook secret e Stripe-Signature são obrigatórios.');
         }
+
+        $event = Webhook::constructEvent($payload, $sig, $secret);
+        $type = $event->type;
+        $object = $event->data->object;
+        $data = json_decode(json_encode($object), true) ?? [];
 
         $companyId = isset($data['metadata']['company_id'])
             ? (int) $data['metadata']['company_id']

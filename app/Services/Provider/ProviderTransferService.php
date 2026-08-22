@@ -52,6 +52,9 @@ class ProviderTransferService
 
         if (! $needsConsent && ! $currentCompanyId) {
             // Brand-new client profile without preferences conflict — link directly.
+            $company->clients()->syncWithoutDetaching([
+                $client->id => ['origin' => 'empresa', 'is_active' => true],
+            ]);
             $this->providers->updateClientProvider($client, [
                 'default_provider_mode' => DefaultProviderMode::Company->value,
                 'default_company_id' => $company->id,
@@ -61,6 +64,9 @@ class ProviderTransferService
         }
 
         if ($needsConsent) {
+            $company->clients()->syncWithoutDetaching([
+                $client->id => ['origin' => 'empresa', 'is_active' => false],
+            ]);
             $transfer = $this->createPendingTransfer('client', $client->id, $company, $actor, $currentCompanyId);
             $this->notifySubject($client->user, $company, $transfer, 'cliente');
 
@@ -71,6 +77,9 @@ class ProviderTransferService
             ];
         }
 
+        $company->clients()->syncWithoutDetaching([
+            $client->id => ['origin' => 'empresa', 'is_active' => true],
+        ]);
         $this->providers->updateClientProvider($client, [
             'default_provider_mode' => DefaultProviderMode::Company->value,
             'default_company_id' => $company->id,
@@ -165,6 +174,9 @@ class ProviderTransferService
 
             if ($transfer->subject_type === 'client') {
                 $client = Client::query()->findOrFail($transfer->subject_id);
+                $company->clients()->syncWithoutDetaching([
+                    $client->id => ['origin' => 'empresa', 'is_active' => true],
+                ]);
                 $this->providers->updateClientProvider($client, [
                     'default_provider_mode' => DefaultProviderMode::Company->value,
                     'default_company_id' => $company->id,

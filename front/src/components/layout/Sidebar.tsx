@@ -35,7 +35,6 @@ export const Sidebar: React.FC = () => {
     activeRole,
     switchActiveRole,
     financialMode,
-    featureFlags,
     notifications,
     resetDomainData,
   } = useAppStore();
@@ -54,29 +53,24 @@ export const Sidebar: React.FC = () => {
   const availableRoles = profile.roles;
 
   const navItems = [
-    { path: '/dashboard', label: t.nav.dashboardLong, icon: LayoutDashboard, flag: null },
-    { path: '/corridas', label: t.nav.rides, icon: Car, flag: null },
-    { path: '/clientes', label: t.nav.clients, icon: Users, flag: 'moduloClientes' as const },
-    { path: '/motoristas', label: t.nav.drivers, icon: UserCheck, flag: 'moduloMotoristas' as const },
-    { path: '/empresas', label: t.nav.companies, icon: Building2, flag: null },
-    { path: '/financeiro', label: t.nav.financial, icon: CreditCard, flag: null },
-    { path: '/relatorios', label: t.nav.reports, icon: BarChart3, flag: 'relatoriosFinanceiros' as const },
-    { path: '/logs', label: t.nav.logs, icon: Activity, flag: 'logsAvancados' as const },
+    { path: '/dashboard', label: t.nav.dashboardLong, icon: LayoutDashboard },
+    { path: '/corridas', label: t.nav.rides, icon: Car },
+    { path: '/clientes', label: t.nav.clients, icon: Users },
+    { path: '/motoristas', label: t.nav.drivers, icon: UserCheck },
+    { path: '/empresas', label: t.nav.companies, icon: Building2 },
+    { path: '/financeiro', label: t.nav.financial, icon: CreditCard },
+    { path: '/relatorios', label: t.nav.reports, icon: BarChart3 },
+    { path: '/logs', label: t.nav.logs, icon: Activity },
     {
       path: '/notificacoes',
       label: t.nav.notifications,
       icon: Bell,
       badge: unreadCount > 0 ? unreadCount : undefined,
-      flag: 'notificacoesPush' as const,
     },
-    { path: '/configuracoes', label: t.nav.settings, icon: Settings, flag: null },
-    { path: '/fornecedores', label: 'Fornecedores', icon: Building2, flag: null },
-    { path: '/perfil', label: t.nav.profile, icon: Zap, flag: null },
-  ].filter((item) => {
-    if (!canAccessRoute(activeRole, item.path)) return false;
-    if (item.flag && !featureFlags[item.flag]) return false;
-    return true;
-  });
+    { path: '/configuracoes', label: t.nav.settings, icon: Settings },
+    { path: '/fornecedores', label: 'Fornecedores', icon: Building2 },
+    { path: '/perfil', label: t.nav.profile, icon: Zap },
+  ].filter((item) => canAccessRoute(activeRole, item.path));
 
   return (
     <aside

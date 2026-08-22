@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class BillingWebhookController extends Controller
@@ -39,12 +40,16 @@ class BillingWebhookController extends Controller
         );
     }
 
-    public function mockComplete(Request $request): JsonResponse|RedirectResponse
+    public function mockComplete(Request $request, ?Company $company = null): JsonResponse|RedirectResponse
     {
         $gateway = $this->billing->driver();
 
         if (! $gateway instanceof MockBillingGateway) {
             return response()->json(['error' => 'Mock billing desabilitado.'], 403);
+        }
+
+        if (! app()->environment(['local', 'testing'])) {
+            return response()->json(['error' => 'Mock billing só é permitido em ambiente local.'], 403);
         }
 
         $sessionId = (string) $request->query('session_id', $request->input('session_id', ''));
@@ -55,23 +60,48 @@ class BillingWebhookController extends Controller
             return response()->json(['error' => $e->getMessage()], 422);
         }
 
-        $company = Company::query()->findOrFail($session['company_id']);
+        $sessionCompany = Company::query()->findOrFail($session['company_id']);
+
+        if ($company) {
+            $this->authorize('manage', $company);
+            abort_unless((int) $company->id === (int) $sessionCompany->id, 403, 'Sessão não pertence a esta empresa.');
+        }
+
         $plan = Plan::query()->findOrFail($session['plan_id']);
         $subscription = $this->lifecycle->activatePaid(
-            $company,
+            $sessionCompany,
             $plan,
             'mock_sub_'.$sessionId,
         );
 
-        $redirect = $request->query('redirect');
-        if (is_string($redirect) && $redirect !== '') {
-            return redirect()->away($redirect);
+        $redirect = $this->safeRedirectTarget($request->query('redirect'));
+        if ($redirect !== null) {
+            return redirect()->to($redirect);
         }
 
         return response()->json([
             'message' => 'Assinatura ativada (mock).',
             'subscription' => $subscription,
         ]);
+    }
+
+    private function safeRedirectTarget(mixed $redirect): ?string
+    {
+        if (! is_string($redirect) || $redirect === '') {
+            return null;
+        }
+
+        // Relative path only (same-origin SPA).
+        if (Str::startsWith($redirect, '/') && ! Str::startsWith($redirect, '//')) {
+            return $redirect;
+        }
+
+        $frontend = rtrim((string) config('kinito.frontend_url'), '/');
+        if ($frontend !== '' && Str::startsWith($redirect, $frontend.'/')) {
+            return $redirect;
+        }
+
+        return null;
     }
 
     private function handleEvent(

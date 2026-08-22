@@ -41,7 +41,8 @@ class WhatsAppManager
     public function isEnabled(): bool
     {
         return (bool) config('kinito.whatsapp.enabled', false)
-            && $this->driver()->isConfigured();
+            && $this->driver()->isConfigured()
+            && $this->gatewayKeyConfigured();
     }
 
     public function sendText(string $to, string $body, ?string $userId = null, array $meta = []): WhatsAppSendResult
@@ -56,6 +57,13 @@ class WhatsAppManager
             return WhatsAppSendResult::fail($this->driver()->driver(), 'WhatsApp desabilitado (WHATSAPP_ENABLED=false).');
         }
 
+        if (! $this->gatewayKeyConfigured() && $this->driver()->driver() !== 'log') {
+            return WhatsAppSendResult::fail(
+                $this->driver()->driver(),
+                'WHATSAPP_GATEWAY_API_KEY obrigatório quando WhatsApp está habilitado.',
+            );
+        }
+
         $gateway = $this->driver();
 
         if (! $gateway->isConfigured()) {
@@ -63,6 +71,20 @@ class WhatsAppManager
         }
 
         return $gateway->sendText(new WhatsAppMessage($phone, $body, $userId, $meta));
+    }
+
+    private function gatewayKeyConfigured(): bool
+    {
+        $provider = (string) config('kinito.whatsapp.provider', 'log');
+        if ($provider === 'log') {
+            return true;
+        }
+
+        if ($provider === 'meta') {
+            return filled(config('kinito.whatsapp.meta.token'));
+        }
+
+        return filled(config('kinito.whatsapp.gateway.api_key'));
     }
 
     public function sendToUser(User $user, string $body, array $meta = []): WhatsAppSendResult

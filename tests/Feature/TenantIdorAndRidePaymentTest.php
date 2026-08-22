@@ -137,6 +137,8 @@ class TenantIdorAndRidePaymentTest extends TestCase
         $this->postJson('/api/v1/webhooks/stripe', [
             'type' => 'payment_intent.succeeded',
             'data' => ['object' => ['id' => $intentId]],
+        ], [
+            'X-Billing-Mock-Secret' => 'test-mock-webhook-secret',
         ])->assertOk();
 
         $this->assertDatabaseHas('payments', [
@@ -149,12 +151,15 @@ class TenantIdorAndRidePaymentTest extends TestCase
         $this->postJson('/api/v1/webhooks/stripe', [
             'type' => 'payment_intent.succeeded',
             'data' => ['object' => ['id' => 'pi_stub_invented_does_not_exist']],
+        ], [
+            'X-Billing-Mock-Secret' => 'test-mock-webhook-secret',
         ])->assertStatus(400);
     }
 
     public function test_stripe_mode_webhook_rejects_invalid_signature(): void
     {
         config([
+            'kinito.payment_provider' => 'stripe',
             'kinito.stripe.secret' => 'sk_test_fake_secret_for_mode',
             'kinito.stripe.webhook_secret' => 'whsec_test_secret',
         ]);

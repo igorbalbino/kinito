@@ -102,15 +102,18 @@ const SECRET_USER_KEYS = [
 /** Detects autofill/password tokens accidentally glued into name fields. */
 function looksLikePasswordToken(token: string): boolean {
   if (token.length < 4 || /\s/.test(token)) return false;
-  if (/^(password|senha|admin|root|12345678?|qwerty|changeme|secret)$/i.test(token)) {
+  // Hyphen/apostrophe in compound names (Jean-Luc, O'Brien) are not password signals.
+  const withoutNamePunct = token.replace(/[-'’]/g, '');
+  if (withoutNamePunct.length < 4) return false;
+  if (/^(password|senha|admin|root|12345678?|qwerty|changeme|secret)$/i.test(withoutNamePunct)) {
     return true;
   }
-  if (token.length < 6) return false;
-  const hasLetter = /[A-Za-zÀ-ÿ]/.test(token);
-  const hasDigit = /\d/.test(token);
-  const hasSpecial = /[^A-Za-zÀ-ÿ0-9]/.test(token);
+  if (withoutNamePunct.length < 6) return false;
+  const hasLetter = /[A-Za-zÀ-ÿ]/.test(withoutNamePunct);
+  const hasDigit = /\d/.test(withoutNamePunct);
+  const hasSpecial = /[^A-Za-zÀ-ÿ0-9]/.test(withoutNamePunct);
   // all-lowercase long token often is a dumped password (e.g. "minhasenha")
-  if (/^[a-z]{8,}$/.test(token)) return true;
+  if (/^[a-z]{8,}$/.test(withoutNamePunct)) return true;
   return (hasLetter && hasDigit) || (hasLetter && hasSpecial) || (hasDigit && hasSpecial);
 }
 

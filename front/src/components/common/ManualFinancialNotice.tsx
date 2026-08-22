@@ -1,10 +1,10 @@
 import React from 'react';
-import { AlertCircle, SlidersHorizontal } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { isClientRole, isFleetOperator } from '../../lib/navByRole';
+import { isClientRole } from '../../lib/navByRole';
 
 export const ManualFinancialNotice: React.FC = () => {
-  const { financialMode, setFinancialMode, activeRole } = useAppStore();
+  const { financialMode, activeRole } = useAppStore();
 
   if (isClientRole(activeRole)) return null;
   if (financialMode !== 'manual') return null;
@@ -25,15 +25,6 @@ export const ManualFinancialNotice: React.FC = () => {
           </p>
         </div>
       </div>
-      {isFleetOperator(activeRole) && (
-        <button
-          onClick={() => setFinancialMode('stripe')}
-          className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          Ativar Stripe Automático
-        </button>
-      )}
     </div>
   );
 };

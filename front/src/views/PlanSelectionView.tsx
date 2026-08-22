@@ -37,7 +37,7 @@ export const PlanSelectionView: React.FC = () => {
   const { activeRole } = useAppStore();
   const [companyId, setCompanyId] = useState<number | null>(() => getApiCompanyId());
   const [plans, setPlans] = useState<ApiPlan[]>([]);
-  const [usingMockPlans, setUsingMockPlans] = useState(false);
+  const [plansEmpty, setPlansEmpty] = useState(false);
   const [status, setStatus] = useState<SubscriptionStatusPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyPlanId, setBusyPlanId] = useState<number | string | null>(null);
@@ -56,16 +56,13 @@ export const PlanSelectionView: React.FC = () => {
       const planList = await fetchPlans();
       const resolved = resolvePlansForDisplay(planList);
       setPlans(resolved.plans);
-      setUsingMockPlans(resolved.usingMockPlans);
+      setPlansEmpty(resolved.empty);
     } catch (e) {
-      const resolved = resolvePlansForDisplay([]);
-      setPlans(resolved.plans);
-      setUsingMockPlans(true);
-      if (resolved.plans.length === 0) {
-        setError(e instanceof Error ? e.message : 'Falha ao carregar planos');
-        setLoading(false);
-        return;
-      }
+      setPlans([]);
+      setPlansEmpty(true);
+      setError(e instanceof Error ? e.message : 'Falha ao carregar planos');
+      setLoading(false);
+      return;
     }
 
     let cid = companyId ?? getApiCompanyId() ?? listSessionCompanies()[0]?.id ?? null;
@@ -126,11 +123,11 @@ export const PlanSelectionView: React.FC = () => {
       const real = fresh.find((p) => p.slug === plan.slug);
       if (real) {
         setPlans(fresh);
-        setUsingMockPlans(false);
+        setPlansEmpty(false);
         return real;
       }
     } catch {
-      // keep mock fallback
+      // keep empty
     }
     setError('Planos ainda não disponíveis no servidor. Tente novamente em instantes.');
     return null;
@@ -205,10 +202,9 @@ export const PlanSelectionView: React.FC = () => {
       </header>
 
       <main className="flex-1 max-w-5xl mx-auto w-full p-4 pb-12 space-y-6">
-        {usingMockPlans && (
+        {plansEmpty && (
           <p className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-500/10 border border-slate-500/30 rounded-xl px-4 py-3">
-            Catálogo de demonstração (R$ 0,00) — limites e liberações por plano. Ao confirmar, o sistema
-            sincroniza com o servidor.
+            Nenhum plano disponível no momento. Tente novamente em instantes ou fale com o suporte.
           </p>
         )}
 

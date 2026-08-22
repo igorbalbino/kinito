@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\RideStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ride\StoreRideRequest;
@@ -168,6 +169,10 @@ class RideController extends Controller
     {
         $this->authorize('adjustPrice', $ride);
 
+        if (in_array($ride->status, [RideStatus::Finalizada, RideStatus::Cancelada], true)) {
+            abort(422, 'Não é possível alterar o valor de uma corrida finalizada ou cancelada.');
+        }
+
         $data = $request->validate([
             'gross_value' => ['required', 'numeric', 'min:0'],
             'platform_commission' => ['nullable', 'numeric', 'min:0'],
@@ -177,23 +182,39 @@ class RideController extends Controller
         ]);
 
         $acting = $request->user()->actingRole();
-        $isDriverOnly = $acting === UserRole::Motorista;
+        $isAdmin = $acting === UserRole::Admin && $request->user()->hasRole(UserRole::Admin->value);
 
-        // Drivers may only change gross; split is always recalculated.
-        if ($isDriverOnly) {
+        // Empresa/motorista: só gross_value → split recalculado (inclui stripe_fee).
+        // Overrides de platform_commission / cuts: somente admin.
+        if (! $isAdmin) {
             $this->finance->applyToRide($ride, (float) $data['gross_value'], true);
+            if (! empty($data['manual_override_notes'])) {
+                $ride->update(['manual_override_notes' => $data['manual_override_notes']]);
+            }
 
             return new RideResource($ride->fresh()->load(['client.user', 'driver.user', 'company']));
         }
 
         if (isset($data['platform_commission']) || isset($data['driver_net']) || isset($data['company_cut'])) {
+            $gross = (float) $data['gross_value'];
+            $paymentMethod = $ride->payment_method;
+            $methodValue = $paymentMethod instanceof \BackedEnum
+                ? $paymentMethod->value
+                : (is_string($paymentMethod) ? $paymentMethod : null);
+            $split = $this->finance->calculateSplit(
+                $gross,
+                (float) ($ride->company?->commission_rate ?? config('kinito.commissions.company_percent', 10)),
+                $methodValue,
+            );
+
             $ride->update([
-                'gross_value' => $data['gross_value'],
-                'platform_commission' => $data['platform_commission'] ?? $ride->platform_commission,
-                'company_cut' => $data['company_cut'] ?? $ride->company_cut,
-                'driver_net' => $data['driver_net'] ?? $ride->driver_net,
+                'gross_value' => $gross,
+                'stripe_fee' => $split['stripe_fee'],
+                'platform_commission' => $data['platform_commission'] ?? $split['platform_commission'],
+                'company_cut' => $data['company_cut'] ?? $split['company_cut'],
+                'driver_net' => $data['driver_net'] ?? $split['driver_net'],
                 'manual_override_notes' => $data['manual_override_notes'] ?? null,
-                'financial_status' => $data['gross_value'] > 0 ? 'PENDENTE' : 'INCOMPLETO',
+                'financial_status' => $gross > 0 ? 'PENDENTE' : 'INCOMPLETO',
             ]);
         } else {
             $this->finance->applyToRide($ride, (float) $data['gross_value'], true);

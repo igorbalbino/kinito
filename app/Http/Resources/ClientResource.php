@@ -22,13 +22,20 @@ class ClientResource extends JsonResource
             $primaryCompany = $this->companies->first();
         }
 
-        return [
+        $viewer = $request->user();
+        $transferPending = false;
+        if ($viewer && $this->relationLoaded('companies')) {
+            $viewerCompanyIds = $viewer->accessibleCompanyIds();
+            $pendingPivot = $this->companies->first(function ($company) use ($viewerCompanyIds) {
+                return $viewerCompanyIds->contains($company->id)
+                    && ! (bool) ($company->pivot?->is_active ?? true);
+            });
+            $transferPending = $pendingPivot !== null;
+        }
+
+        $base = [
             'id' => (string) $this->id,
             'userId' => $this->user_id,
-            'name' => $this->whenLoaded('user', fn () => $this->user?->name),
-            'email' => $this->whenLoaded('user', fn () => $this->user?->email),
-            'phone' => $this->whenLoaded('user', fn () => $this->user?->phone),
-            'avatar' => $this->whenLoaded('user', fn () => $this->user?->avatar),
             'status' => strtolower($this->status?->value ?? 'ativo'),
             'rating' => (float) $this->rating,
             'totalRides' => $this->total_rides,
@@ -37,9 +44,29 @@ class ClientResource extends JsonResource
                 ? (string) $prefCompanyId
                 : ($primaryCompany ? (string) $primaryCompany->id : null),
             'companyName' => $primaryCompany?->name,
-            'preferences' => new ClientPreferenceResource($this->whenLoaded('preferences')),
-            'favoriteAddresses' => $this->whenLoaded('preferences', fn () => $this->preferences?->favorite_addresses ?? []),
+            'transferPending' => $transferPending,
             'createdAt' => $this->created_at?->toIso8601String(),
         ];
+
+        // Pending consent: hide PII from company listing until the client accepts.
+        if ($transferPending && $viewer && ! $viewer->hasRole('ADMIN') && (int) $viewer->id !== (int) $this->user_id) {
+            return array_merge($base, [
+                'name' => 'Transferência pendente',
+                'email' => null,
+                'phone' => null,
+                'avatar' => null,
+                'preferences' => null,
+                'favoriteAddresses' => [],
+            ]);
+        }
+
+        return array_merge($base, [
+            'name' => $this->whenLoaded('user', fn () => $this->user?->name),
+            'email' => $this->whenLoaded('user', fn () => $this->user?->email),
+            'phone' => $this->whenLoaded('user', fn () => $this->user?->phone),
+            'avatar' => $this->whenLoaded('user', fn () => $this->user?->avatar),
+            'preferences' => new ClientPreferenceResource($this->whenLoaded('preferences')),
+            'favoriteAddresses' => $this->whenLoaded('preferences', fn () => $this->preferences?->favorite_addresses ?? []),
+        ]);
     }
 }

@@ -15,10 +15,10 @@ export const ScreenHelpFab: React.FC = () => {
 
   const positionClass =
     handPreference === 'left'
-      ? 'left-4 bottom-36 md:bottom-6'
+      ? 'left-4 bottom-44 md:bottom-6'
       : handPreference === 'right'
-        ? 'right-4 bottom-36 md:bottom-6'
-        : 'left-1/2 -translate-x-1/2 bottom-36 md:bottom-6 md:left-auto md:right-4 md:translate-x-0';
+        ? 'right-4 bottom-44 md:bottom-6'
+        : 'left-1/2 -translate-x-1/2 bottom-44 md:bottom-6 md:left-auto md:right-4 md:translate-x-0';
 
   return (
     <>
